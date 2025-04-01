@@ -1,0 +1,12 @@
+model:
+  num_classes: 14
+  backbone: "densenet121"
+  
+privacy:
+  epsilon: 1.0
+  delta: 1e-5
+  max_grad_norm: 1.0
+  
+visualization:
+  save_dir: "outputs"
+  plot_size: [15, 5]
