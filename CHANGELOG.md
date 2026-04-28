@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.5.0 - Dockerized local runner and customer pilot docs
+
+### Added
+
+- Added Dockerfile for local-only customer runner execution.
+- Added `.dockerignore` for cleaner image builds.
+- Added Docker CI job with image build and config-runner smoke test.
+- Added customer onboarding guide under `docs/customer_onboarding.md`.
+- Added customer pilot checklist under `docs/pilot_checklist.md`.
+- Updated README with Docker workflow and pilot documentation links.
+- Bumped package version to `0.5.0`.
+- Added `PyYAML` to package dependencies.
+
+### Notes
+
+This release makes PrivateLabBench easier to run in a customer pilot. A lab can now build a container, mount its local data directory, run a YAML evaluation config, and export reports without changing the Python environment on its host machine.
+
 ## 0.4.0 - Config-based local runner
 
 ### Added
