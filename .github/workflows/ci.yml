@@ -40,3 +40,9 @@ jobs:
         run: |
           privatelabbench eval-federated examples/labs --target label --privacy dp --epsilon 8 --report outputs/ci_federated_report.md
           test -f outputs/ci_federated_report.md
+
+      - name: Smoke test prediction CLI
+        run: |
+          privatelabbench eval-predictions examples/predictions_demo.csv --target label --prediction-column pred --privacy dp --epsilon 8 --report outputs/ci_prediction_report.md --json-report outputs/ci_prediction_report.json
+          test -f outputs/ci_prediction_report.md
+          test -f outputs/ci_prediction_report.json
