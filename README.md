@@ -8,6 +8,7 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 
 - Molecular property prediction from `smiles,target` CSV files
 - External prediction evaluation for customer-owned models
+- Config-based local runner with YAML workflows
 - Dependency-light hashed SMILES fingerprints
 - Random forest regression/classification baseline
 - Regression metrics: MAE, RMSE, R2
@@ -31,6 +32,53 @@ Or install minimal dependencies manually:
 
 ```bash
 pip install -r requirements.txt
+```
+
+## Config-based runner
+
+The recommended customer workflow is to run an evaluation from a YAML config:
+
+```bash
+privatelabbench run configs/prediction_eval.yaml
+```
+
+Example config:
+
+```yaml
+project: kinase-prediction-demo
+workflow: predictions
+
+input:
+  path: examples/predictions_demo.csv
+  target_column: label
+  prediction_column: pred
+  task_type: regression
+
+privacy:
+  mode: dp
+  epsilon: 8
+  sensitivity: 1
+  seed: 13
+
+report:
+  markdown: reports/kinase_prediction_eval.md
+  json: reports/kinase_prediction_eval.json
+```
+
+Supported workflows:
+
+```text
+predictions  evaluate customer-owned model outputs
+molecules     train/evaluate the built-in molecule baseline
+federated     evaluate a directory of private lab CSVs and aggregate reports
+```
+
+Included configs:
+
+```text
+configs/prediction_eval.yaml
+configs/molecule_eval.yaml
+configs/federated_eval.yaml
 ```
 
 ## Single-client quickstart
@@ -119,6 +167,7 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 
 ## Project files
 
+- [`configs/`](configs/): example local runner configs
 - [`docs/roadmap.md`](docs/roadmap.md): staged product and research roadmap
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): development and privacy principles
 - [`CHANGELOG.md`](CHANGELOG.md): release notes
@@ -126,7 +175,8 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 
 ## Roadmap
 
-- Config-based local runner
+- Dockerized local runner
+- Customer onboarding guide
 - JSON reports and signed run metadata
 - RDKit Morgan fingerprints
 - ChemBERTa and GNN model adapters
