@@ -38,18 +38,30 @@ Status: implemented.
 
 ## v0.4: Config-based local runner
 
-Goal: make the workflow product-like and repeatable.
+Status: implemented.
+
+- `privatelabbench run <config.yaml>`
+- YAML config schema
+- support for molecule, federated, and prediction workflows
+- stable report output paths
+- JSON reports for config-driven molecule, prediction, and federated runs
+- example customer configs under `configs/`
+- CI smoke test for the config runner
+
+## v0.5: Dockerized local runner and onboarding
+
+Goal: make the product easier to pilot in a customer environment.
 
 Planned features:
 
-- `privatelabbench run privatelabbench.yaml`
-- YAML config schema
-- support for molecule, federated, and prediction workflows
-- stable output directory conventions
-- reproducible run metadata
-- example customer configs
+- Dockerfile for local-only execution
+- `.dockerignore`
+- `docker run` example for configs
+- customer onboarding guide
+- local data privacy checklist
+- pilot success criteria template
 
-## v0.5: Scientific model adapters
+## v0.6: Scientific model adapters
 
 Goal: move beyond toy baselines.
 
@@ -60,7 +72,7 @@ Planned features:
 - simple graph neural network adapter
 - support for external model endpoints
 
-## v0.6: Privacy and attack evaluation
+## v0.7: Privacy and attack evaluation
 
 Goal: quantify what is leaked by evaluation artifacts.
 
@@ -71,7 +83,7 @@ Planned features:
 - DP budget reporting
 - privacy/utility tradeoff plots
 
-## v0.7: Local runner + hosted dashboard
+## v0.8: Local runner + hosted dashboard
 
 Goal: make the workflow product-like while keeping raw data local.
 
