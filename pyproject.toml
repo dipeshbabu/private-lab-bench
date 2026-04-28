@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "private-lab-bench"
-version = "0.1.0"
+version = "0.5.0"
 description = "Local-first evaluation framework for scientific AI models."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -13,6 +13,7 @@ dependencies = [
   "numpy>=1.21",
   "pandas>=1.3",
   "scikit-learn>=1.0",
+  "PyYAML>=6.0",
 ]
 
 [project.scripts]
