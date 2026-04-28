@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.9.0 - Sanitized hosted dashboard sync
+
+### Added
+
+- Added hosted dashboard API under `privatelabbench.dashboard.api`.
+- Added SQLite dashboard store for sanitized run metadata and audit events.
+- Added `privatelabbench serve-dashboard` for local dashboard API pilots.
+- Added `privatelabbench export-sanitized` for dashboard-safe payload generation.
+- Added `privatelabbench sync-dashboard` for sending sanitized metrics to a dashboard endpoint.
+- Added dashboard API-key authentication via `PRIVATELABBENCH_DASHBOARD_API_KEY`.
+- Added artifact hash metadata for synced reports without uploading raw report contents.
+- Added tests for sanitization and dashboard-store roundtrips.
+
+### Notes
+
+This release turns the product into a clearer local-runner plus hosted-dashboard architecture. Labs can keep raw datasets, predictions, SMILES strings, and local reports on their own machine while sharing only sanitized aggregate metadata with a central dashboard.
+
 ## 0.6.0 - Signed reports and audit metadata
 
 ### Added
@@ -79,8 +96,8 @@ This release makes the product easier to pilot because customers can evaluate th
 - Added aggregate dataset-shift summaries.
 - Added example lab datasets under `examples/labs/`.
 - Added federated Markdown report export.
-- Added federated CLI smoke test to CI.
 - Added federated evaluation tests.
+- Added federated CLI smoke test to CI.
 
 ### Notes
 
