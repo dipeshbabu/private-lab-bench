@@ -15,9 +15,7 @@ Status: implemented.
 
 ## v0.2: Multi-client private evaluation
 
-Goal: simulate multiple private labs evaluating the same model locally.
-
-Planned features:
+Status: implemented.
 
 - `eval-federated` command over a directory of lab CSVs
 - per-client metrics
@@ -25,6 +23,7 @@ Planned features:
 - client distribution-shift summary
 - weighted aggregation by sample count
 - privacy-preserving aggregate report
+- example multi-lab datasets and report
 
 ## v0.3: Secure benchmark reports
 
@@ -37,6 +36,7 @@ Planned features:
 - privacy risk section
 - per-client heterogeneity summary
 - reproducible run metadata
+- stable report schema for a hosted dashboard
 
 ## v0.4: Scientific model adapters
 
