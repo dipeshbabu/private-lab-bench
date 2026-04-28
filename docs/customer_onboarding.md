@@ -8,6 +8,9 @@ PrivateLabBench is designed for scientific teams that need to evaluate AI models
 - YAML-based repeatable evaluation configs
 - Markdown reports for humans
 - JSON reports for dashboards and audit trails
+- JSON report integrity hashes
+- Optional signed reports
+- Local audit logs for config-driven evaluations
 - DP-style reported metrics
 - Support for customer-owned model predictions
 - Multi-lab evaluation simulation through per-client CSV files
@@ -60,6 +63,9 @@ privacy:
 report:
   markdown: /data/reports/customer_assay_eval.md
   json: /data/reports/customer_assay_eval.json
+
+audit:
+  path: /data/reports/customer_assay_audit.jsonl
 ```
 
 ### 4. Run locally with Python
@@ -67,6 +73,7 @@ report:
 ```bash
 pip install -e .
 privatelabbench run configs/prediction_eval.yaml
+privatelabbench verify-report reports/kinase_prediction_eval.json
 ```
 
 ### 5. Run locally with Docker
@@ -94,6 +101,17 @@ docker run --rm \
   privatelabbench:local run /data/customer_eval.yaml
 ```
 
+### 6. Verify and share artifacts
+
+The customer can share only these outputs with the vendor or internal stakeholders:
+
+- Markdown report
+- JSON report
+- audit JSONL file
+- verification output from `privatelabbench verify-report`
+
+Raw dataset rows do not need to leave the customer environment.
+
 ## Privacy model for the MVP
 
 PrivateLabBench currently provides a local-first evaluation workflow. Raw data stays in the customer's environment when the runner is executed locally or inside the customer's Docker environment.
@@ -109,6 +127,7 @@ A pilot is successful if the customer can answer:
 - Is there visible dataset shift across labs or batches?
 - Can the evaluation be repeated from a config file?
 - Can our team share only the report, not the raw data?
+- Can our team verify the report has not been changed after generation?
 
 ## Suggested 4-week paid pilot
 
@@ -118,6 +137,7 @@ A pilot is successful if the customer can answer:
 - Create customer config
 - Run first local prediction evaluation
 - Produce Markdown and JSON reports
+- Verify JSON report integrity
 
 ### Week 2: Benchmarking
 
@@ -135,6 +155,7 @@ A pilot is successful if the customer can answer:
 
 - Final benchmark report
 - Privacy/utility summary
+- Report verification summary
 - Deployment recommendation
 - Next-step integration plan
 
