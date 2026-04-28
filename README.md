@@ -10,15 +10,19 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - External prediction evaluation for customer-owned models
 - Config-based local runner with YAML workflows
 - Dockerized local runner for customer pilots
+- Adapter interface for scientific model integrations
 - Dependency-light hashed SMILES fingerprints
+- Optional RDKit Morgan fingerprint adapter
 - Random forest regression/classification baseline
 - Regression metrics: MAE, RMSE, R2
 - Classification metrics: accuracy, F1, AUROC
+- Error slice analysis for model debugging
 - DP-style metric reporting
 - Dataset and prediction summaries
 - Single-client local evaluation
 - Multi-client private evaluation over a directory of lab CSVs
 - Weighted aggregate benchmark reports
+- Model comparison reports across multiple configs
 - Markdown and JSON report export
 - CLI entrypoint
 - CI tests across Python 3.9, 3.10, and 3.11
@@ -27,6 +31,12 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 
 ```bash
 pip install -e .
+```
+
+Optional RDKit support:
+
+```bash
+pip install -e '.[rdkit]'
 ```
 
 Or install minimal dependencies manually:
@@ -79,7 +89,43 @@ Included configs:
 ```text
 configs/prediction_eval.yaml
 configs/molecule_eval.yaml
+configs/molecule_eval_rdkit.yaml
 configs/federated_eval.yaml
+```
+
+## Adapter-based molecule evaluation
+
+Default hashed adapter:
+
+```yaml
+model:
+  adapter: hashed_random_forest
+  fingerprint: hashed
+  n_bits: 256
+  n_estimators: 200
+```
+
+RDKit adapter:
+
+```yaml
+model:
+  adapter: rdkit_random_forest
+  fingerprint: rdkit_morgan
+  n_bits: 2048
+  radius: 2
+  n_estimators: 200
+```
+
+See [`docs/ADAPTERS.md`](docs/ADAPTERS.md) for the adapter roadmap.
+
+## Model comparison
+
+Run multiple configs and produce one benchmark comparison report:
+
+```bash
+privatelabbench compare configs/prediction_eval.yaml configs/molecule_eval.yaml \
+  --report reports/model_comparison.md \
+  --json-report reports/model_comparison.json
 ```
 
 ## Docker local runner
@@ -196,6 +242,7 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 ## Project files
 
 - [`configs/`](configs/): example local runner configs
+- [`docs/ADAPTERS.md`](docs/ADAPTERS.md): adapter interface and model integration guide
 - [`docs/customer_onboarding.md`](docs/customer_onboarding.md): customer pilot guide
 - [`docs/pilot_checklist.md`](docs/pilot_checklist.md): pilot readiness checklist
 - [`docs/roadmap.md`](docs/roadmap.md): staged product and research roadmap
@@ -205,14 +252,11 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 
 ## Roadmap
 
-- Signed run metadata
-- Report integrity verification
-- RDKit Morgan fingerprints
-- ChemBERTa and GNN model adapters
-- Membership-inference and property-inference risk scoring
-- Federated evaluation reports across private lab clients
 - Hosted dashboard with local runner architecture
-- Protein, microscopy, and materials tasks
+- ChemBERTa, MolFormer, Uni-Mol, and GNN adapters
+- Protein, microscopy, robotics, and materials prediction tasks
+- Membership-inference and property-inference risk scoring
+- SOC2-ready tenant metadata, audit trails, and deployment templates
 
 ## Non-goals for the current MVP
 
