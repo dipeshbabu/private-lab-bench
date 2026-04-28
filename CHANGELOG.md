@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.0 - Multi-client private evaluation
+
+### Added
+
+- Added `eval-federated` CLI command for directory-based multi-client evaluation.
+- Added federated evaluator utilities for discovering client CSVs and evaluating each lab independently.
+- Added weighted aggregation of clean and privacy-preserving reported metrics.
+- Added aggregate dataset-shift summaries.
+- Added example lab datasets under `examples/labs/`.
+- Added federated Markdown report export.
+- Added federated CLI smoke test to CI.
+- Added federated evaluation tests.
+
+### Notes
+
+This is still a simulated local multi-client workflow. It does not yet implement networked secure aggregation or federated training. The value is that each client can be evaluated independently and only metrics/summaries are aggregated.
+
 ## 0.1.0 - Initial PrivateLabBench MVP
 
 ### Added
