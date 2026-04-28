@@ -7,16 +7,17 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 ## Current scope
 
 - Molecular property prediction from `smiles,target` CSV files
+- External prediction evaluation for customer-owned models
 - Dependency-light hashed SMILES fingerprints
 - Random forest regression/classification baseline
 - Regression metrics: MAE, RMSE, R2
 - Classification metrics: accuracy, F1, AUROC
 - DP-style metric reporting
-- Dataset shift summary
+- Dataset and prediction summaries
 - Single-client local evaluation
 - Multi-client private evaluation over a directory of lab CSVs
 - Weighted aggregate benchmark reports
-- Markdown report export
+- Markdown and JSON report export
 - CLI entrypoint
 - CI tests across Python 3.9, 3.10, and 3.11
 
@@ -51,6 +52,31 @@ Report saved to: reports/molecule_eval_report.md
 ```
 
 An example generated report is available at [`examples/reports/molecule_eval_report.md`](examples/reports/molecule_eval_report.md).
+
+## External prediction evaluation
+
+Evaluate predictions from a customer-owned model without integrating model code into PrivateLabBench:
+
+```bash
+privatelabbench eval-predictions examples/predictions_demo.csv \
+  --target label \
+  --prediction-column pred \
+  --privacy dp \
+  --epsilon 8 \
+  --report reports/prediction_eval_report.md \
+  --json-report reports/prediction_eval_report.json
+```
+
+Expected input format:
+
+```csv
+smiles,label,pred
+CCO,0.12,0.14
+CCN,0.20,0.23
+c1ccccc1,0.74,0.71
+```
+
+This is the easiest customer workflow: they run their own model locally, add a prediction column, and PrivateLabBench generates privacy-preserving Markdown and JSON evaluation reports.
 
 ## Multi-client private evaluation
 
@@ -100,6 +126,7 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 
 ## Roadmap
 
+- Config-based local runner
 - JSON reports and signed run metadata
 - RDKit Morgan fingerprints
 - ChemBERTa and GNN model adapters
