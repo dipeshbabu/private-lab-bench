@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 from privatelabbench.eval.metrics import summarize_metrics
@@ -8,6 +9,7 @@ from privatelabbench.eval.predictions import evaluate_prediction_csv
 from privatelabbench.federated.evaluator import evaluate_federated_directory
 from privatelabbench.models.sklearn_baseline import evaluate_random_forest
 from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
+from privatelabbench.reports.integrity import verify_report
 from privatelabbench.reports.json import write_json_report
 from privatelabbench.reports.markdown import (
     write_federated_markdown_report,
@@ -43,6 +45,10 @@ def build_parser() -> argparse.ArgumentParser:
     run = sub.add_parser("run", help="Run an evaluation workflow from a YAML config file.")
     run.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
 
+    verify = sub.add_parser("verify-report", help="Verify JSON report integrity metadata and optional HMAC signature.")
+    verify.add_argument("json_report", help="Path to a PrivateLabBench JSON report.")
+    verify.add_argument("--signing-secret", default=None, help="Optional HMAC signing secret. Defaults to PRIVATELABBENCH_SIGNING_SECRET.")
+
     eval_mol = sub.add_parser("eval-molecules", help="Evaluate a molecular property prediction CSV locally.")
     eval_mol.add_argument("csv_path", help="Path to a CSV containing SMILES and target columns.")
     add_common_eval_args(eval_mol)
@@ -72,6 +78,20 @@ def run_from_config(args: argparse.Namespace) -> int:
     summary = run_config(args.config_path)
     print_run_summary(summary)
     return 0
+
+
+def verify_report_command(args: argparse.Namespace) -> int:
+    secret = args.signing_secret or os.getenv("PRIVATELABBENCH_SIGNING_SECRET")
+    result = verify_report(args.json_report, signing_secret=secret)
+    print("PrivateLabBench report verification")
+    print(f"Report: {result['path']}")
+    print(f"Valid: {result['valid']}")
+    print(f"Reason: {result['reason']}")
+    print(f"Hash valid: {result['hash_valid']}")
+    if result["signature_valid"] is not None:
+        print(f"Signature valid: {result['signature_valid']}")
+    print(f"Payload SHA256: {result['payload_sha256']}")
+    return 0 if result["valid"] else 1
 
 
 def eval_molecules(args: argparse.Namespace) -> int:
@@ -185,6 +205,8 @@ def main() -> int:
     args = parser.parse_args()
     if args.command == "run":
         return run_from_config(args)
+    if args.command == "verify-report":
+        return verify_report_command(args)
     if args.command == "eval-molecules":
         return eval_molecules(args)
     if args.command == "eval-federated":
