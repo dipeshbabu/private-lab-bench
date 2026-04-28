@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from privatelabbench.reports.markdown import (
     write_prediction_markdown_report,
 )
 from privatelabbench.runner import print_run_summary, run_config
+from privatelabbench.sync import sanitize_summary, sync_payload, write_sanitized_payload
 from privatelabbench.tasks.molecules import load_molecule_csv
 
 
@@ -51,6 +53,11 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--port", type=int, default=8000, help="Port for the API server.")
     serve.add_argument("--reload", action="store_true", help="Enable uvicorn auto-reload for local development.")
 
+    dashboard = sub.add_parser("serve-dashboard", help="Start the hosted-dashboard API for sanitized run metadata.")
+    dashboard.add_argument("--host", default="127.0.0.1", help="Host interface for the dashboard API.")
+    dashboard.add_argument("--port", type=int, default=8010, help="Port for the dashboard API.")
+    dashboard.add_argument("--reload", action="store_true", help="Enable uvicorn auto-reload for local development.")
+
     compare = sub.add_parser("compare", help="Run multiple configs and generate a model comparison report.")
     compare.add_argument("config_paths", nargs="+", help="Two or more config files to compare.")
     compare.add_argument("--report", default="reports/model_comparison.md")
@@ -59,6 +66,17 @@ def build_parser() -> argparse.ArgumentParser:
     verify = sub.add_parser("verify-report", help="Verify JSON report integrity metadata and optional HMAC signature.")
     verify.add_argument("json_report", help="Path to a PrivateLabBench JSON report.")
     verify.add_argument("--signing-secret", default=None, help="Optional HMAC signing secret. Defaults to PRIVATELABBENCH_SIGNING_SECRET.")
+
+    export = sub.add_parser("export-sanitized", help="Run a config and export dashboard-safe metadata only.")
+    export.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
+    export.add_argument("--out", default="reports/sanitized_payload.json", help="Output JSON payload path.")
+    export.add_argument("--organization-id", default="local-org", help="Organization id to include in sanitized metadata.")
+
+    sync = sub.add_parser("sync-dashboard", help="Run a config and sync sanitized metrics to a dashboard API.")
+    sync.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
+    sync.add_argument("--endpoint", required=True, help="Dashboard API base URL, e.g. http://127.0.0.1:8010")
+    sync.add_argument("--api-key", default=None, help="Dashboard API key. Defaults to PRIVATELABBENCH_DASHBOARD_API_KEY.")
+    sync.add_argument("--organization-id", default="local-org", help="Organization id to include in sanitized metadata.")
 
     eval_mol = sub.add_parser("eval-molecules", help="Evaluate a molecular property prediction CSV locally.")
     eval_mol.add_argument("csv_path", help="Path to a CSV containing SMILES and target columns.")
@@ -97,6 +115,38 @@ def serve_api(args: argparse.Namespace) -> int:
     except ImportError as exc:
         raise SystemExit("API dependencies are missing. Install with: pip install -e '.[api]'") from exc
     uvicorn.run("privatelabbench.api:app", host=args.host, port=args.port, reload=args.reload)
+    return 0
+
+
+def serve_dashboard_api(args: argparse.Namespace) -> int:
+    try:
+        import uvicorn
+    except ImportError as exc:
+        raise SystemExit("API dependencies are missing. Install with: pip install -e '.[api]'") from exc
+    uvicorn.run("privatelabbench.dashboard.api:app", host=args.host, port=args.port, reload=args.reload)
+    return 0
+
+
+def export_sanitized(args: argparse.Namespace) -> int:
+    summary = run_config(args.config_path)
+    output = write_sanitized_payload(summary, args.out, organization_id=args.organization_id)
+    payload = sanitize_summary(summary, organization_id=args.organization_id)
+    print("PrivateLabBench sanitized export")
+    print(f"Project: {payload.project}")
+    print(f"Workflow: {payload.workflow}")
+    print(f"Metrics: {summarize_metrics(payload.metrics)}")
+    print(f"Payload saved to: {Path(output)}")
+    return 0
+
+
+def sync_dashboard(args: argparse.Namespace) -> int:
+    summary = run_config(args.config_path)
+    payload = sanitize_summary(summary, organization_id=args.organization_id)
+    result = sync_payload(payload, endpoint=args.endpoint, api_key=args.api_key or os.getenv("PRIVATELABBENCH_DASHBOARD_API_KEY"))
+    print("PrivateLabBench dashboard sync")
+    print(f"Project: {payload.project}")
+    print(f"Workflow: {payload.workflow}")
+    print(f"Synced run id: {result.get('id')}")
     return 0
 
 
@@ -236,6 +286,12 @@ def main() -> int:
         return run_from_config(args)
     if args.command == "serve":
         return serve_api(args)
+    if args.command == "serve-dashboard":
+        return serve_dashboard_api(args)
+    if args.command == "export-sanitized":
+        return export_sanitized(args)
+    if args.command == "sync-dashboard":
+        return sync_dashboard(args)
     if args.command == "compare":
         return compare_from_configs(args)
     if args.command == "verify-report":
