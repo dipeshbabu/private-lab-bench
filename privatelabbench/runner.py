@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
+from privatelabbench.audit import write_audit_event
 from privatelabbench.config import RunnerConfig, load_config, required, section
 from privatelabbench.eval.metrics import summarize_metrics
 from privatelabbench.eval.predictions import evaluate_prediction_csv
@@ -33,6 +35,33 @@ def _report_path(config: RunnerConfig, key: str, default: str) -> str:
     return str(report.get(key, default))
 
 
+def _signing_secret(config: RunnerConfig) -> str | None:
+    report = section(config, "report")
+    secret = report.get("signing_secret") or os.getenv("PRIVATELABBENCH_SIGNING_SECRET")
+    return str(secret) if secret else None
+
+
+def _audit_path(config: RunnerConfig) -> str:
+    audit = section(config, "audit")
+    return str(audit.get("path", f"reports/{config.project}_audit.jsonl"))
+
+
+def _write_audit(config: RunnerConfig, summary: dict[str, Any]) -> str:
+    audit_path = _audit_path(config)
+    write_audit_event(
+        audit_path,
+        event_type="evaluation_completed",
+        payload={
+            "project": config.project,
+            "workflow": config.workflow,
+            "markdown_report": summary.get("markdown_report"),
+            "json_report": summary.get("json_report"),
+            "privacy": summary.get("privacy"),
+        },
+    )
+    return audit_path
+
+
 def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     input_cfg = section(config, "input")
     path = str(required(input_cfg, "path", section_name="input"))
@@ -60,6 +89,8 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
             "prediction_summary": result.prediction_summary,
         },
         privacy_config=privacy_config,
+        config_snapshot=config.raw,
+        signing_secret=_signing_secret(config),
     )
     markdown_path = write_prediction_markdown_report(
         _report_path(config, "markdown", f"reports/{config.project}_prediction_eval.md"),
@@ -123,6 +154,8 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
             "shift": result["shift"],
         },
         privacy_config=privacy_config,
+        config_snapshot=config.raw,
+        signing_secret=_signing_secret(config),
     )
     return {
         "project": config.project,
@@ -178,6 +211,8 @@ def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
             "aggregate_shift": result["aggregate_shift"],
         },
         privacy_config=privacy_config,
+        config_snapshot=config.raw,
+        signing_secret=_signing_secret(config),
     )
     return {
         "project": config.project,
@@ -195,12 +230,15 @@ def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
 def run_config(config_path: str) -> dict[str, Any]:
     config = load_config(config_path)
     if config.workflow == "predictions":
-        return run_prediction_workflow(config)
-    if config.workflow == "molecules":
-        return run_molecule_workflow(config)
-    if config.workflow == "federated":
-        return run_federated_workflow(config)
-    raise ValueError(f"Unsupported workflow: {config.workflow}")
+        summary = run_prediction_workflow(config)
+    elif config.workflow == "molecules":
+        summary = run_molecule_workflow(config)
+    elif config.workflow == "federated":
+        summary = run_federated_workflow(config)
+    else:
+        raise ValueError(f"Unsupported workflow: {config.workflow}")
+    summary["audit_log"] = _write_audit(config, summary)
+    return summary
 
 
 def print_run_summary(summary: dict[str, Any]) -> None:
@@ -225,3 +263,4 @@ def print_run_summary(summary: dict[str, Any]) -> None:
     print(f"Privacy: {summary['privacy']}")
     print(f"Markdown report saved to: {Path(summary['markdown_report'])}")
     print(f"JSON report saved to: {Path(summary['json_report'])}")
+    print(f"Audit log saved to: {Path(summary['audit_log'])}")
