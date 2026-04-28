@@ -2,7 +2,7 @@
 
 PrivateLabBench is a local-first evaluation framework for scientific AI models on proprietary lab datasets.
 
-It lets labs run model evaluations locally, compute privacy-preserving metrics, and generate benchmark reports without uploading raw experimental data. The initial product wedge is private molecular property prediction evaluation from CSV files.
+It lets labs run model evaluations locally, compute privacy-preserving metrics, generate benchmark reports, and sync only sanitized benchmark metadata to a hosted dashboard. The initial product wedge is private molecular property prediction evaluation from CSV files.
 
 ## Current scope
 
@@ -10,6 +10,8 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - External prediction evaluation for customer-owned models
 - Config-based local runner with YAML workflows
 - Local FastAPI service for product-style integrations
+- Hosted dashboard API for sanitized run metadata
+- Dashboard-safe sync/export commands that avoid raw data upload
 - Dockerized local runner for customer pilots
 - Adapter interface for scientific model integrations
 - Dependency-light hashed SMILES fingerprints
@@ -128,6 +130,43 @@ curl -H 'x-api-key: dev-secret' http://127.0.0.1:8000/v1/runs/demo-run/report/ma
 ```
 
 If `PRIVATELABBENCH_API_KEY` is unset, the local API runs without authentication for development only.
+
+## Hosted dashboard sync
+
+PrivateLabBench now has a hosted-dashboard path that keeps raw lab data local. The local runner evaluates data, writes full local reports, then sends only sanitized metadata such as project name, workflow, sample counts, reported/private metrics, privacy mode, and artifact hashes.
+
+Start the dashboard API:
+
+```bash
+export PRIVATELABBENCH_DASHBOARD_API_KEY=dashboard-secret
+privatelabbench serve-dashboard --host 127.0.0.1 --port 8010
+```
+
+Export a dashboard-safe payload without sending it anywhere:
+
+```bash
+privatelabbench export-sanitized configs/prediction_eval.yaml \
+  --organization-id acme-lab \
+  --out reports/sanitized_payload.json
+```
+
+Sync sanitized metrics to the dashboard API:
+
+```bash
+privatelabbench sync-dashboard configs/prediction_eval.yaml \
+  --endpoint http://127.0.0.1:8010 \
+  --api-key dashboard-secret \
+  --organization-id acme-lab
+```
+
+Inspect synced runs:
+
+```bash
+curl -H 'x-api-key: dashboard-secret' http://127.0.0.1:8010/v1/runs
+curl -H 'x-api-key: dashboard-secret' http://127.0.0.1:8010/v1/audit-events
+```
+
+The sync layer intentionally excludes raw rows, SMILES strings, local dataset paths, prediction summaries, client-level raw details, and free-form private lab data.
 
 ## Adapter-based molecule evaluation
 
@@ -288,7 +327,7 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 
 ## Roadmap
 
-- Hosted dashboard with local runner architecture
+- Hosted dashboard UI on top of the sanitized dashboard API
 - ChemBERTa, MolFormer, Uni-Mol, and GNN adapters
 - Protein, microscopy, robotics, and materials prediction tasks
 - Membership-inference and property-inference risk scoring
