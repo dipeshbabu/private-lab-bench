@@ -1,0 +1,19 @@
+project: multi-lab-demo
+workflow: federated
+
+input:
+  client_dir: examples/labs
+  target_column: label
+  smiles_column: smiles
+  task_type: regression
+  test_size: 0.25
+
+privacy:
+  mode: dp
+  epsilon: 8
+  sensitivity: 1
+  seed: 13
+
+report:
+  markdown: reports/multi_lab_federated_eval.md
+  json: reports/multi_lab_federated_eval.json
