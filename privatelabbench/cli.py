@@ -46,6 +46,11 @@ def build_parser() -> argparse.ArgumentParser:
     run = sub.add_parser("run", help="Run an evaluation workflow from a YAML config file.")
     run.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
 
+    serve = sub.add_parser("serve", help="Start the local PrivateLabBench API server.")
+    serve.add_argument("--host", default="127.0.0.1", help="Host interface for the API server.")
+    serve.add_argument("--port", type=int, default=8000, help="Port for the API server.")
+    serve.add_argument("--reload", action="store_true", help="Enable uvicorn auto-reload for local development.")
+
     compare = sub.add_parser("compare", help="Run multiple configs and generate a model comparison report.")
     compare.add_argument("config_paths", nargs="+", help="Two or more config files to compare.")
     compare.add_argument("--report", default="reports/model_comparison.md")
@@ -83,6 +88,15 @@ def make_privacy_config(args: argparse.Namespace) -> PrivacyConfig:
 def run_from_config(args: argparse.Namespace) -> int:
     summary = run_config(args.config_path)
     print_run_summary(summary)
+    return 0
+
+
+def serve_api(args: argparse.Namespace) -> int:
+    try:
+        import uvicorn
+    except ImportError as exc:
+        raise SystemExit("API dependencies are missing. Install with: pip install -e '.[api]'") from exc
+    uvicorn.run("privatelabbench.api:app", host=args.host, port=args.port, reload=args.reload)
     return 0
 
 
@@ -220,6 +234,8 @@ def main() -> int:
     args = parser.parse_args()
     if args.command == "run":
         return run_from_config(args)
+    if args.command == "serve":
+        return serve_api(args)
     if args.command == "compare":
         return compare_from_configs(args)
     if args.command == "verify-report":
