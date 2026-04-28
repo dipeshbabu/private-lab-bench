@@ -46,3 +46,9 @@ jobs:
           privatelabbench eval-predictions examples/predictions_demo.csv --target label --prediction-column pred --privacy dp --epsilon 8 --report outputs/ci_prediction_report.md --json-report outputs/ci_prediction_report.json
           test -f outputs/ci_prediction_report.md
           test -f outputs/ci_prediction_report.json
+
+      - name: Smoke test config runner
+        run: |
+          privatelabbench run configs/prediction_eval.yaml
+          test -f reports/kinase_prediction_eval.md
+          test -f reports/kinase_prediction_eval.json
