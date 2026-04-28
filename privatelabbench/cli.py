@@ -4,6 +4,7 @@ import argparse
 import os
 from pathlib import Path
 
+from privatelabbench.compare import compare_configs
 from privatelabbench.eval.metrics import summarize_metrics
 from privatelabbench.eval.predictions import evaluate_prediction_csv
 from privatelabbench.federated.evaluator import evaluate_federated_directory
@@ -45,6 +46,11 @@ def build_parser() -> argparse.ArgumentParser:
     run = sub.add_parser("run", help="Run an evaluation workflow from a YAML config file.")
     run.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
 
+    compare = sub.add_parser("compare", help="Run multiple configs and generate a model comparison report.")
+    compare.add_argument("config_paths", nargs="+", help="Two or more config files to compare.")
+    compare.add_argument("--report", default="reports/model_comparison.md")
+    compare.add_argument("--json-report", default="reports/model_comparison.json")
+
     verify = sub.add_parser("verify-report", help="Verify JSON report integrity metadata and optional HMAC signature.")
     verify.add_argument("json_report", help="Path to a PrivateLabBench JSON report.")
     verify.add_argument("--signing-secret", default=None, help="Optional HMAC signing secret. Defaults to PRIVATELABBENCH_SIGNING_SECRET.")
@@ -77,6 +83,15 @@ def make_privacy_config(args: argparse.Namespace) -> PrivacyConfig:
 def run_from_config(args: argparse.Namespace) -> int:
     summary = run_config(args.config_path)
     print_run_summary(summary)
+    return 0
+
+
+def compare_from_configs(args: argparse.Namespace) -> int:
+    result = compare_configs(args.config_paths, markdown_path=args.report, json_path=args.json_report)
+    print("PrivateLabBench model comparison")
+    print(f"Runs: {result['n_runs']}")
+    print(f"Markdown report saved to: {Path(result['markdown_report'])}")
+    print(f"JSON report saved to: {Path(result['json_report'])}")
     return 0
 
 
@@ -205,6 +220,8 @@ def main() -> int:
     args = parser.parse_args()
     if args.command == "run":
         return run_from_config(args)
+    if args.command == "compare":
+        return compare_from_configs(args)
     if args.command == "verify-report":
         return verify_report_command(args)
     if args.command == "eval-molecules":
