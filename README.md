@@ -9,6 +9,7 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - Molecular property prediction from `smiles,target` CSV files
 - External prediction evaluation for customer-owned models
 - Config-based local runner with YAML workflows
+- Dockerized local runner for customer pilots
 - Dependency-light hashed SMILES fingerprints
 - Random forest regression/classification baseline
 - Regression metrics: MAE, RMSE, R2
@@ -80,6 +81,33 @@ configs/prediction_eval.yaml
 configs/molecule_eval.yaml
 configs/federated_eval.yaml
 ```
+
+## Docker local runner
+
+Build the local runner image:
+
+```bash
+docker build -t privatelabbench:local .
+```
+
+Run the included demo:
+
+```bash
+docker run --rm \
+  -v "$PWD/reports:/app/reports" \
+  privatelabbench:local run configs/prediction_eval.yaml
+```
+
+Run against customer-owned local data:
+
+```bash
+docker run --rm \
+  -v "$PWD/customer_data:/data" \
+  -v "$PWD/reports:/app/reports" \
+  privatelabbench:local run /data/customer_eval.yaml
+```
+
+See [`docs/customer_onboarding.md`](docs/customer_onboarding.md) and [`docs/pilot_checklist.md`](docs/pilot_checklist.md) for the recommended pilot workflow.
 
 ## Single-client quickstart
 
@@ -168,6 +196,8 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 ## Project files
 
 - [`configs/`](configs/): example local runner configs
+- [`docs/customer_onboarding.md`](docs/customer_onboarding.md): customer pilot guide
+- [`docs/pilot_checklist.md`](docs/pilot_checklist.md): pilot readiness checklist
 - [`docs/roadmap.md`](docs/roadmap.md): staged product and research roadmap
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): development and privacy principles
 - [`CHANGELOG.md`](CHANGELOG.md): release notes
@@ -175,9 +205,8 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 
 ## Roadmap
 
-- Dockerized local runner
-- Customer onboarding guide
-- JSON reports and signed run metadata
+- Signed run metadata
+- Report integrity verification
 - RDKit Morgan fingerprints
 - ChemBERTa and GNN model adapters
 - Membership-inference and property-inference risk scoring
