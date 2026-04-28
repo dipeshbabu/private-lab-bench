@@ -34,6 +34,8 @@ def write_markdown_report(
         "",
         "## Model",
         f"- Baseline: {result['model']}",
+        f"- Adapter: {result.get('adapter', 'default')}",
+        f"- Fingerprint: {result.get('fingerprint', 'hashed_smiles')}",
         f"- Task type: {result['task_type']}",
         "",
         "## Clean local metrics",
@@ -45,6 +47,11 @@ def write_markdown_report(
 
     lines.extend(["", "## Privacy mode", privacy_summary(privacy_config), "", "## Dataset shift summary"])
     lines.extend(_format_metric_lines(dict(result["shift"])))
+
+    error_slices = dict(result.get("error_slices", {}))
+    if error_slices:
+        lines.extend(["", "## Error slices"])
+        lines.extend(_format_metric_lines(error_slices))
 
     lines.extend([
         "",
