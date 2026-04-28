@@ -4,12 +4,12 @@ import os
 from pathlib import Path
 from typing import Any
 
+from privatelabbench.adapters.sklearn_adapter import build_molecule_adapter
 from privatelabbench.audit import write_audit_event
 from privatelabbench.config import RunnerConfig, load_config, required, section
 from privatelabbench.eval.metrics import summarize_metrics
 from privatelabbench.eval.predictions import evaluate_prediction_csv
 from privatelabbench.federated.evaluator import evaluate_federated_directory
-from privatelabbench.models.sklearn_baseline import evaluate_random_forest
 from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
 from privatelabbench.reports.json import write_json_report
 from privatelabbench.reports.markdown import (
@@ -115,6 +115,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
 
 def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
     input_cfg = section(config, "input")
+    model_cfg = section(config, "model")
     path = str(required(input_cfg, "path", section_name="input"))
     target = str(required(input_cfg, "target_column", section_name="input"))
     smiles_column = str(input_cfg.get("smiles_column", "smiles"))
@@ -124,7 +125,8 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
     privacy_config = _privacy_config(config)
 
     dataset = load_molecule_csv(path, target=target, smiles_column=smiles_column, task_type=task_type)
-    result = evaluate_random_forest(dataset, test_size=test_size, seed=seed)
+    adapter = build_molecule_adapter(model_cfg)
+    result = adapter.evaluate(dataset, test_size=test_size, seed=seed)
     clean_metrics = dict(result["metrics"])
     reported_metrics = privatize_metrics(clean_metrics, privacy_config)
 
@@ -149,9 +151,12 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
             "n_train": result["n_train"],
             "n_test": result["n_test"],
             "model": result["model"],
+            "adapter": result.get("adapter"),
+            "fingerprint": result.get("fingerprint"),
             "clean_metrics": clean_metrics,
             "reported_metrics": reported_metrics,
             "shift": result["shift"],
+            "error_slices": result.get("error_slices", {}),
         },
         privacy_config=privacy_config,
         config_snapshot=config.raw,
