@@ -1,0 +1,227 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from privatelabbench.config import RunnerConfig, load_config, required, section
+from privatelabbench.eval.metrics import summarize_metrics
+from privatelabbench.eval.predictions import evaluate_prediction_csv
+from privatelabbench.federated.evaluator import evaluate_federated_directory
+from privatelabbench.models.sklearn_baseline import evaluate_random_forest
+from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
+from privatelabbench.reports.json import write_json_report
+from privatelabbench.reports.markdown import (
+    write_federated_markdown_report,
+    write_markdown_report,
+    write_prediction_markdown_report,
+)
+from privatelabbench.tasks.molecules import load_molecule_csv
+
+
+def _privacy_config(config: RunnerConfig) -> PrivacyConfig:
+    privacy = section(config, "privacy")
+    return PrivacyConfig(
+        mode=str(privacy.get("mode", "none")),
+        epsilon=float(privacy.get("epsilon", 8.0)),
+        sensitivity=float(privacy.get("sensitivity", 1.0)),
+        seed=int(privacy.get("seed", 13)),
+    )
+
+
+def _report_path(config: RunnerConfig, key: str, default: str) -> str:
+    report = section(config, "report")
+    return str(report.get(key, default))
+
+
+def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
+    input_cfg = section(config, "input")
+    path = str(required(input_cfg, "path", section_name="input"))
+    target = str(required(input_cfg, "target_column", section_name="input"))
+    prediction_column = str(required(input_cfg, "prediction_column", section_name="input"))
+    task_type = input_cfg.get("task_type")
+    privacy_config = _privacy_config(config)
+
+    result = evaluate_prediction_csv(path, target=target, prediction_column=prediction_column, task_type=task_type)
+    clean_metrics = result.metrics
+    reported_metrics = privatize_metrics(clean_metrics, privacy_config)
+
+    json_path = write_json_report(
+        _report_path(config, "json", f"reports/{config.project}_prediction_eval.json"),
+        report_type="prediction_evaluation",
+        result={
+            "project": config.project,
+            "dataset_path": result.dataset_path,
+            "target_column": result.target_column,
+            "prediction_column": result.prediction_column,
+            "task_type": result.task_type,
+            "n_samples": result.n_samples,
+            "clean_metrics": clean_metrics,
+            "reported_metrics": reported_metrics,
+            "prediction_summary": result.prediction_summary,
+        },
+        privacy_config=privacy_config,
+    )
+    markdown_path = write_prediction_markdown_report(
+        _report_path(config, "markdown", f"reports/{config.project}_prediction_eval.md"),
+        result=result,
+        clean_metrics=clean_metrics,
+        private_metrics=reported_metrics,
+        privacy_config=privacy_config,
+        json_report_path=str(json_path),
+    )
+    return {
+        "project": config.project,
+        "workflow": config.workflow,
+        "task_type": result.task_type,
+        "n_samples": result.n_samples,
+        "clean_metrics": clean_metrics,
+        "reported_metrics": reported_metrics,
+        "markdown_report": str(markdown_path),
+        "json_report": str(json_path),
+        "privacy": privacy_summary(privacy_config),
+    }
+
+
+def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
+    input_cfg = section(config, "input")
+    path = str(required(input_cfg, "path", section_name="input"))
+    target = str(required(input_cfg, "target_column", section_name="input"))
+    smiles_column = str(input_cfg.get("smiles_column", "smiles"))
+    task_type = input_cfg.get("task_type")
+    test_size = float(input_cfg.get("test_size", 0.25))
+    seed = int(section(config, "privacy").get("seed", 13))
+    privacy_config = _privacy_config(config)
+
+    dataset = load_molecule_csv(path, target=target, smiles_column=smiles_column, task_type=task_type)
+    result = evaluate_random_forest(dataset, test_size=test_size, seed=seed)
+    clean_metrics = dict(result["metrics"])
+    reported_metrics = privatize_metrics(clean_metrics, privacy_config)
+
+    markdown_path = write_markdown_report(
+        _report_path(config, "markdown", f"reports/{config.project}_molecule_eval.md"),
+        dataset_path=path,
+        target=target,
+        result=result,
+        clean_metrics=clean_metrics,
+        private_metrics=reported_metrics,
+        privacy_config=privacy_config,
+    )
+    json_path = write_json_report(
+        _report_path(config, "json", f"reports/{config.project}_molecule_eval.json"),
+        report_type="molecule_evaluation",
+        result={
+            "project": config.project,
+            "dataset_path": path,
+            "target_column": target,
+            "task_type": result["task_type"],
+            "n_samples": result["n_samples"],
+            "n_train": result["n_train"],
+            "n_test": result["n_test"],
+            "model": result["model"],
+            "clean_metrics": clean_metrics,
+            "reported_metrics": reported_metrics,
+            "shift": result["shift"],
+        },
+        privacy_config=privacy_config,
+    )
+    return {
+        "project": config.project,
+        "workflow": config.workflow,
+        "task_type": result["task_type"],
+        "n_samples": result["n_samples"],
+        "clean_metrics": clean_metrics,
+        "reported_metrics": reported_metrics,
+        "markdown_report": str(markdown_path),
+        "json_report": str(json_path),
+        "privacy": privacy_summary(privacy_config),
+    }
+
+
+def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
+    input_cfg = section(config, "input")
+    client_dir = str(required(input_cfg, "client_dir", section_name="input"))
+    target = str(required(input_cfg, "target_column", section_name="input"))
+    smiles_column = str(input_cfg.get("smiles_column", "smiles"))
+    task_type = input_cfg.get("task_type")
+    test_size = float(input_cfg.get("test_size", 0.25))
+    seed = int(section(config, "privacy").get("seed", 13))
+    privacy_config = _privacy_config(config)
+
+    result = evaluate_federated_directory(
+        client_dir,
+        target=target,
+        smiles_column=smiles_column,
+        task_type=task_type,
+        test_size=test_size,
+        seed=seed,
+        privacy_config=privacy_config,
+    )
+    markdown_path = write_federated_markdown_report(
+        _report_path(config, "markdown", f"reports/{config.project}_federated_eval.md"),
+        result=result,
+        privacy_config=privacy_config,
+    )
+    json_path = write_json_report(
+        _report_path(config, "json", f"reports/{config.project}_federated_eval.json"),
+        report_type="federated_evaluation",
+        result={
+            "project": config.project,
+            "directory": result["directory"],
+            "target": result["target"],
+            "n_clients": result["n_clients"],
+            "total_samples": result["total_samples"],
+            "task_types": result["task_types"],
+            "models": result["models"],
+            "clients": result["clients"],
+            "aggregate_clean_metrics": result["aggregate_clean_metrics"],
+            "aggregate_reported_metrics": result["aggregate_reported_metrics"],
+            "aggregate_shift": result["aggregate_shift"],
+        },
+        privacy_config=privacy_config,
+    )
+    return {
+        "project": config.project,
+        "workflow": config.workflow,
+        "n_clients": result["n_clients"],
+        "total_samples": result["total_samples"],
+        "aggregate_clean_metrics": result["aggregate_clean_metrics"],
+        "aggregate_reported_metrics": result["aggregate_reported_metrics"],
+        "markdown_report": str(markdown_path),
+        "json_report": str(json_path),
+        "privacy": privacy_summary(privacy_config),
+    }
+
+
+def run_config(config_path: str) -> dict[str, Any]:
+    config = load_config(config_path)
+    if config.workflow == "predictions":
+        return run_prediction_workflow(config)
+    if config.workflow == "molecules":
+        return run_molecule_workflow(config)
+    if config.workflow == "federated":
+        return run_federated_workflow(config)
+    raise ValueError(f"Unsupported workflow: {config.workflow}")
+
+
+def print_run_summary(summary: dict[str, Any]) -> None:
+    print("PrivateLabBench config runner")
+    print(f"Project: {summary['project']}")
+    print(f"Workflow: {summary['workflow']}")
+    if "task_type" in summary:
+        print(f"Task: {summary['task_type']}")
+    if "n_samples" in summary:
+        print(f"Samples: {summary['n_samples']}")
+    if "n_clients" in summary:
+        print(f"Clients: {summary['n_clients']}")
+        print(f"Total samples: {summary['total_samples']}")
+    if "clean_metrics" in summary:
+        print(f"Clean metrics: {summarize_metrics(summary['clean_metrics'])}")
+    if "reported_metrics" in summary:
+        print(f"Reported metrics: {summarize_metrics(summary['reported_metrics'])}")
+    if "aggregate_clean_metrics" in summary:
+        print(f"Aggregate clean metrics: {summarize_metrics(summary['aggregate_clean_metrics'])}")
+    if "aggregate_reported_metrics" in summary:
+        print(f"Aggregate reported metrics: {summarize_metrics(summary['aggregate_reported_metrics'])}")
+    print(f"Privacy: {summary['privacy']}")
+    print(f"Markdown report saved to: {Path(summary['markdown_report'])}")
+    print(f"JSON report saved to: {Path(summary['json_report'])}")
