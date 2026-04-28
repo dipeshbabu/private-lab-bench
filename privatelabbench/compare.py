@@ -5,6 +5,7 @@ from typing import Any
 
 from privatelabbench.config import load_config
 from privatelabbench.eval.metrics import summarize_metrics
+from privatelabbench.privacy.dp import PrivacyConfig
 from privatelabbench.reports.json import write_json_report
 from privatelabbench.runner import run_config
 
@@ -39,7 +40,6 @@ def compare_configs(config_paths: list[str], *, markdown_path: str, json_path: s
         candidates = [run for run in runs if metric in run["clean_metrics"]]
         if not candidates:
             continue
-        # Higher is better for these metrics; lower is better for errors/losses.
         lower_is_better = any(token in metric.lower() for token in ["mae", "mse", "rmse", "error", "loss"])
         best = sorted(candidates, key=lambda r: float(r["clean_metrics"][metric]), reverse=not lower_is_better)[0]
         best_by_metric[metric] = {
@@ -54,7 +54,12 @@ def compare_configs(config_paths: list[str], *, markdown_path: str, json_path: s
         "runs": runs,
         "best_by_metric": best_by_metric,
     }
-    write_json_report(json_path, report_type="model_comparison", result=payload)
+    write_json_report(
+        json_path,
+        report_type="model_comparison",
+        result=payload,
+        privacy_config=PrivacyConfig(mode="none"),
+    )
     write_comparison_markdown(markdown_path, payload, json_path=json_path)
     payload["markdown_report"] = markdown_path
     payload["json_report"] = json_path
