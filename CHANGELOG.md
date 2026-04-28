@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.0 - Config-based local runner
+
+### Added
+
+- Added `privatelabbench run <config.yaml>` for repeatable local evaluation workflows.
+- Added YAML config loader and validation.
+- Added config runner support for prediction, molecule, and federated workflows.
+- Added example configs under `configs/`.
+- Added JSON export for molecule and federated config runs.
+- Added config runner tests.
+- Added config runner CI smoke test.
+- Added PyYAML dependency.
+
+### Notes
+
+This release makes PrivateLabBench feel closer to a customer-deployable local runner. A pilot user can now keep their evaluation settings in a YAML file and rerun the same private benchmark without remembering long CLI commands.
+
 ## 0.3.0 - Customer prediction evaluation and JSON reports
 
 ### Added
