@@ -14,6 +14,7 @@ from privatelabbench.reports.markdown import (
     write_markdown_report,
     write_prediction_markdown_report,
 )
+from privatelabbench.runner import print_run_summary, run_config
 from privatelabbench.tasks.molecules import load_molecule_csv
 
 
@@ -39,6 +40,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
+    run = sub.add_parser("run", help="Run an evaluation workflow from a YAML config file.")
+    run.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
+
     eval_mol = sub.add_parser("eval-molecules", help="Evaluate a molecular property prediction CSV locally.")
     eval_mol.add_argument("csv_path", help="Path to a CSV containing SMILES and target columns.")
     add_common_eval_args(eval_mol)
@@ -62,6 +66,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 def make_privacy_config(args: argparse.Namespace) -> PrivacyConfig:
     return PrivacyConfig(mode=args.privacy, epsilon=args.epsilon, sensitivity=args.sensitivity, seed=args.seed)
+
+
+def run_from_config(args: argparse.Namespace) -> int:
+    summary = run_config(args.config_path)
+    print_run_summary(summary)
+    return 0
 
 
 def eval_molecules(args: argparse.Namespace) -> int:
@@ -173,6 +183,8 @@ def eval_predictions(args: argparse.Namespace) -> int:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
+    if args.command == "run":
+        return run_from_config(args)
     if args.command == "eval-molecules":
         return eval_molecules(args)
     if args.command == "eval-federated":
