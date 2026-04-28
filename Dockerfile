@@ -13,13 +13,15 @@ COPY examples ./examples
 COPY docs ./docs
 
 RUN python -m pip install --upgrade pip && \
-    pip install -e .
+    pip install -e '.[api]'
 
 RUN useradd --create-home --shell /bin/bash appuser && \
-    mkdir -p /app/reports /data && \
+    mkdir -p /app/reports /data /app/.privatelabbench_api/runs && \
     chown -R appuser:appuser /app /data
 
 USER appuser
+
+EXPOSE 8000
 
 ENTRYPOINT ["privatelabbench"]
 CMD ["--help"]
