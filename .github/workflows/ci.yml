@@ -46,12 +46,22 @@ jobs:
           privatelabbench eval-predictions examples/predictions_demo.csv --target label --prediction-column pred --privacy dp --epsilon 8 --report outputs/ci_prediction_report.md --json-report outputs/ci_prediction_report.json
           test -f outputs/ci_prediction_report.md
           test -f outputs/ci_prediction_report.json
+          privatelabbench verify-report outputs/ci_prediction_report.json
 
       - name: Smoke test config runner
         run: |
           privatelabbench run configs/prediction_eval.yaml
           test -f reports/kinase_prediction_eval.md
           test -f reports/kinase_prediction_eval.json
+          test -f reports/kinase_prediction_audit.jsonl
+          privatelabbench verify-report reports/kinase_prediction_eval.json
+
+      - name: Smoke test signed report verification
+        env:
+          PRIVATELABBENCH_SIGNING_SECRET: ci-secret
+        run: |
+          privatelabbench run configs/prediction_eval.yaml
+          privatelabbench verify-report reports/kinase_prediction_eval.json --signing-secret ci-secret
 
   docker:
     runs-on: ubuntu-latest
@@ -67,3 +77,4 @@ jobs:
           docker run --rm -v "$PWD/reports:/app/reports" privatelabbench:ci run configs/prediction_eval.yaml
           test -f reports/kinase_prediction_eval.md
           test -f reports/kinase_prediction_eval.json
+          test -f reports/kinase_prediction_audit.jsonl
