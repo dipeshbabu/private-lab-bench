@@ -31,7 +31,12 @@ jobs:
       - name: Run tests
         run: pytest -q
 
-      - name: Smoke test CLI
+      - name: Smoke test molecule CLI
         run: |
           privatelabbench eval-molecules examples/molecules_demo.csv --target label --privacy dp --epsilon 8 --report outputs/ci_molecule_report.md
           test -f outputs/ci_molecule_report.md
+
+      - name: Smoke test federated CLI
+        run: |
+          privatelabbench eval-federated examples/labs --target label --privacy dp --epsilon 8 --report outputs/ci_federated_report.md
+          test -f outputs/ci_federated_report.md
