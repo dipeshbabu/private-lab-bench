@@ -14,6 +14,7 @@ def test_prediction_runner_writes_reports(tmp_path):
     config_path = tmp_path / "prediction_eval.yaml"
     md_path = tmp_path / "prediction.md"
     json_path = tmp_path / "prediction.json"
+    audit_path = tmp_path / "audit.jsonl"
     config_path.write_text(
         f"""
 project: test-prediction
@@ -31,14 +32,19 @@ privacy:
 report:
   markdown: {md_path}
   json: {json_path}
+audit:
+  path: {audit_path}
 """.strip()
     )
     summary = run_config(str(config_path))
     assert summary["workflow"] == "predictions"
     assert md_path.exists()
     assert json_path.exists()
+    assert audit_path.exists()
     payload = json.loads(json_path.read_text())
     assert payload["report_type"] == "prediction_evaluation"
+    assert payload["config_snapshot"]["project"] == "test-prediction"
+    assert payload["integrity"]["payload_sha256"]
 
 
 def test_molecule_runner_writes_reports(tmp_path):
