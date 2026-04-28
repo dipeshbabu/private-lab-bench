@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.6.0 - Signed reports and audit metadata
+
+### Added
+
+- Added canonical JSON report hashing with SHA256.
+- Added optional HMAC-SHA256 report signing.
+- Added `privatelabbench verify-report` CLI command.
+- Added config snapshots to config-driven JSON reports.
+- Added local JSONL audit logs for config runner executions.
+- Added report integrity tests covering valid, signed, and tampered reports.
+- Added CI smoke tests for report verification and signed report verification.
+- Added report integrity documentation under `docs/report_integrity.md`.
+- Bumped package version to `0.6.0`.
+
+### Notes
+
+This release makes evaluation artifacts more suitable for pilots. A customer can run a local evaluation, produce a JSON report with integrity metadata, optionally sign it using a local secret, and verify that the report was not changed before sharing it internally.
+
 ## 0.5.0 - Dockerized local runner and customer pilot docs
 
 ### Added
