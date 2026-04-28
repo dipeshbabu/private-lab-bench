@@ -10,6 +10,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.9", "3.10", "3.11"]
 
@@ -27,6 +28,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
           pip install pytest
+
+      - name: Prepare output directories
+        run: mkdir -p outputs reports
 
       - name: Run tests
         run: pytest -q
@@ -74,6 +78,7 @@ jobs:
 
       - name: Smoke test Docker runner
         run: |
+          mkdir -p reports
           docker run --rm -v "$PWD/reports:/app/reports" privatelabbench:ci run configs/prediction_eval.yaml
           test -f reports/kinase_prediction_eval.md
           test -f reports/kinase_prediction_eval.json
