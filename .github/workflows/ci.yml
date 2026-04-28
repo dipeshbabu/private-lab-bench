@@ -52,3 +52,18 @@ jobs:
           privatelabbench run configs/prediction_eval.yaml
           test -f reports/kinase_prediction_eval.md
           test -f reports/kinase_prediction_eval.json
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t privatelabbench:ci .
+
+      - name: Smoke test Docker runner
+        run: |
+          docker run --rm -v "$PWD/reports:/app/reports" privatelabbench:ci run configs/prediction_eval.yaml
+          test -f reports/kinase_prediction_eval.md
+          test -f reports/kinase_prediction_eval.json
