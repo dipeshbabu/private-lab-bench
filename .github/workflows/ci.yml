@@ -60,10 +60,18 @@ jobs:
           test -f reports/kinase_prediction_audit.jsonl
           privatelabbench verify-report reports/kinase_prediction_eval.json
 
+      - name: Smoke test sanitized export
+        run: |
+          privatelabbench export-sanitized configs/prediction_eval.yaml --organization-id ci-lab --out outputs/sanitized_payload.json
+          test -f outputs/sanitized_payload.json
+          python -c "import json; p=json.load(open('outputs/sanitized_payload.json')); assert p['organization_id']=='ci-lab'; assert 'dataset_path' not in json.dumps(p)"
+
       - name: Smoke test API import and CLI entrypoint
         run: |
           python -c "from privatelabbench.api import app; print(app.title)"
+          python -c "from privatelabbench.dashboard.api import app; print(app.title)"
           privatelabbench serve --help
+          privatelabbench serve-dashboard --help
 
       - name: Smoke test signed report verification
         env:
