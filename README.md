@@ -9,6 +9,7 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - Molecular property prediction from `smiles,target` CSV files
 - External prediction evaluation for customer-owned models
 - Config-based local runner with YAML workflows
+- Local FastAPI service for product-style integrations
 - Dockerized local runner for customer pilots
 - Adapter interface for scientific model integrations
 - Dependency-light hashed SMILES fingerprints
@@ -33,13 +34,19 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 pip install -e .
 ```
 
+API server support:
+
+```bash
+pip install -e '.[api]'
+```
+
 Optional RDKit support:
 
 ```bash
 pip install -e '.[rdkit]'
 ```
 
-Or install minimal dependencies manually:
+Or install dependencies manually:
 
 ```bash
 pip install -r requirements.txt
@@ -92,6 +99,35 @@ configs/molecule_eval.yaml
 configs/molecule_eval_rdkit.yaml
 configs/federated_eval.yaml
 ```
+
+## Local API server
+
+The API wraps the same local runner so a dashboard, desktop app, or customer backend can launch evaluations without raw data leaving the customer environment.
+
+Start the server:
+
+```bash
+export PRIVATELABBENCH_API_KEY=dev-secret
+privatelabbench serve --host 127.0.0.1 --port 8000
+```
+
+Run an existing config:
+
+```bash
+curl -X POST http://127.0.0.1:8000/v1/runs \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: dev-secret' \
+  -d '{"config_path":"configs/prediction_eval.yaml","run_id":"demo-run"}'
+```
+
+Fetch run metadata or reports:
+
+```bash
+curl -H 'x-api-key: dev-secret' http://127.0.0.1:8000/v1/runs/demo-run
+curl -H 'x-api-key: dev-secret' http://127.0.0.1:8000/v1/runs/demo-run/report/markdown
+```
+
+If `PRIVATELABBENCH_API_KEY` is unset, the local API runs without authentication for development only.
 
 ## Adapter-based molecule evaluation
 
