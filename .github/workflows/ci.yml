@@ -26,8 +26,8 @@ jobs:
       - name: Install package
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
-          pip install pytest
+          pip install -e '.[api]'
+          pip install pytest httpx
 
       - name: Prepare output directories
         run: mkdir -p outputs reports
@@ -59,6 +59,11 @@ jobs:
           test -f reports/kinase_prediction_eval.json
           test -f reports/kinase_prediction_audit.jsonl
           privatelabbench verify-report reports/kinase_prediction_eval.json
+
+      - name: Smoke test API import and CLI entrypoint
+        run: |
+          python -c "from privatelabbench.api import app; print(app.title)"
+          privatelabbench serve --help
 
       - name: Smoke test signed report verification
         env:
