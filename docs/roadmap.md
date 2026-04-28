@@ -50,18 +50,31 @@ Status: implemented.
 
 ## v0.5: Dockerized local runner and onboarding
 
-Goal: make the product easier to pilot in a customer environment.
-
-Planned features:
+Status: implemented.
 
 - Dockerfile for local-only execution
 - `.dockerignore`
-- `docker run` example for configs
+- Docker CI smoke test
+- `docker run` examples for configs
 - customer onboarding guide
+- pilot checklist
 - local data privacy checklist
 - pilot success criteria template
 
-## v0.6: Scientific model adapters
+## v0.6: Signed reports and audit metadata
+
+Goal: make reports more trustworthy for customer pilots and later hosted dashboards.
+
+Planned features:
+
+- deterministic report hashing
+- SHA256 digest in JSON report metadata
+- optional HMAC report signature
+- `privatelabbench verify-report` command
+- config snapshot embedded in JSON reports
+- basic audit event log for local runs
+
+## v0.7: Scientific model adapters
 
 Goal: move beyond toy baselines.
 
@@ -72,7 +85,7 @@ Planned features:
 - simple graph neural network adapter
 - support for external model endpoints
 
-## v0.7: Privacy and attack evaluation
+## v0.8: Privacy and attack evaluation
 
 Goal: quantify what is leaked by evaluation artifacts.
 
@@ -83,7 +96,7 @@ Planned features:
 - DP budget reporting
 - privacy/utility tradeoff plots
 
-## v0.8: Local runner + hosted dashboard
+## v0.9: Local runner + hosted dashboard
 
 Goal: make the workflow product-like while keeping raw data local.
 
