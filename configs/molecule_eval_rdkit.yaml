@@ -1,0 +1,29 @@
+project: kinase_rdkit_rf
+workflow: molecules
+
+input:
+  path: examples/molecules_demo.csv
+  target_column: label
+  smiles_column: smiles
+  task_type: classification
+  test_size: 0.25
+
+model:
+  adapter: rdkit_random_forest
+  fingerprint: rdkit_morgan
+  n_bits: 2048
+  radius: 2
+  n_estimators: 200
+
+privacy:
+  mode: dp
+  epsilon: 8.0
+  sensitivity: 1.0
+  seed: 13
+
+report:
+  markdown: reports/kinase_rdkit_rf_eval.md
+  json: reports/kinase_rdkit_rf_eval.json
+
+audit:
+  path: reports/kinase_rdkit_rf_audit.jsonl
