@@ -15,6 +15,7 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - Dataset shift summary
 - Markdown report export
 - CLI entrypoint
+- CI tests across Python 3.9, 3.10, and 3.11
 
 ## Install
 
@@ -46,6 +47,8 @@ Reported metrics: ...
 Report saved to: reports/molecule_eval_report.md
 ```
 
+An example generated report is available at [`examples/reports/molecule_eval_report.md`](examples/reports/molecule_eval_report.md).
+
 ## CSV format
 
 ```csv
@@ -57,11 +60,18 @@ c1ccccc1,0.74
 
 For classification tasks, labels should be `0` or `1`. For regression tasks, labels can be continuous values.
 
+## Project files
+
+- [`docs/roadmap.md`](docs/roadmap.md): staged product and research roadmap
+- [`CONTRIBUTING.md`](CONTRIBUTING.md): development and privacy principles
+- [`CHANGELOG.md`](CHANGELOG.md): release notes
+- [`.github/workflows/ci.yml`](.github/workflows/ci.yml): automated tests and CLI smoke test
+
 ## Roadmap
 
+- Multi-client secure metric aggregation
 - RDKit Morgan fingerprints
 - ChemBERTa and GNN model adapters
-- Multi-client secure metric aggregation
 - Membership-inference and property-inference risk scoring
 - Federated evaluation reports across private lab clients
 - Hosted dashboard with local runner architecture
