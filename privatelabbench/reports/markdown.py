@@ -49,7 +49,47 @@ def write_markdown_report(
     lines.extend([
         "",
         "## Notes",
-        "PrivateLabBench v0.1 runs evaluation locally and reports only metrics. Raw scientific samples are not uploaded by this CLI.",
+        "PrivateLabBench runs evaluation locally and reports only metrics. Raw scientific samples are not uploaded by this CLI.",
+    ])
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def write_prediction_markdown_report(
+    output_path: str,
+    *,
+    result: object,
+    clean_metrics: Mapping[str, float],
+    private_metrics: Mapping[str, float],
+    privacy_config: PrivacyConfig,
+    json_report_path: str | None = None,
+) -> Path:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# PrivateLabBench Prediction Evaluation Report",
+        "",
+        "## Dataset",
+        f"- Source: `{result.dataset_path}`",
+        f"- Target column: `{result.target_column}`",
+        f"- Prediction column: `{result.prediction_column}`",
+        f"- Samples: {result.n_samples}",
+        f"- Task type: {result.task_type}",
+        "",
+        "## Clean local metrics",
+    ]
+    lines.extend(_format_metric_lines(clean_metrics))
+    lines.extend(["", "## Privacy-preserving reported metrics"])
+    lines.extend(_format_metric_lines(private_metrics))
+    lines.extend(["", "## Prediction summary"])
+    lines.extend(_format_metric_lines(result.prediction_summary))
+    lines.extend(["", "## Privacy mode", privacy_summary(privacy_config)])
+    if json_report_path:
+        lines.extend(["", "## Machine-readable report", f"- JSON report: `{json_report_path}`"])
+    lines.extend([
+        "",
+        "## Notes",
+        "This workflow evaluates externally generated model predictions. It is designed for customer-owned models where PrivateLabBench only sees local targets and predictions during local execution.",
     ])
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
