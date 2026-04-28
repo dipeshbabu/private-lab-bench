@@ -16,3 +16,8 @@ privacy:
 report:
   markdown: reports/kinase_prediction_eval.md
   json: reports/kinase_prediction_eval.json
+  # Optional. Prefer setting PRIVATELABBENCH_SIGNING_SECRET in the environment.
+  # signing_secret: replace-with-local-secret
+
+audit:
+  path: reports/kinase_prediction_audit.jsonl
