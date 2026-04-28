@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.0 - Customer prediction evaluation and JSON reports
+
+### Added
+
+- Added `eval-predictions` CLI command for externally generated model predictions.
+- Added prediction CSV evaluator for customer-owned models.
+- Added prediction summary statistics.
+- Added machine-readable JSON report writer with run metadata.
+- Added Markdown prediction evaluation reports.
+- Added prediction demo CSV under `examples/predictions_demo.csv`.
+- Added prediction evaluation tests.
+- Added prediction CLI smoke test to CI.
+
+### Notes
+
+This release makes the product easier to pilot because customers can evaluate their own model outputs without integrating model code into PrivateLabBench. They only need a local CSV containing the target column and prediction column.
+
 ## 0.2.0 - Multi-client private evaluation
 
 ### Added
