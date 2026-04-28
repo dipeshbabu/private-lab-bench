@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "private-lab-bench"
-version = "0.6.0"
+version = "0.7.0"
 description = "Local-first evaluation framework for scientific AI models."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -15,6 +15,10 @@ dependencies = [
   "scikit-learn>=1.0",
   "PyYAML>=6.0",
 ]
+
+[project.optional-dependencies]
+rdkit = ["rdkit>=2023.9.1"]
+dev = ["pytest>=7.0"]
 
 [project.scripts]
 privatelabbench = "privatelabbench.cli:main"
