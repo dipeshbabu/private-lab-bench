@@ -1,0 +1,19 @@
+project: molecule-baseline-demo
+workflow: molecules
+
+input:
+  path: examples/molecules_demo.csv
+  target_column: label
+  smiles_column: smiles
+  task_type: regression
+  test_size: 0.25
+
+privacy:
+  mode: dp
+  epsilon: 8
+  sensitivity: 1
+  seed: 13
+
+report:
+  markdown: reports/molecule_baseline_eval.md
+  json: reports/molecule_baseline_eval.json
