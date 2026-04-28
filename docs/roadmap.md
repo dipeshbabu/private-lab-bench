@@ -25,20 +25,31 @@ Status: implemented.
 - privacy-preserving aggregate report
 - example multi-lab datasets and report
 
-## v0.3: Secure benchmark reports
+## v0.3: Customer prediction evaluation and JSON reports
 
-Goal: make outputs useful for model comparison and pilot conversations.
+Status: implemented.
+
+- `eval-predictions` command for externally generated model outputs
+- Markdown prediction reports
+- JSON report schema with run metadata
+- prediction summary statistics
+- CI smoke test for prediction evaluation
+- customer-friendly path for evaluating private model outputs
+
+## v0.4: Config-based local runner
+
+Goal: make the workflow product-like and repeatable.
 
 Planned features:
 
-- JSON and Markdown benchmark reports
-- model cards for evaluated baselines
-- privacy risk section
-- per-client heterogeneity summary
+- `privatelabbench run privatelabbench.yaml`
+- YAML config schema
+- support for molecule, federated, and prediction workflows
+- stable output directory conventions
 - reproducible run metadata
-- stable report schema for a hosted dashboard
+- example customer configs
 
-## v0.4: Scientific model adapters
+## v0.5: Scientific model adapters
 
 Goal: move beyond toy baselines.
 
@@ -47,9 +58,9 @@ Planned features:
 - optional RDKit Morgan fingerprints
 - ChemBERTa adapter
 - simple graph neural network adapter
-- support for external prediction files
+- support for external model endpoints
 
-## v0.5: Privacy and attack evaluation
+## v0.6: Privacy and attack evaluation
 
 Goal: quantify what is leaked by evaluation artifacts.
 
@@ -60,7 +71,7 @@ Planned features:
 - DP budget reporting
 - privacy/utility tradeoff plots
 
-## v0.6: Local runner + hosted dashboard
+## v0.7: Local runner + hosted dashboard
 
 Goal: make the workflow product-like while keeping raw data local.
 
