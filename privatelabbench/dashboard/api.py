@@ -11,6 +11,7 @@ except ImportError as exc:  # pragma: no cover
 from privatelabbench.dashboard.auth import require_dashboard_api_key
 from privatelabbench.dashboard.schemas import AuditEvent, BenchmarkRun, SanitizedRunPayload
 from privatelabbench.dashboard.store import DashboardStore
+from privatelabbench import __version__
 
 
 DASHBOARD_DB_ENV = "PRIVATELABBENCH_DASHBOARD_DB"
@@ -22,14 +23,14 @@ def get_store() -> DashboardStore:
 
 app = FastAPI(
     title="PrivateLabBench Dashboard API",
-    version="0.1.0",
+    version=__version__,
     description="Hosted-dashboard API for sanitized scientific-model benchmark results.",
 )
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "privatelabbench-dashboard"}
+    return {"status": "ok", "service": "privatelabbench-dashboard", "version": __version__}
 
 
 @app.post("/v1/runs", response_model=BenchmarkRun, dependencies=[Depends(require_dashboard_api_key)])

@@ -7,6 +7,22 @@ from privatelabbench.dashboard.store import DashboardStore
 from privatelabbench.sync import sanitize_summary
 
 
+def test_dashboard_health_endpoint():
+    from fastapi.testclient import TestClient
+
+    from privatelabbench import __version__
+    from privatelabbench.dashboard.api import app
+
+    response = TestClient(app).get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ok",
+        "service": "privatelabbench-dashboard",
+        "version": __version__,
+    }
+
+
 def test_sanitize_summary_excludes_private_fields(tmp_path):
     report = tmp_path / "report.json"
     report.write_text(json.dumps({"ok": True}), encoding="utf-8")

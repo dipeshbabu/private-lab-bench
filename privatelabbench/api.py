@@ -18,6 +18,7 @@ except ImportError as exc:  # pragma: no cover - exercised only when api extra i
         "Install them with: pip install -e '.[api]'"
     ) from exc
 
+from privatelabbench import __version__
 from privatelabbench.runner import run_config
 
 
@@ -51,7 +52,7 @@ class RunRecord(BaseModel):
 
 app = FastAPI(
     title="PrivateLabBench API",
-    version="0.8.0",
+    version=__version__,
     description="Local-first API for running private scientific model evaluations without uploading raw lab data.",
 )
 
@@ -120,7 +121,7 @@ def _materialize_config(request: RunRequest, run_id: str) -> str:
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "privatelabbench", "version": "0.8.0"}
+    return {"status": "ok", "service": "privatelabbench", "version": __version__}
 
 
 @app.post(f"/{API_VERSION}/runs", response_model=RunRecord, dependencies=[Depends(require_api_key)])

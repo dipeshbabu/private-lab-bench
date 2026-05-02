@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from privatelabbench import __version__
 from privatelabbench import api
 from privatelabbench.api import app
 
@@ -14,6 +15,7 @@ def test_health_endpoint() -> None:
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+    assert response.json()["version"] == __version__
 
 
 def test_create_run_with_inline_prediction_config(tmp_path: Path, monkeypatch) -> None:
