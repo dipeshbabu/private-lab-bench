@@ -23,6 +23,50 @@ def test_dashboard_health_endpoint():
     }
 
 
+def test_dashboard_home_renders_sanitized_runs(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from privatelabbench.dashboard.api import app
+
+    monkeypatch.delenv("PRIVATELABBENCH_DASHBOARD_API_KEY", raising=False)
+    monkeypatch.setenv("PRIVATELABBENCH_DASHBOARD_DB", str(tmp_path / "dashboard.db"))
+    store = DashboardStore(tmp_path / "dashboard.db")
+    store.create_run(
+        SanitizedRunPayload(
+            organization_id="org_1",
+            project="kinase-demo",
+            workflow="predictions",
+            task_type="regression",
+            n_samples=20,
+            metrics={"rmse": 0.4},
+            privacy={"mode": "dp"},
+            metadata={"dataset_path": "/secret/lab.csv"},
+        )
+    )
+
+    response = TestClient(app).get("/")
+
+    assert response.status_code == 200
+    assert "PrivateLabBench Dashboard" in response.text
+    assert "kinase-demo" in response.text
+    assert "rmse" in response.text
+    assert "0.4" in response.text
+    assert "/secret/lab.csv" not in response.text
+
+
+def test_dashboard_home_accepts_api_key_query(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from privatelabbench.dashboard.api import app
+
+    monkeypatch.setenv("PRIVATELABBENCH_DASHBOARD_API_KEY", "dashboard-secret")
+    monkeypatch.setenv("PRIVATELABBENCH_DASHBOARD_DB", str(tmp_path / "dashboard.db"))
+    client = TestClient(app)
+
+    assert client.get("/").status_code == 401
+    assert client.get("/?api_key=dashboard-secret").status_code == 200
+
+
 def test_sanitize_summary_excludes_private_fields(tmp_path):
     report = tmp_path / "report.json"
     report.write_text(json.dumps({"ok": True}), encoding="utf-8")

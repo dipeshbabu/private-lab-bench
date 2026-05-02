@@ -166,6 +166,12 @@ curl -H 'x-api-key: dashboard-secret' http://127.0.0.1:8010/v1/runs
 curl -H 'x-api-key: dashboard-secret' http://127.0.0.1:8010/v1/audit-events
 ```
 
+Browser dashboard:
+
+```text
+http://127.0.0.1:8010/?api_key=dashboard-secret
+```
+
 The sync layer intentionally excludes raw rows, SMILES strings, local dataset paths, prediction summaries, client-level raw details, and free-form private lab data.
 
 ## Adapter-based molecule evaluation
@@ -334,7 +340,7 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 
 ## Roadmap
 
-- Hosted dashboard UI on top of the sanitized dashboard API
+- Dashboard filters, run detail pages, and deployment templates
 - ChemBERTa, MolFormer, Uni-Mol, and GNN adapters
 - Protein, microscopy, robotics, and materials prediction tasks
 - Membership-inference and property-inference risk scoring
