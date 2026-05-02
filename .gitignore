@@ -24,6 +24,7 @@ htmlcov/
 reports/
 outputs/
 artifacts/
+.privatelabbench_dashboard/
 *.log
 
 # Notebooks
