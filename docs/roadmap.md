@@ -63,9 +63,7 @@ Status: implemented.
 
 ## v0.6: Signed reports and audit metadata
 
-Goal: make reports more trustworthy for customer pilots and later hosted dashboards.
-
-Planned features:
+Status: implemented.
 
 - deterministic report hashing
 - SHA256 digest in JSON report metadata
@@ -78,9 +76,16 @@ Planned features:
 
 Goal: move beyond toy baselines.
 
-Planned features:
+Status: partially implemented.
+
+Implemented:
 
 - optional RDKit Morgan fingerprints
+- adapter interface for built-in and external evaluation paths
+- model comparison reports across configs
+
+Next adapter targets:
+
 - ChemBERTa adapter
 - simple graph neural network adapter
 - support for external model endpoints
@@ -100,13 +105,14 @@ Planned features:
 
 Goal: make the workflow product-like while keeping raw data local.
 
-Planned features:
+Status: implemented for sanitized dashboard sync pilots.
 
 - local runner agent
 - hosted aggregate dashboard
 - signed reports
 - team/project organization
-- private benchmark network prototype
+- sanitized export and sync commands
+- private benchmark network prototype remains future work
 
 ## Long-term domains
 

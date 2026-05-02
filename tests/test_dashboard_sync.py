@@ -28,6 +28,7 @@ def test_sanitize_summary_excludes_private_fields(tmp_path):
     assert payload.organization_id == "org_1"
     assert payload.project == "demo"
     assert payload.metrics == {"mae": 0.1, "rmse": 0.2}
+    assert payload.privacy == {"summary": "dp(epsilon=8.0, sensitivity=1.0)"}
     dumped = payload.model_dump_json()
     assert "/secret/lab.csv" not in dumped
     assert "do-not-sync" not in dumped
