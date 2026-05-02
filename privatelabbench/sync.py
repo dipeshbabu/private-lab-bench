@@ -33,6 +33,14 @@ def sha256_file(path: str | Path) -> str | None:
     return digest.hexdigest()
 
 
+def sanitize_privacy(value: Any) -> dict[str, Any]:
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        return {str(key): item for key, item in value.items()}
+    return {"summary": str(value)}
+
+
 def sanitize_summary(summary: dict[str, Any], organization_id: str = "local-org") -> SanitizedRunPayload:
     metrics = summary.get("reported_metrics") or summary.get("aggregate_reported_metrics") or {}
     artifacts: list[ArtifactMetadata] = []
@@ -65,7 +73,7 @@ def sanitize_summary(summary: dict[str, Any], organization_id: str = "local-org"
         n_clients=summary.get("n_clients"),
         total_samples=summary.get("total_samples"),
         metrics=metrics,
-        privacy=summary.get("privacy", {}),
+        privacy=sanitize_privacy(summary.get("privacy")),
         artifacts=artifacts,
         metadata=safe_metadata,
     )
