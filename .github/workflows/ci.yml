@@ -107,6 +107,7 @@ jobs:
       - name: Smoke test Docker runner
         run: |
           mkdir -p reports
+          chmod 777 reports
           docker run --rm -v "$PWD/reports:/app/reports" privatelabbench:ci run configs/prediction_eval.yaml
           test -f reports/kinase_prediction_eval.md
           test -f reports/kinase_prediction_eval.json

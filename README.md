@@ -238,6 +238,13 @@ Build the local runner image:
 docker build -t privatelabbench:local .
 ```
 
+On Linux hosts, make sure the mounted report directory is writable by the container user:
+
+```bash
+mkdir -p reports
+chmod 777 reports
+```
+
 Run the included demo:
 
 ```bash
