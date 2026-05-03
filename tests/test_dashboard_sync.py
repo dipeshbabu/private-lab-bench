@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from privatelabbench.dashboard.schemas import SanitizedRunPayload
+from privatelabbench.dashboard.schemas import ArtifactMetadata, SanitizedRunPayload
 from privatelabbench.dashboard.store import DashboardStore
 from privatelabbench.sync import sanitize_summary
 
@@ -31,7 +31,7 @@ def test_dashboard_home_renders_sanitized_runs(tmp_path, monkeypatch):
     monkeypatch.delenv("PRIVATELABBENCH_DASHBOARD_API_KEY", raising=False)
     monkeypatch.setenv("PRIVATELABBENCH_DASHBOARD_DB", str(tmp_path / "dashboard.db"))
     store = DashboardStore(tmp_path / "dashboard.db")
-    store.create_run(
+    created = store.create_run(
         SanitizedRunPayload(
             organization_id="org_1",
             project="kinase-demo",
@@ -51,6 +51,49 @@ def test_dashboard_home_renders_sanitized_runs(tmp_path, monkeypatch):
     assert "kinase-demo" in response.text
     assert "rmse" in response.text
     assert "0.4" in response.text
+    assert f"/runs/{created.id}" in response.text
+    assert "/secret/lab.csv" not in response.text
+
+
+def test_dashboard_run_detail_renders_sanitized_metadata(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from privatelabbench.dashboard.api import app
+
+    monkeypatch.delenv("PRIVATELABBENCH_DASHBOARD_API_KEY", raising=False)
+    monkeypatch.setenv("PRIVATELABBENCH_DASHBOARD_DB", str(tmp_path / "dashboard.db"))
+    store = DashboardStore(tmp_path / "dashboard.db")
+    created = store.create_run(
+        SanitizedRunPayload(
+            organization_id="org_1",
+            project="kinase-demo",
+            workflow="predictions",
+            task_type="regression",
+            n_samples=20,
+            metrics={"rmse": 0.4},
+            privacy={"summary": "DP-style metric noise applied."},
+            artifacts=[
+                ArtifactMetadata(
+                    name="kinase_prediction_eval.json",
+                    kind="json",
+                    sha256="abc123",
+                )
+            ],
+            metadata={"release": "pilot", "dataset_path": "/secret/lab.csv"},
+        )
+    )
+
+    response = TestClient(app).get(f"/runs/{created.id}")
+
+    assert response.status_code == 200
+    assert f"Run {created.id}" in response.text
+    assert "kinase-demo" in response.text
+    assert "rmse" in response.text
+    assert "DP-style metric noise applied." in response.text
+    assert "kinase_prediction_eval.json" in response.text
+    assert "abc123" in response.text
+    assert "pilot" in response.text
+    assert "run_synced" in response.text
     assert "/secret/lab.csv" not in response.text
 
 
@@ -65,6 +108,27 @@ def test_dashboard_home_accepts_api_key_query(tmp_path, monkeypatch):
 
     assert client.get("/").status_code == 401
     assert client.get("/?api_key=dashboard-secret").status_code == 200
+
+
+def test_dashboard_run_detail_accepts_api_key_query(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from privatelabbench.dashboard.api import app
+
+    monkeypatch.setenv("PRIVATELABBENCH_DASHBOARD_API_KEY", "dashboard-secret")
+    monkeypatch.setenv("PRIVATELABBENCH_DASHBOARD_DB", str(tmp_path / "dashboard.db"))
+    created = DashboardStore(tmp_path / "dashboard.db").create_run(
+        SanitizedRunPayload(
+            organization_id="org_1",
+            project="kinase-demo",
+            workflow="predictions",
+            metrics={"rmse": 0.4},
+        )
+    )
+    client = TestClient(app)
+
+    assert client.get(f"/runs/{created.id}").status_code == 401
+    assert client.get(f"/runs/{created.id}?api_key=dashboard-secret").status_code == 200
 
 
 def test_sanitize_summary_excludes_private_fields(tmp_path):

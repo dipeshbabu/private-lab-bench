@@ -48,6 +48,8 @@ Browser UI:
 https://dashboard.example.com/?api_key=replace-with-customer-secret
 ```
 
+The run table links each run ID to a detail page with sanitized metrics, privacy metadata, artifact hashes, and related audit events.
+
 API:
 
 ```bash
