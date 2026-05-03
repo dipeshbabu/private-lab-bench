@@ -346,6 +346,7 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 - [`configs/`](configs/): example local runner configs
 - [`docs/ADAPTERS.md`](docs/ADAPTERS.md): adapter interface and model integration guide
 - [`docs/customer_onboarding.md`](docs/customer_onboarding.md): customer pilot guide
+- [`docs/dashboard_deployment.md`](docs/dashboard_deployment.md): hosted dashboard deployment guide
 - [`docs/pilot_checklist.md`](docs/pilot_checklist.md): pilot readiness checklist
 - [`docs/roadmap.md`](docs/roadmap.md): staged product and research roadmap
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): development and privacy principles
