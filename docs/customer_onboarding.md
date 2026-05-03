@@ -87,6 +87,9 @@ docker build -t privatelabbench:local .
 Run the included demo config:
 
 ```bash
+mkdir -p reports
+chmod 777 reports
+
 docker run --rm \
   -v "$PWD/reports:/app/reports" \
   privatelabbench:local run configs/prediction_eval.yaml
@@ -95,6 +98,9 @@ docker run --rm \
 Run against customer-owned local data:
 
 ```bash
+mkdir -p reports
+chmod 777 reports
+
 docker run --rm \
   -v "$PWD/customer_data:/data" \
   -v "$PWD/reports:/app/reports" \
