@@ -135,6 +135,20 @@ If `PRIVATELABBENCH_API_KEY` is unset, the local API runs without authentication
 
 PrivateLabBench now has a hosted-dashboard path that keeps raw lab data local. The local runner evaluates data, writes full local reports, then sends only sanitized metadata such as project name, workflow, sample counts, reported/private metrics, privacy mode, and artifact hashes.
 
+One-command local demo on Windows:
+
+```powershell
+.\scripts\demo_dashboard.ps1 -OpenDashboard
+```
+
+One-command local demo on macOS/Linux:
+
+```bash
+bash scripts/demo_dashboard.sh
+```
+
+The demo starts the dashboard API if needed, syncs `configs/prediction_eval.yaml`, and prints the browser URL.
+
 Start the dashboard API:
 
 ```bash
