@@ -186,6 +186,8 @@ Browser dashboard:
 http://127.0.0.1:8010/?api_key=dashboard-secret
 ```
 
+Click a run ID in the dashboard to inspect sanitized metrics, privacy metadata, artifact hashes, and related audit events.
+
 The sync layer intentionally excludes raw rows, SMILES strings, local dataset paths, prediction summaries, client-level raw details, and free-form private lab data.
 
 ## Adapter-based molecule evaluation
