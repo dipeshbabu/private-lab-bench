@@ -28,7 +28,7 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - Model comparison reports across multiple configs
 - Markdown and JSON report export
 - CLI entrypoint
-- CI tests across Python 3.9, 3.10, and 3.11
+- CI tests across Python 3.10, 3.11, and 3.12
 
 ## Install
 
@@ -270,7 +270,14 @@ docker run --rm \
   privatelabbench:local run /data/customer_eval.yaml
 ```
 
-See [`docs/customer_onboarding.md`](docs/customer_onboarding.md) and [`docs/pilot_checklist.md`](docs/pilot_checklist.md) for the recommended pilot workflow.
+See [`docs/production_deployment.md`](docs/production_deployment.md), [`docs/customer_onboarding.md`](docs/customer_onboarding.md), and [`docs/pilot_checklist.md`](docs/pilot_checklist.md) for the recommended pilot workflow.
+
+Production-style dashboard deployment:
+
+```bash
+cp .env.example .env
+docker compose -f docker-compose.prod.yml --env-file .env up -d dashboard
+```
 
 ## Single-client quickstart
 
@@ -363,6 +370,7 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 - [`docs/ADAPTERS.md`](docs/ADAPTERS.md): adapter interface and model integration guide
 - [`docs/customer_onboarding.md`](docs/customer_onboarding.md): customer pilot guide
 - [`docs/dashboard_deployment.md`](docs/dashboard_deployment.md): hosted dashboard deployment guide
+- [`docs/production_deployment.md`](docs/production_deployment.md): production compose and customer pilot runbook
 - [`docs/pilot_quickstart.md`](docs/pilot_quickstart.md): customer self-service pilot quickstart
 - [`docs/pilot_checklist.md`](docs/pilot_checklist.md): pilot readiness checklist
 - [`docs/roadmap.md`](docs/roadmap.md): staged product and research roadmap

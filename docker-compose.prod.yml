@@ -1,0 +1,51 @@
+name: privatelabbench
+
+services:
+  dashboard:
+    image: ghcr.io/dipeshbabu/private-lab-bench:${PRIVATELABBENCH_IMAGE_TAG:-0.9.0}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PRIVATELABBENCH_ENV: ${PRIVATELABBENCH_ENV:-production}
+      PRIVATELABBENCH_DASHBOARD_API_KEY: ${PRIVATELABBENCH_DASHBOARD_API_KEY}
+      PRIVATELABBENCH_DASHBOARD_DB: ${PRIVATELABBENCH_DASHBOARD_DB:-/data/dashboard.db}
+      PRIVATELABBENCH_HEALTH_PORT: "8010"
+    command: ["serve-dashboard", "--host", "0.0.0.0", "--port", "8010"]
+    ports:
+      - "${PRIVATELABBENCH_DASHBOARD_PORT:-8010}:8010"
+    volumes:
+      - dashboard-data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health', timeout=2).read()",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  api:
+    image: ghcr.io/dipeshbabu/private-lab-bench:${PRIVATELABBENCH_IMAGE_TAG:-0.9.0}
+    profiles: ["api"]
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PRIVATELABBENCH_ENV: ${PRIVATELABBENCH_ENV:-production}
+      PRIVATELABBENCH_API_KEY: ${PRIVATELABBENCH_API_KEY}
+      PRIVATELABBENCH_RUN_ROOT: ${PRIVATELABBENCH_RUN_ROOT:-/data/runs}
+      PRIVATELABBENCH_HEALTH_PORT: "8000"
+    command: ["serve", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "${PRIVATELABBENCH_API_PORT:-8000}:8000"
+    volumes:
+      - api-data:/data
+
+volumes:
+  dashboard-data:
+  api-data:
