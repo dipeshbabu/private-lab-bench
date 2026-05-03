@@ -72,6 +72,7 @@ audit:
 
 ```bash
 pip install -e .
+privatelabbench validate-config configs/prediction_eval.yaml
 privatelabbench run configs/prediction_eval.yaml
 privatelabbench verify-report reports/kinase_prediction_eval.json
 ```

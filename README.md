@@ -62,6 +62,12 @@ The recommended customer workflow is to run an evaluation from a YAML config:
 privatelabbench run configs/prediction_eval.yaml
 ```
 
+Validate a config before running it:
+
+```bash
+privatelabbench validate-config configs/prediction_eval.yaml
+```
+
 Example config:
 
 ```yaml

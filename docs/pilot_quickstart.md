@@ -46,6 +46,12 @@ Use `task_type: classification` for binary labels.
 
 ## 3. Run Locally
 
+Validate the edited config before running an evaluation:
+
+```bash
+privatelabbench validate-config configs/customer_prediction_eval.yaml
+```
+
 Python:
 
 ```bash
@@ -121,6 +127,12 @@ Use the API key provided for the hosted dashboard:
 `Column not found`
 
 Check `target_column` and `prediction_column` against the CSV header.
+
+Run the preflight command for a faster diagnosis:
+
+```bash
+privatelabbench validate-config configs/customer_prediction_eval.yaml
+```
 
 `Permission denied: reports/...` in Docker
 
