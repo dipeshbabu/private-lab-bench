@@ -11,6 +11,7 @@ from privatelabbench.eval.predictions import evaluate_prediction_csv
 from privatelabbench.federated.evaluator import evaluate_federated_directory
 from privatelabbench.models.sklearn_baseline import evaluate_random_forest
 from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
+from privatelabbench.production import assert_runtime
 from privatelabbench.reports.integrity import verify_report
 from privatelabbench.reports.json import write_json_report
 from privatelabbench.reports.markdown import (
@@ -137,6 +138,7 @@ def validate_config_command(args: argparse.Namespace) -> int:
 
 
 def serve_api(args: argparse.Namespace) -> int:
+    assert_runtime("api")
     try:
         import uvicorn
     except ImportError as exc:
@@ -146,6 +148,7 @@ def serve_api(args: argparse.Namespace) -> int:
 
 
 def serve_dashboard_api(args: argparse.Namespace) -> int:
+    assert_runtime("dashboard")
     try:
         import uvicorn
     except ImportError as exc:

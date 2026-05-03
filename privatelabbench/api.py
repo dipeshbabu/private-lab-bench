@@ -23,7 +23,7 @@ from privatelabbench.runner import run_config
 
 
 API_VERSION = "v1"
-DEFAULT_RUN_ROOT = Path(os.getenv("PRIVATELABBENCH_RUN_ROOT", ".privatelabbench_api/runs"))
+DEFAULT_RUN_ROOT = Path(".privatelabbench_api/runs")
 API_KEY_ENV = "PRIVATELABBENCH_API_KEY"
 
 
@@ -62,7 +62,7 @@ def _utc_now() -> str:
 
 
 def _run_root() -> Path:
-    root = DEFAULT_RUN_ROOT
+    root = Path(os.getenv("PRIVATELABBENCH_RUN_ROOT", str(DEFAULT_RUN_ROOT)))
     root.mkdir(parents=True, exist_ok=True)
     return root
 

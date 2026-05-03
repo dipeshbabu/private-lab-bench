@@ -102,6 +102,11 @@ jobs:
           print(f"PACKAGE_VERSION={version}")
           PY
 
+      - name: Validate production compose config
+        run: |
+          cp .env.example .env
+          docker compose -f docker-compose.prod.yml --env-file .env config >/tmp/privatelabbench-compose.yml
+
       - name: Build Docker image
         run: docker build -t privatelabbench:ci .
 

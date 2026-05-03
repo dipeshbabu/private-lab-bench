@@ -19,6 +19,15 @@ The dashboard does not receive raw rows, SMILES strings, local dataset paths, pr
 
 ## Hosted Dashboard
 
+Production compose deployment:
+
+```bash
+cp .env.example .env
+docker compose -f docker-compose.prod.yml --env-file .env up -d dashboard
+```
+
+See [`production_deployment.md`](production_deployment.md) for the full operator runbook.
+
 Run the dashboard service from the published image:
 
 ```bash

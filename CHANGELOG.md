@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased - Production deployment hardening
+
+### Added
+
+- Added `docker-compose.prod.yml` for production-style dashboard deployment and optional local API service.
+- Added `.env.example` with required dashboard/API environment variables.
+- Added production runtime checks for required API keys and persistent storage paths.
+- Added production deployment runbook under `docs/production_deployment.md`.
+- Added CI validation for the production Docker Compose configuration.
+
+### Changed
+
+- Made the Docker healthcheck port configurable so dashboard and API containers can both report healthy.
+
 ## 0.9.0 - Sanitized hosted dashboard sync
 
 ### Added
