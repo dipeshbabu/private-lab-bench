@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased - Production deployment hardening
+## 0.10.0 - Production deployment hardening
 
 ### Added
 

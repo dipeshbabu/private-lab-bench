@@ -237,7 +237,7 @@ CI publishes the main-branch image to GitHub Container Registry:
 
 ```bash
 docker pull ghcr.io/dipeshbabu/private-lab-bench:latest
-docker pull ghcr.io/dipeshbabu/private-lab-bench:0.9.0
+docker pull ghcr.io/dipeshbabu/private-lab-bench:0.10.0
 ```
 
 Build the local runner image:

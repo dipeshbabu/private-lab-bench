@@ -73,13 +73,13 @@ chmod 777 reports
 docker run --rm \
   -v "$PWD/customer_data:/data:ro" \
   -v "$PWD/reports:/app/reports" \
-  ghcr.io/dipeshbabu/private-lab-bench:0.9.0 \
+  ghcr.io/dipeshbabu/private-lab-bench:0.10.0 \
   validate-config /data/customer_prediction_eval.yaml
 
 docker run --rm \
   -v "$PWD/customer_data:/data:ro" \
   -v "$PWD/reports:/app/reports" \
-  ghcr.io/dipeshbabu/private-lab-bench:0.9.0 \
+  ghcr.io/dipeshbabu/private-lab-bench:0.10.0 \
   sync-dashboard /data/customer_prediction_eval.yaml \
     --endpoint https://dashboard.example.com \
     --api-key "$PRIVATELABBENCH_DASHBOARD_API_KEY" \

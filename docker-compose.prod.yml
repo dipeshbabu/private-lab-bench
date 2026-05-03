@@ -2,7 +2,7 @@ name: privatelabbench
 
 services:
   dashboard:
-    image: ghcr.io/dipeshbabu/private-lab-bench:${PRIVATELABBENCH_IMAGE_TAG:-0.9.0}
+    image: ghcr.io/dipeshbabu/private-lab-bench:${PRIVATELABBENCH_IMAGE_TAG:-0.10.0}
     restart: unless-stopped
     env_file:
       - .env
@@ -30,7 +30,7 @@ services:
       start_period: 10s
 
   api:
-    image: ghcr.io/dipeshbabu/private-lab-bench:${PRIVATELABBENCH_IMAGE_TAG:-0.9.0}
+    image: ghcr.io/dipeshbabu/private-lab-bench:${PRIVATELABBENCH_IMAGE_TAG:-0.10.0}
     profiles: ["api"]
     restart: unless-stopped
     env_file:

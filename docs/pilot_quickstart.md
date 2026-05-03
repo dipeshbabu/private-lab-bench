@@ -70,7 +70,7 @@ docker run --rm \
   -v "$PWD/configs:/app/configs" \
   -v "$PWD/reports:/app/reports" \
   -v "$PWD/customer_data:/data" \
-  ghcr.io/dipeshbabu/private-lab-bench:0.9.0 \
+  ghcr.io/dipeshbabu/private-lab-bench:0.10.0 \
   run configs/customer_prediction_eval.yaml
 ```
 

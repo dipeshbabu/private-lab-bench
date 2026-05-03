@@ -31,7 +31,7 @@ See [`production_deployment.md`](production_deployment.md) for the full operator
 Run the dashboard service from the published image:
 
 ```bash
-docker pull ghcr.io/dipeshbabu/private-lab-bench:0.9.0
+docker pull ghcr.io/dipeshbabu/private-lab-bench:0.10.0
 
 docker run -d \
   --name privatelabbench-dashboard \
@@ -39,7 +39,7 @@ docker run -d \
   -e PRIVATELABBENCH_DASHBOARD_API_KEY="replace-with-customer-secret" \
   -e PRIVATELABBENCH_DASHBOARD_DB="/data/dashboard.db" \
   -v privatelabbench-dashboard-data:/data \
-  ghcr.io/dipeshbabu/private-lab-bench:0.9.0 \
+  ghcr.io/dipeshbabu/private-lab-bench:0.10.0 \
   serve-dashboard --host 0.0.0.0 --port 8010
 ```
 
@@ -119,7 +119,7 @@ Docker runner option:
 docker run --rm \
   -v "$PWD/customer_data:/data" \
   -v "$PWD/reports:/app/reports" \
-  ghcr.io/dipeshbabu/private-lab-bench:0.9.0 \
+  ghcr.io/dipeshbabu/private-lab-bench:0.10.0 \
   sync-dashboard /data/customer_eval.yaml \
     --endpoint https://dashboard.example.com \
     --api-key replace-with-customer-secret \
