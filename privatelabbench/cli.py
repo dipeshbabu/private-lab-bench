@@ -21,6 +21,7 @@ from privatelabbench.reports.markdown import (
 from privatelabbench.runner import print_run_summary, run_config
 from privatelabbench.sync import sanitize_summary, sync_payload, write_sanitized_payload
 from privatelabbench.tasks.molecules import load_molecule_csv
+from privatelabbench.validation import ConfigValidationResult, validate_config
 
 
 def add_privacy_args(parser: argparse.ArgumentParser) -> None:
@@ -47,6 +48,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     run = sub.add_parser("run", help="Run an evaluation workflow from a YAML config file.")
     run.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
+
+    validate = sub.add_parser("validate-config", help="Validate a YAML config before running it.")
+    validate.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
 
     serve = sub.add_parser("serve", help="Start the local PrivateLabBench API server.")
     serve.add_argument("--host", default="127.0.0.1", help="Host interface for the API server.")
@@ -107,6 +111,29 @@ def run_from_config(args: argparse.Namespace) -> int:
     summary = run_config(args.config_path)
     print_run_summary(summary)
     return 0
+
+
+def print_validation_result(result: ConfigValidationResult) -> None:
+    print("PrivateLabBench config validation")
+    print(f"Config: {result.config_path}")
+    if result.project:
+        print(f"Project: {result.project}")
+    if result.workflow:
+        print(f"Workflow: {result.workflow}")
+    if result.valid:
+        print("Valid: True")
+    else:
+        print("Valid: False")
+    for warning in result.warnings:
+        print(f"Warning: {warning}")
+    for error in result.errors:
+        print(f"Error: {error}")
+
+
+def validate_config_command(args: argparse.Namespace) -> int:
+    result = validate_config(args.config_path)
+    print_validation_result(result)
+    return 0 if result.valid else 1
 
 
 def serve_api(args: argparse.Namespace) -> int:
@@ -284,6 +311,8 @@ def main() -> int:
     args = parser.parse_args()
     if args.command == "run":
         return run_from_config(args)
+    if args.command == "validate-config":
+        return validate_config_command(args)
     if args.command == "serve":
         return serve_api(args)
     if args.command == "serve-dashboard":
