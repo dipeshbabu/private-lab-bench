@@ -1,0 +1,28 @@
+# Copy this file to customer_prediction_eval.yaml and edit the paths/columns.
+project: customer-private-prediction-eval
+workflow: predictions
+
+input:
+  # Local CSV path on the customer's machine or mounted Docker volume.
+  # CSV must include the target_column and prediction_column below.
+  path: /path/to/customer_predictions.csv
+  target_column: label
+  prediction_column: prediction
+  # Use "regression" for continuous labels or "classification" for 0/1 labels.
+  task_type: regression
+
+privacy:
+  # Use "dp" for DP-style reported metric noise, or "none" for exact local metrics.
+  mode: dp
+  epsilon: 8
+  sensitivity: 1
+  seed: 13
+
+report:
+  markdown: reports/customer_prediction_eval.md
+  json: reports/customer_prediction_eval.json
+  # Optional. Prefer setting PRIVATELABBENCH_SIGNING_SECRET in the environment.
+  # signing_secret: replace-with-local-secret
+
+audit:
+  path: reports/customer_prediction_audit.jsonl
