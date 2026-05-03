@@ -353,9 +353,11 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 ## Project files
 
 - [`configs/`](configs/): example local runner configs
+- [`configs/customer_prediction_eval.template.yaml`](configs/customer_prediction_eval.template.yaml): customer-owned prediction eval template
 - [`docs/ADAPTERS.md`](docs/ADAPTERS.md): adapter interface and model integration guide
 - [`docs/customer_onboarding.md`](docs/customer_onboarding.md): customer pilot guide
 - [`docs/dashboard_deployment.md`](docs/dashboard_deployment.md): hosted dashboard deployment guide
+- [`docs/pilot_quickstart.md`](docs/pilot_quickstart.md): customer self-service pilot quickstart
 - [`docs/pilot_checklist.md`](docs/pilot_checklist.md): pilot readiness checklist
 - [`docs/roadmap.md`](docs/roadmap.md): staged product and research roadmap
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): development and privacy principles
