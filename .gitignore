@@ -15,6 +15,7 @@ env/
 
 # Test and coverage
 .pytest_cache/
+.pytest-tmp/
 .coverage
 htmlcov/
 .mypy_cache/
@@ -25,6 +26,7 @@ reports/
 outputs/
 artifacts/
 .privatelabbench_dashboard/
+.privatelabbench_api/
 *.log
 
 # Notebooks
