@@ -10,6 +10,7 @@ from privatelabbench.adapters.fingerprints import build_fingerprint_adapter
 from privatelabbench.eval.metrics import classification_metrics, regression_metrics
 from privatelabbench.eval.shift import feature_shift_summary
 from privatelabbench.eval.slices import classification_error_slices, regression_error_slices
+from privatelabbench.privacy.attacks import membership_inference_risk
 from privatelabbench.tasks.molecules import MoleculeDataset
 
 
@@ -40,17 +41,28 @@ class RandomForestMoleculeAdapter:
             )
             model.fit(x_train, y_train.astype(int))
             if hasattr(model, "predict_proba"):
+                y_train_score = model.predict_proba(x_train)[:, 1]
                 y_score = model.predict_proba(x_test)[:, 1]
             else:
+                y_train_score = model.predict(x_train)
                 y_score = model.predict(x_test)
             metrics = classification_metrics(y_test.astype(int), y_score)
             slices = classification_error_slices(y_test.astype(int), y_score)
         else:
             model = RandomForestRegressor(n_estimators=self.n_estimators, random_state=seed)
             model.fit(x_train, y_train)
+            y_train_score = model.predict(x_train)
             y_score = model.predict(x_test)
             metrics = regression_metrics(y_test, y_score)
             slices = regression_error_slices(y_test, y_score)
+
+        privacy_risk = membership_inference_risk(
+            train_y=y_train,
+            train_score=y_train_score,
+            test_y=y_test,
+            test_score=y_score,
+            task_type=dataset.task_type,
+        )
 
         return {
             "model": model.__class__.__name__,
@@ -63,6 +75,7 @@ class RandomForestMoleculeAdapter:
             "metrics": metrics,
             "shift": feature_shift_summary(x_train, x_test),
             "error_slices": slices,
+            "privacy_risk": privacy_risk,
         }
 
 
