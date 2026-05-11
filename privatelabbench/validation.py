@@ -135,11 +135,15 @@ def _validate_predictions(config: RunnerConfig, *, config_path: Path, errors: li
     path_value = required(input_cfg, "path", section_name="input")
     target = str(required(input_cfg, "target_column", section_name="input"))
     prediction_column = str(required(input_cfg, "prediction_column", section_name="input"))
+    split_column = input_cfg.get("split_column")
     _validate_task_type(input_cfg.get("task_type"), errors)
     path = _validate_input_file(path_value, config_path=config_path, errors=errors)
     if path is None:
         return
-    _require_columns(path, _csv_columns(path), {target, prediction_column}, errors)
+    required_columns = {target, prediction_column}
+    if split_column:
+        required_columns.add(str(split_column))
+    _require_columns(path, _csv_columns(path), required_columns, errors)
 
 
 def _validate_molecules(config: RunnerConfig, *, config_path: Path, errors: list[str]) -> None:

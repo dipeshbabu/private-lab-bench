@@ -26,6 +26,7 @@ PRIVATE_METADATA_KEYS = {
     "target",
     "target_column",
     "prediction_column",
+    "split_column",
     "prediction_summary",
     "clients",
     "shift",

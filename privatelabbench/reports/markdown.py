@@ -106,6 +106,9 @@ def write_prediction_markdown_report(
     lines.extend(["", "## Prediction summary"])
     lines.extend(_format_metric_lines(result.prediction_summary))
     lines.extend(["", "## Privacy mode", privacy_summary(privacy_config)])
+    if result.privacy_risk:
+        lines.extend(["", "## Privacy attack risk"])
+        lines.extend(_format_value_lines(result.privacy_risk))
     if json_report_path:
         lines.extend(["", "## Machine-readable report", f"- JSON report: `{json_report_path}`"])
     lines.extend([

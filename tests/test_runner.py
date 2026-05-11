@@ -47,6 +47,57 @@ audit:
     assert payload["integrity"]["payload_sha256"]
 
 
+def test_prediction_runner_writes_privacy_risk_when_split_column_is_configured(tmp_path):
+    csv_path = tmp_path / "predictions_with_split.csv"
+    config_path = tmp_path / "prediction_eval.yaml"
+    md_path = tmp_path / "prediction.md"
+    json_path = tmp_path / "prediction.json"
+    csv_path.write_text(
+        "\n".join(
+            [
+                "label,pred,split",
+                "0.10,0.10,train",
+                "0.20,0.21,train",
+                "0.80,0.78,member",
+                "0.90,0.88,1",
+                "0.10,0.45,test",
+                "0.20,0.52,holdout",
+                "0.80,0.51,nonmember",
+                "0.90,0.48,0",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    config_path.write_text(
+        f"""
+project: test-prediction-risk
+workflow: predictions
+input:
+  path: {csv_path}
+  target_column: label
+  prediction_column: pred
+  split_column: split
+  task_type: regression
+privacy:
+  mode: none
+report:
+  markdown: {md_path}
+  json: {json_path}
+""".strip(),
+        encoding="utf-8",
+    )
+
+    summary = run_config(str(config_path))
+
+    assert summary["privacy_risk_level"] in {"moderate", "high"}
+    assert summary["privacy_member_advantage"] > 0
+    assert "Privacy attack risk" in md_path.read_text(encoding="utf-8")
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    assert payload["result"]["split_column"] == "split"
+    assert payload["result"]["privacy_risk"]["attack"] == "loss_threshold_membership_inference"
+
+
 def test_molecule_runner_writes_reports(tmp_path):
     config_path = tmp_path / "molecule_eval.yaml"
     md_path = tmp_path / "molecule.md"

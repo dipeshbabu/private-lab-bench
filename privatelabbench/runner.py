@@ -68,9 +68,16 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     target = str(required(input_cfg, "target_column", section_name="input"))
     prediction_column = str(required(input_cfg, "prediction_column", section_name="input"))
     task_type = input_cfg.get("task_type")
+    split_column = input_cfg.get("split_column")
     privacy_config = _privacy_config(config)
 
-    result = evaluate_prediction_csv(path, target=target, prediction_column=prediction_column, task_type=task_type)
+    result = evaluate_prediction_csv(
+        path,
+        target=target,
+        prediction_column=prediction_column,
+        task_type=task_type,
+        split_column=str(split_column) if split_column else None,
+    )
     clean_metrics = result.metrics
     reported_metrics = privatize_metrics(clean_metrics, privacy_config)
 
@@ -87,6 +94,8 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
             "clean_metrics": clean_metrics,
             "reported_metrics": reported_metrics,
             "prediction_summary": result.prediction_summary,
+            "split_column": result.split_column,
+            "privacy_risk": result.privacy_risk or {},
         },
         privacy_config=privacy_config,
         config_snapshot=config.raw,
@@ -100,7 +109,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
         privacy_config=privacy_config,
         json_report_path=str(json_path),
     )
-    return {
+    summary = {
         "project": config.project,
         "workflow": config.workflow,
         "task_type": result.task_type,
@@ -111,6 +120,12 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
         "json_report": str(json_path),
         "privacy": privacy_summary(privacy_config),
     }
+    if result.privacy_risk:
+        summary["privacy_risk_level"] = result.privacy_risk.get("risk_level")
+        summary["privacy_attack_auc"] = result.privacy_risk.get("attack_auc")
+        summary["privacy_member_advantage"] = result.privacy_risk.get("member_advantage")
+        summary["split_column"] = result.split_column
+    return summary
 
 
 def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
@@ -163,7 +178,7 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
         config_snapshot=config.raw,
         signing_secret=_signing_secret(config),
     )
-    return {
+    summary = {
         "project": config.project,
         "workflow": config.workflow,
         "task_type": result["task_type"],
@@ -174,6 +189,12 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
         "json_report": str(json_path),
         "privacy": privacy_summary(privacy_config),
     }
+    privacy_risk = dict(result.get("privacy_risk", {}))
+    if privacy_risk:
+        summary["privacy_risk_level"] = privacy_risk.get("risk_level")
+        summary["privacy_attack_auc"] = privacy_risk.get("attack_auc")
+        summary["privacy_member_advantage"] = privacy_risk.get("member_advantage")
+    return summary
 
 
 def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
@@ -266,6 +287,12 @@ def print_run_summary(summary: dict[str, Any]) -> None:
         print(f"Aggregate clean metrics: {summarize_metrics(summary['aggregate_clean_metrics'])}")
     if "aggregate_reported_metrics" in summary:
         print(f"Aggregate reported metrics: {summarize_metrics(summary['aggregate_reported_metrics'])}")
+    if "privacy_risk_level" in summary:
+        print(
+            "Privacy attack risk: "
+            f"{summary['privacy_risk_level']} "
+            f"(member advantage: {float(summary.get('privacy_member_advantage', 0.0)):.4f})"
+        )
     print(f"Privacy: {summary['privacy']}")
     print(f"Markdown report saved to: {Path(summary['markdown_report'])}")
     print(f"JSON report saved to: {Path(summary['json_report'])}")
