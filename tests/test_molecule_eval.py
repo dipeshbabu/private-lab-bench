@@ -9,6 +9,8 @@ def test_molecule_regression_eval_runs():
     assert result["task_type"] == "regression"
     assert result["n_samples"] == 20
     assert "mae" in result["metrics"]
+    assert result["privacy_risk"]["attack"] == "loss_threshold_membership_inference"
+    assert result["privacy_risk"]["risk_level"] in {"low", "moderate", "high"}
 
 
 def test_dp_metric_reporting_changes_metric():

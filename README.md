@@ -21,6 +21,7 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - Classification metrics: accuracy, F1, AUROC
 - Error slice analysis for model debugging
 - DP-style metric reporting
+- Local membership-inference risk scoring for trained molecule baselines
 - Dataset and prediction summaries
 - Single-client local evaluation
 - Multi-client private evaluation over a directory of lab CSVs
@@ -384,6 +385,7 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 - ChemBERTa, MolFormer, Uni-Mol, and GNN adapters
 - Protein, microscopy, robotics, and materials prediction tasks
 - Membership-inference and property-inference risk scoring
+- Model cards and customer-facing privacy risk histories
 - SOC2-ready tenant metadata, audit trails, and deployment templates
 
 ## Non-goals for the current MVP

@@ -10,6 +10,16 @@ def _format_metric_lines(metrics: Mapping[str, float]) -> list[str]:
     return [f"- {key}: {float(value):.6f}" for key, value in metrics.items()]
 
 
+def _format_report_value(value: object) -> str:
+    if isinstance(value, float):
+        return f"{value:.6f}"
+    return str(value)
+
+
+def _format_value_lines(values: Mapping[str, object]) -> list[str]:
+    return [f"- {key}: {_format_report_value(value)}" for key, value in values.items()]
+
+
 def write_markdown_report(
     output_path: str,
     *,
@@ -52,6 +62,11 @@ def write_markdown_report(
     if error_slices:
         lines.extend(["", "## Error slices"])
         lines.extend(_format_metric_lines(error_slices))
+
+    privacy_risk = dict(result.get("privacy_risk", {}))
+    if privacy_risk:
+        lines.extend(["", "## Privacy attack risk"])
+        lines.extend(_format_value_lines(privacy_risk))
 
     lines.extend([
         "",

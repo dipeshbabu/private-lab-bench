@@ -94,9 +94,17 @@ Next adapter targets:
 
 Goal: quantify what is leaked by evaluation artifacts.
 
+Status: first local membership-risk scoring implemented for molecule baselines.
+
+Implemented:
+
+- aggregate loss-threshold membership-inference risk scoring
+- train/holdout attack AUC, attack accuracy, member advantage, and risk level
+- report-safe privacy-risk metadata in molecule Markdown and JSON reports
+
 Planned features:
 
-- membership inference risk scoring
+- membership inference risk scoring for external prediction workflows with customer-provided split labels
 - property inference risk scoring
 - DP budget reporting
 - privacy/utility tradeoff plots

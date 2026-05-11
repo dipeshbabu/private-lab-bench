@@ -157,6 +157,7 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
             "reported_metrics": reported_metrics,
             "shift": result["shift"],
             "error_slices": result.get("error_slices", {}),
+            "privacy_risk": result.get("privacy_risk", {}),
         },
         privacy_config=privacy_config,
         config_snapshot=config.raw,
