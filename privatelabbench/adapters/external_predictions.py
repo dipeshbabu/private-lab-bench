@@ -12,6 +12,7 @@ class ExternalPredictionAdapter:
     target_column: str
     prediction_column: str
     task_type: str | None = None
+    split_column: str | None = None
     name: str = "external_predictions"
 
     def evaluate_csv(self, csv_path: str):
@@ -20,4 +21,5 @@ class ExternalPredictionAdapter:
             target=self.target_column,
             prediction_column=self.prediction_column,
             task_type=self.task_type,
+            split_column=self.split_column,
         )

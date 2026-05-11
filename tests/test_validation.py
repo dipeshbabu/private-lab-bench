@@ -88,6 +88,31 @@ privacy:
     assert any("missing required column(s): pred" in error for error in result.errors)
 
 
+def test_validate_prediction_config_reports_missing_split_column(tmp_path):
+    csv_path = tmp_path / "predictions.csv"
+    csv_path.write_text("label,pred\n0.1,0.2\n", encoding="utf-8")
+    config_path = tmp_path / "prediction.yaml"
+    config_path.write_text(
+        f"""
+project: missing-split-demo
+workflow: predictions
+input:
+  path: {csv_path}
+  target_column: label
+  prediction_column: pred
+  split_column: split
+privacy:
+  mode: none
+""".strip(),
+        encoding="utf-8",
+    )
+
+    result = validate_config(str(config_path))
+
+    assert not result.valid
+    assert any("missing required column(s): split" in error for error in result.errors)
+
+
 def test_validate_config_command_returns_nonzero_for_invalid_config(tmp_path, capsys):
     config_path = tmp_path / "prediction.yaml"
     config_path.write_text(

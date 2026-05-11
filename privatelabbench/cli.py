@@ -98,6 +98,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_pred.add_argument("--target", required=True, help="Target column name.")
     eval_pred.add_argument("--prediction-column", required=True, help="Prediction column name.")
     eval_pred.add_argument("--task-type", choices=["regression", "classification"], default=None)
+    eval_pred.add_argument("--split-column", default=None, help="Optional train/test split column for membership-risk scoring.")
     add_privacy_args(eval_pred)
     eval_pred.add_argument("--report", default="reports/prediction_eval_report.md")
     eval_pred.add_argument("--json-report", default="reports/prediction_eval_report.json")
@@ -227,6 +228,13 @@ def eval_molecules(args: argparse.Namespace) -> int:
     print(f"Model: {result['model']}")
     print(f"Clean metrics: {summarize_metrics(clean_metrics)}")
     print(f"Reported metrics: {summarize_metrics(private_metrics)}")
+    privacy_risk = dict(result.get("privacy_risk", {}))
+    if privacy_risk:
+        print(
+            "Privacy attack risk: "
+            f"{privacy_risk['risk_level']} "
+            f"(member advantage: {float(privacy_risk['member_advantage']):.4f})"
+        )
     print(f"Privacy: {privacy_summary(privacy_config)}")
     print(f"Report saved to: {Path(report_path)}")
     return 0
@@ -271,6 +279,7 @@ def eval_predictions(args: argparse.Namespace) -> int:
         target=args.target,
         prediction_column=args.prediction_column,
         task_type=args.task_type,
+        split_column=args.split_column,
     )
     clean_metrics = result.metrics
     private_metrics = privatize_metrics(clean_metrics, privacy_config)
@@ -286,6 +295,8 @@ def eval_predictions(args: argparse.Namespace) -> int:
             "clean_metrics": clean_metrics,
             "reported_metrics": private_metrics,
             "prediction_summary": result.prediction_summary,
+            "split_column": result.split_column,
+            "privacy_risk": result.privacy_risk or {},
         },
         privacy_config=privacy_config,
     )
@@ -303,6 +314,12 @@ def eval_predictions(args: argparse.Namespace) -> int:
     print(f"Samples: {result.n_samples}")
     print(f"Clean metrics: {summarize_metrics(clean_metrics)}")
     print(f"Reported metrics: {summarize_metrics(private_metrics)}")
+    if result.privacy_risk:
+        print(
+            "Privacy attack risk: "
+            f"{result.privacy_risk['risk_level']} "
+            f"(member advantage: {float(result.privacy_risk['member_advantage']):.4f})"
+        )
     print(f"Privacy: {privacy_summary(privacy_config)}")
     print(f"Markdown report saved to: {Path(report_path)}")
     print(f"JSON report saved to: {Path(json_path)}")

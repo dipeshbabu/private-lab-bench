@@ -8,6 +8,9 @@ input:
   path: /path/to/customer_predictions.csv
   target_column: label
   prediction_column: prediction
+  # Optional: include a train/test split column to estimate membership-inference risk.
+  # Accepted values include train, test, member, nonmember, 1, and 0.
+  # split_column: split
   # Use "regression" for continuous labels or "classification" for 0/1 labels.
   task_type: regression
 

@@ -21,7 +21,7 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - Classification metrics: accuracy, F1, AUROC
 - Error slice analysis for model debugging
 - DP-style metric reporting
-- Local membership-inference risk scoring for trained molecule baselines
+- Local membership-inference risk scoring for trained molecule baselines and split-labeled prediction exports
 - Dataset and prediction summaries
 - Single-client local evaluation
 - Multi-client private evaluation over a directory of lab CSVs
@@ -79,6 +79,8 @@ input:
   path: examples/predictions_demo.csv
   target_column: label
   prediction_column: pred
+  # Optional. Enables membership-inference risk scoring when present.
+  # split_column: split
   task_type: regression
 
 privacy:
@@ -324,6 +326,19 @@ c1ccccc1,0.74,0.71
 ```
 
 This is the easiest customer workflow: they run their own model locally, add a prediction column, and PrivateLabBench generates privacy-preserving Markdown and JSON evaluation reports.
+
+If the CSV includes a split column, PrivateLabBench can also estimate aggregate membership-inference risk from train/member rows versus test/nonmember rows:
+
+```bash
+privatelabbench eval-predictions customer_predictions.csv \
+  --target label \
+  --prediction-column pred \
+  --split-column split \
+  --report reports/prediction_eval_report.md \
+  --json-report reports/prediction_eval_report.json
+```
+
+Accepted split values include `train`, `test`, `member`, `nonmember`, `1`, and `0`. Only aggregate privacy-risk metadata is reported.
 
 ## Multi-client private evaluation
 
