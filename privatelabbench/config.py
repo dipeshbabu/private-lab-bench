@@ -15,6 +15,7 @@ class RunnerConfig:
     project: str
     workflow: str
     raw: dict[str, Any]
+    config_path: str | None = None
 
 
 def load_config(path: str) -> RunnerConfig:
@@ -29,7 +30,7 @@ def load_config(path: str) -> RunnerConfig:
     workflow = str(payload.get("workflow", "")).strip().lower()
     if workflow not in SUPPORTED_WORKFLOWS:
         raise ValueError(f"Unsupported workflow '{workflow}'. Supported workflows: {', '.join(sorted(SUPPORTED_WORKFLOWS))}")
-    return RunnerConfig(project=project, workflow=workflow, raw=payload)
+    return RunnerConfig(project=project, workflow=workflow, raw=payload, config_path=str(config_path.resolve()))
 
 
 def section(config: RunnerConfig, name: str) -> dict[str, Any]:

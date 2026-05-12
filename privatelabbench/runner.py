@@ -35,6 +35,18 @@ def _report_path(config: RunnerConfig, key: str, default: str) -> str:
     return str(report.get(key, default))
 
 
+def _input_path(config: RunnerConfig, value: str) -> str:
+    candidate = Path(value)
+    if candidate.is_absolute():
+        return str(candidate)
+    cwd_relative = Path.cwd() / candidate
+    if cwd_relative.exists():
+        return str(cwd_relative)
+    if config.config_path:
+        return str(Path(config.config_path).parent / candidate)
+    return str(candidate)
+
+
 def _signing_secret(config: RunnerConfig) -> str | None:
     report = section(config, "report")
     secret = report.get("signing_secret") or os.getenv("PRIVATELABBENCH_SIGNING_SECRET")
@@ -64,7 +76,7 @@ def _write_audit(config: RunnerConfig, summary: dict[str, Any]) -> str:
 
 def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     input_cfg = section(config, "input")
-    path = str(required(input_cfg, "path", section_name="input"))
+    path = _input_path(config, str(required(input_cfg, "path", section_name="input")))
     target = str(required(input_cfg, "target_column", section_name="input"))
     prediction_column = str(required(input_cfg, "prediction_column", section_name="input"))
     task_type = input_cfg.get("task_type")
@@ -131,7 +143,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
 def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
     input_cfg = section(config, "input")
     model_cfg = section(config, "model")
-    path = str(required(input_cfg, "path", section_name="input"))
+    path = _input_path(config, str(required(input_cfg, "path", section_name="input")))
     target = str(required(input_cfg, "target_column", section_name="input"))
     smiles_column = str(input_cfg.get("smiles_column", "smiles"))
     task_type = input_cfg.get("task_type")
@@ -199,7 +211,7 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
 
 def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
     input_cfg = section(config, "input")
-    client_dir = str(required(input_cfg, "client_dir", section_name="input"))
+    client_dir = _input_path(config, str(required(input_cfg, "client_dir", section_name="input")))
     target = str(required(input_cfg, "target_column", section_name="input"))
     smiles_column = str(input_cfg.get("smiles_column", "smiles"))
     task_type = input_cfg.get("task_type")

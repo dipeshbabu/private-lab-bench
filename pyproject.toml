@@ -43,3 +43,4 @@ include = ["privatelabbench*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--basetemp=.pytest-tmp"
+pythonpath = ["."]

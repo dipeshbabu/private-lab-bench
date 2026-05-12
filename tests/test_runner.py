@@ -47,6 +47,40 @@ audit:
     assert payload["integrity"]["payload_sha256"]
 
 
+def test_prediction_runner_resolves_input_relative_to_config_file(tmp_path):
+    csv_path = tmp_path / "predictions.csv"
+    config_path = tmp_path / "prediction_eval.yaml"
+    md_path = tmp_path / "prediction.md"
+    json_path = tmp_path / "prediction.json"
+    csv_path.write_text(
+        "label,pred\n0.1,0.1\n0.2,0.25\n0.3,0.28\n0.4,0.39\n",
+        encoding="utf-8",
+    )
+    config_path.write_text(
+        f"""
+project: relative-prediction
+workflow: predictions
+input:
+  path: predictions.csv
+  target_column: label
+  prediction_column: pred
+  task_type: regression
+privacy:
+  mode: none
+report:
+  markdown: {md_path}
+  json: {json_path}
+""".strip(),
+        encoding="utf-8",
+    )
+
+    summary = run_config(str(config_path))
+
+    assert summary["workflow"] == "predictions"
+    assert summary["n_samples"] == 4
+    assert json_path.exists()
+
+
 def test_prediction_runner_writes_privacy_risk_when_split_column_is_configured(tmp_path):
     csv_path = tmp_path / "predictions_with_split.csv"
     config_path = tmp_path / "prediction_eval.yaml"
