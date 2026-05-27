@@ -42,6 +42,11 @@ class SanitizedRunPayload(BaseModel):
     """
 
     organization_id: str = "local-org"
+    run_id: str | None = None
+    benchmark_id: str | None = None
+    benchmark_version: str | None = None
+    benchmark_suite: str | None = None
+    domain: str | None = None
     project: str
     workflow: str
     task_type: str | None = None
@@ -69,6 +74,11 @@ class SanitizedRunPayload(BaseModel):
 class BenchmarkRun(BaseModel):
     id: str
     organization_id: str
+    source_run_id: str | None = None
+    benchmark_id: str | None = None
+    benchmark_version: str | None = None
+    benchmark_suite: str | None = None
+    domain: str | None = None
     project: str
     workflow: str
     status: str = "synced"

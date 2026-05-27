@@ -195,14 +195,24 @@ def _render_shell(title: str, body: str, eyebrow: str = "Sanitized benchmark run
 </html>"""
 
 
-def _render_dashboard(runs: list[BenchmarkRun], project: str | None, limit: int, api_key: str | None = None) -> str:
+def _render_dashboard(
+    runs: list[BenchmarkRun],
+    project: str | None,
+    benchmark_id: str | None,
+    limit: int,
+    api_key: str | None = None,
+) -> str:
     rows = []
     for run in runs:
         sample_count = run.total_samples or run.n_samples or ""
+        benchmark = run.benchmark_id or ""
+        if run.benchmark_version:
+            benchmark = f"{benchmark}@{run.benchmark_version}" if benchmark else run.benchmark_version
         detail_url = f"/runs/{escape(run.id)}{_dashboard_query(api_key=api_key)}"
         rows.append(
             "<tr>"
             f'<td><a href="{detail_url}"><code>{escape(run.id)}</code></a></td>'
+            f"<td>{escape(benchmark)}</td>"
             f"<td>{escape(run.project)}</td>"
             f"<td>{escape(run.workflow)}</td>"
             f"<td>{escape(run.task_type or '')}</td>"
@@ -217,14 +227,16 @@ def _render_dashboard(runs: list[BenchmarkRun], project: str | None, limit: int,
     body = (
         "\n".join(rows)
         if rows
-        else '<tr><td colspan="9" class="empty">No synced runs found.</td></tr>'
+        else '<tr><td colspan="10" class="empty">No synced runs found.</td></tr>'
     )
     project_value = escape(project or "")
+    benchmark_value = escape(benchmark_id or "")
     hidden_api_key = f'<input type="hidden" name="api_key" value="{escape(api_key)}">' if api_key else ""
     content = f"""
     <form method="get" action="/">
       {hidden_api_key}
       <input name="project" value="{project_value}" placeholder="Filter by project">
+      <input name="benchmark_id" value="{benchmark_value}" placeholder="Filter by benchmark">
       <button type="submit">Filter</button>
     </form>
     <div class="table-wrap">
@@ -232,6 +244,7 @@ def _render_dashboard(runs: list[BenchmarkRun], project: str | None, limit: int,
         <thead>
           <tr>
             <th>Run</th>
+            <th>Benchmark</th>
             <th>Project</th>
             <th>Workflow</th>
             <th>Task</th>
@@ -319,7 +332,12 @@ def _render_run_detail(run: BenchmarkRun, events: list[AuditEvent], api_key: str
     overview = _render_definition_list(
         [
             ("Run ID", run.id),
+            ("Source run ID", run.source_run_id),
             ("Organization", run.organization_id),
+            ("Benchmark", run.benchmark_id),
+            ("Benchmark version", run.benchmark_version),
+            ("Benchmark suite", run.benchmark_suite),
+            ("Domain", run.domain),
             ("Project", run.project),
             ("Workflow", run.workflow),
             ("Status", run.status),
@@ -377,9 +395,22 @@ def health() -> dict[str, str]:
 
 
 @app.get("/", response_class=HTMLResponse, dependencies=[Depends(require_dashboard_api_key)])
-def dashboard_home(project: str | None = None, limit: int = 50, api_key: str | None = None) -> HTMLResponse:
-    runs = get_store().list_runs(project=project, limit=limit)
-    return HTMLResponse(_render_dashboard(runs, project=project, limit=max(1, min(limit, 200)), api_key=api_key))
+def dashboard_home(
+    project: str | None = None,
+    benchmark_id: str | None = None,
+    limit: int = 50,
+    api_key: str | None = None,
+) -> HTMLResponse:
+    runs = get_store().list_runs(project=project, benchmark_id=benchmark_id, limit=limit)
+    return HTMLResponse(
+        _render_dashboard(
+            runs,
+            project=project,
+            benchmark_id=benchmark_id,
+            limit=max(1, min(limit, 200)),
+            api_key=api_key,
+        )
+    )
 
 
 @app.get("/runs/{run_id}", response_class=HTMLResponse, dependencies=[Depends(require_dashboard_api_key)])
@@ -402,8 +433,8 @@ def sync_run(payload: SanitizedRunPayload) -> BenchmarkRun:
 
 
 @app.get("/v1/runs", response_model=list[BenchmarkRun], dependencies=[Depends(require_dashboard_api_key)])
-def list_runs(project: str | None = None, limit: int = 50) -> list[BenchmarkRun]:
-    return get_store().list_runs(project=project, limit=limit)
+def list_runs(project: str | None = None, benchmark_id: str | None = None, limit: int = 50) -> list[BenchmarkRun]:
+    return get_store().list_runs(project=project, benchmark_id=benchmark_id, limit=limit)
 
 
 @app.get("/v1/runs/{run_id}", response_model=BenchmarkRun, dependencies=[Depends(require_dashboard_api_key)])

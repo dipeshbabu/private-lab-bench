@@ -1,6 +1,12 @@
 project: molecule-baseline-demo
 workflow: molecules
 
+benchmark:
+  id: molecule-baseline-private
+  version: "2026.05"
+  suite: molecular-property
+  domain: molecules
+
 input:
   path: examples/molecules_demo.csv
   target_column: label

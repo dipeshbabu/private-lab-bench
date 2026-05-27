@@ -33,6 +33,11 @@ class DashboardStore:
                 CREATE TABLE IF NOT EXISTS runs (
                     id TEXT PRIMARY KEY,
                     organization_id TEXT NOT NULL,
+                    source_run_id TEXT,
+                    benchmark_id TEXT,
+                    benchmark_version TEXT,
+                    benchmark_suite TEXT,
+                    domain TEXT,
                     project TEXT NOT NULL,
                     workflow TEXT NOT NULL,
                     status TEXT NOT NULL,
@@ -59,14 +64,31 @@ class DashboardStore:
                 )
                 """
             )
+            self._ensure_column(conn, "runs", "source_run_id", "TEXT")
+            self._ensure_column(conn, "runs", "benchmark_id", "TEXT")
+            self._ensure_column(conn, "runs", "benchmark_version", "TEXT")
+            self._ensure_column(conn, "runs", "benchmark_suite", "TEXT")
+            self._ensure_column(conn, "runs", "domain", "TEXT")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_project ON runs(project)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_org ON runs(organization_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_benchmark ON runs(benchmark_id)")
             conn.commit()
+
+    @staticmethod
+    def _ensure_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+        columns = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        if column not in columns:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
     def create_run(self, payload: SanitizedRunPayload) -> BenchmarkRun:
         run = BenchmarkRun(
             id=uuid.uuid4().hex[:12],
             organization_id=payload.organization_id,
+            source_run_id=payload.run_id,
+            benchmark_id=payload.benchmark_id,
+            benchmark_version=payload.benchmark_version,
+            benchmark_suite=payload.benchmark_suite,
+            domain=payload.domain,
             project=payload.project,
             workflow=payload.workflow,
             task_type=payload.task_type,
@@ -83,14 +105,21 @@ class DashboardStore:
             conn.execute(
                 """
                 INSERT INTO runs (
-                    id, organization_id, project, workflow, status, task_type,
+                    id, organization_id, source_run_id, benchmark_id,
+                    benchmark_version, benchmark_suite, domain, project,
+                    workflow, status, task_type,
                     n_samples, n_clients, total_samples, metrics_json,
                     privacy_json, artifacts_json, metadata_json, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     run.id,
                     run.organization_id,
+                    run.source_run_id,
+                    run.benchmark_id,
+                    run.benchmark_version,
+                    run.benchmark_suite,
+                    run.domain,
                     run.project,
                     run.workflow,
                     run.status,
@@ -106,16 +135,36 @@ class DashboardStore:
                 ),
             )
             conn.commit()
-        self.add_audit_event(run.organization_id, "run_synced", {"run_id": run.id, "project": run.project})
+        self.add_audit_event(
+            run.organization_id,
+            "run_synced",
+            {
+                "run_id": run.id,
+                "source_run_id": run.source_run_id,
+                "benchmark_id": run.benchmark_id,
+                "project": run.project,
+            },
+        )
         return run
 
-    def list_runs(self, project: str | None = None, limit: int = 50) -> list[BenchmarkRun]:
+    def list_runs(
+        self,
+        project: str | None = None,
+        benchmark_id: str | None = None,
+        limit: int = 50,
+    ) -> list[BenchmarkRun]:
         limit = max(1, min(limit, 200))
         query = "SELECT * FROM runs"
         params: list[Any] = []
+        where: list[str] = []
         if project:
-            query += " WHERE project = ?"
+            where.append("project = ?")
             params.append(project)
+        if benchmark_id:
+            where.append("benchmark_id = ?")
+            params.append(benchmark_id)
+        if where:
+            query += " WHERE " + " AND ".join(where)
         query += " ORDER BY created_at DESC LIMIT ?"
         params.append(limit)
         with self._connect() as conn:
@@ -172,6 +221,11 @@ class DashboardStore:
         return BenchmarkRun(
             id=row["id"],
             organization_id=row["organization_id"],
+            source_run_id=row["source_run_id"],
+            benchmark_id=row["benchmark_id"],
+            benchmark_version=row["benchmark_version"],
+            benchmark_suite=row["benchmark_suite"],
+            domain=row["domain"],
             project=row["project"],
             workflow=row["workflow"],
             status=row["status"],

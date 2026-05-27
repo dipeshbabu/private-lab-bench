@@ -19,6 +19,11 @@ def test_prediction_runner_writes_reports(tmp_path):
         f"""
 project: test-prediction
 workflow: predictions
+benchmark:
+  id: kinase-private-v1
+  version: "2026.05"
+  suite: molecular-property
+  domain: molecules
 input:
   path: examples/predictions_demo.csv
   target_column: label
@@ -44,6 +49,11 @@ audit:
     payload = json.loads(json_path.read_text())
     assert payload["report_type"] == "prediction_evaluation"
     assert payload["config_snapshot"]["project"] == "test-prediction"
+    assert payload["extra"]["benchmark_id"] == "kinase-private-v1"
+    assert payload["extra"]["benchmark_version"] == "2026.05"
+    assert summary["benchmark_id"] == "kinase-private-v1"
+    assert summary["run_id"] == payload["run_id"]
+    assert summary["report_payload_sha256"] == payload["integrity"]["payload_sha256"]
     assert payload["integrity"]["payload_sha256"]
 
 
