@@ -14,6 +14,7 @@ def test_prediction_runner_writes_reports(tmp_path):
     config_path = tmp_path / "prediction_eval.yaml"
     md_path = tmp_path / "prediction.md"
     json_path = tmp_path / "prediction.json"
+    manifest_path = tmp_path / "prediction_manifest.json"
     audit_path = tmp_path / "audit.jsonl"
     config_path.write_text(
         f"""
@@ -37,6 +38,7 @@ privacy:
 report:
   markdown: {md_path}
   json: {json_path}
+  manifest: {manifest_path}
 audit:
   path: {audit_path}
 """.strip()
@@ -45,6 +47,7 @@ audit:
     assert summary["workflow"] == "predictions"
     assert md_path.exists()
     assert json_path.exists()
+    assert manifest_path.exists()
     assert audit_path.exists()
     payload = json.loads(json_path.read_text())
     assert payload["report_type"] == "prediction_evaluation"
@@ -54,7 +57,17 @@ audit:
     assert summary["benchmark_id"] == "kinase-private-v1"
     assert summary["run_id"] == payload["run_id"]
     assert summary["report_payload_sha256"] == payload["integrity"]["payload_sha256"]
+    assert summary["manifest"] == str(manifest_path)
     assert payload["integrity"]["payload_sha256"]
+    manifest = json.loads(manifest_path.read_text())
+    assert manifest["run"]["run_id"] == payload["run_id"]
+    assert manifest["benchmark"]["id"] == "kinase-private-v1"
+    assert {artifact["kind"] for artifact in manifest["artifacts"]} == {
+        "audit_log",
+        "config",
+        "json_report",
+        "markdown_report",
+    }
 
 
 def test_prediction_runner_resolves_input_relative_to_config_file(tmp_path):
@@ -62,6 +75,7 @@ def test_prediction_runner_resolves_input_relative_to_config_file(tmp_path):
     config_path = tmp_path / "prediction_eval.yaml"
     md_path = tmp_path / "prediction.md"
     json_path = tmp_path / "prediction.json"
+    manifest_path = tmp_path / "prediction_manifest.json"
     csv_path.write_text(
         "label,pred\n0.1,0.1\n0.2,0.25\n0.3,0.28\n0.4,0.39\n",
         encoding="utf-8",
@@ -80,6 +94,7 @@ privacy:
 report:
   markdown: {md_path}
   json: {json_path}
+  manifest: {manifest_path}
 """.strip(),
         encoding="utf-8",
     )
@@ -89,6 +104,7 @@ report:
     assert summary["workflow"] == "predictions"
     assert summary["n_samples"] == 4
     assert json_path.exists()
+    assert manifest_path.exists()
 
 
 def test_prediction_runner_writes_privacy_risk_when_split_column_is_configured(tmp_path):
@@ -96,6 +112,7 @@ def test_prediction_runner_writes_privacy_risk_when_split_column_is_configured(t
     config_path = tmp_path / "prediction_eval.yaml"
     md_path = tmp_path / "prediction.md"
     json_path = tmp_path / "prediction.json"
+    manifest_path = tmp_path / "prediction_manifest.json"
     csv_path.write_text(
         "\n".join(
             [
@@ -128,6 +145,7 @@ privacy:
 report:
   markdown: {md_path}
   json: {json_path}
+  manifest: {manifest_path}
 """.strip(),
         encoding="utf-8",
     )
@@ -146,6 +164,7 @@ def test_molecule_runner_writes_reports(tmp_path):
     config_path = tmp_path / "molecule_eval.yaml"
     md_path = tmp_path / "molecule.md"
     json_path = tmp_path / "molecule.json"
+    manifest_path = tmp_path / "molecule_manifest.json"
     config_path.write_text(
         f"""
 project: test-molecule
@@ -161,18 +180,21 @@ privacy:
 report:
   markdown: {md_path}
   json: {json_path}
+  manifest: {manifest_path}
 """.strip()
     )
     summary = run_config(str(config_path))
     assert summary["workflow"] == "molecules"
     assert md_path.exists()
     assert json_path.exists()
+    assert manifest_path.exists()
 
 
 def test_federated_runner_writes_reports(tmp_path):
     config_path = tmp_path / "federated_eval.yaml"
     md_path = tmp_path / "federated.md"
     json_path = tmp_path / "federated.json"
+    manifest_path = tmp_path / "federated_manifest.json"
     config_path.write_text(
         f"""
 project: test-federated
@@ -188,6 +210,7 @@ privacy:
 report:
   markdown: {md_path}
   json: {json_path}
+  manifest: {manifest_path}
 """.strip()
     )
     summary = run_config(str(config_path))
@@ -195,3 +218,4 @@ report:
     assert summary["n_clients"] == 3
     assert md_path.exists()
     assert json_path.exists()
+    assert manifest_path.exists()

@@ -23,3 +23,4 @@ privacy:
 report:
   markdown: reports/multi_lab_federated_eval.md
   json: reports/multi_lab_federated_eval.json
+  manifest: reports/multi_lab_federated_manifest.json

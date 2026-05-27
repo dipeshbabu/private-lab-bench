@@ -14,6 +14,7 @@ from privatelabbench.federated.evaluator import evaluate_federated_directory
 from privatelabbench.identity import benchmark_metadata, runner_metadata
 from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
 from privatelabbench.reports.json import write_json_report
+from privatelabbench.reports.manifest import sha256_file, write_run_manifest
 from privatelabbench.reports.markdown import (
     write_federated_markdown_report,
     write_markdown_report,
@@ -58,6 +59,10 @@ def _signing_secret(config: RunnerConfig) -> str | None:
 def _audit_path(config: RunnerConfig) -> str:
     audit = section(config, "audit")
     return str(audit.get("path", f"reports/{config.project}_audit.jsonl"))
+
+
+def _manifest_path(config: RunnerConfig) -> str:
+    return _report_path(config, "manifest", f"reports/{config.project}_{config.workflow}_manifest.json")
 
 
 def _write_audit(config: RunnerConfig, summary: dict[str, Any]) -> str:
@@ -300,6 +305,17 @@ def run_config(config_path: str) -> dict[str, Any]:
     else:
         raise ValueError(f"Unsupported workflow: {config.workflow}")
     summary["audit_log"] = _write_audit(config, summary)
+    manifest_path = write_run_manifest(
+        _manifest_path(config),
+        summary=summary,
+        config_path=config.config_path or config_path,
+        json_report_path=summary["json_report"],
+        markdown_report_path=summary.get("markdown_report"),
+        audit_log_path=summary["audit_log"],
+        signing_secret=_signing_secret(config),
+    )
+    summary["manifest"] = str(manifest_path)
+    summary["manifest_sha256"] = sha256_file(manifest_path)
     return summary
 
 
@@ -336,3 +352,4 @@ def print_run_summary(summary: dict[str, Any]) -> None:
     print(f"Markdown report saved to: {Path(summary['markdown_report'])}")
     print(f"JSON report saved to: {Path(summary['json_report'])}")
     print(f"Audit log saved to: {Path(summary['audit_log'])}")
+    print(f"Manifest saved to: {Path(summary['manifest'])}")

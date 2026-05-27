@@ -13,6 +13,7 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - Hosted dashboard API for sanitized run metadata
 - Dashboard-safe sync/export commands that avoid raw data upload
 - Network-ready benchmark identity metadata for sanitized private leaderboards
+- Verifiable run manifests binding configs, reports, audit logs, and artifact hashes
 - Dockerized local runner for customer pilots
 - Adapter interface for scientific model integrations
 - Dependency-light hashed SMILES fingerprints
@@ -99,6 +100,7 @@ privacy:
 report:
   markdown: reports/kinase_prediction_eval.md
   json: reports/kinase_prediction_eval.json
+  manifest: reports/kinase_prediction_manifest.json
 ```
 
 Supported workflows:
@@ -146,6 +148,18 @@ curl -H 'x-api-key: dev-secret' http://127.0.0.1:8000/v1/runs/demo-run/report/ma
 ```
 
 If `PRIVATELABBENCH_API_KEY` is unset, the local API runs without authentication for development only.
+
+## Verifiable run manifests
+
+Config-driven runs write a run manifest next to the reports. The manifest binds the config, JSON report, Markdown report, audit log, benchmark identity, runner identity, report payload hash, and artifact hashes into one verification bundle.
+
+Verify a manifest:
+
+```bash
+privatelabbench verify-manifest reports/kinase_prediction_manifest.json
+```
+
+When `PRIVATELABBENCH_SIGNING_SECRET` or `report.signing_secret` is set, the JSON report and manifest are both HMAC-signed.
 
 ## Hosted dashboard sync
 
