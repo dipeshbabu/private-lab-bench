@@ -1,6 +1,12 @@
 project: kinase-prediction-demo
 workflow: predictions
 
+benchmark:
+  id: kinase-private-prediction
+  version: "2026.05"
+  suite: molecular-property
+  domain: molecules
+
 input:
   path: examples/predictions_demo.csv
   target_column: label

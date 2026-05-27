@@ -1,6 +1,12 @@
 project: multi-lab-demo
 workflow: federated
 
+benchmark:
+  id: multi-lab-molecule-private
+  version: "2026.05"
+  suite: molecular-property
+  domain: molecules
+
 input:
   client_dir: examples/labs
   target_column: label

@@ -12,6 +12,7 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - Local FastAPI service for product-style integrations
 - Hosted dashboard API for sanitized run metadata
 - Dashboard-safe sync/export commands that avoid raw data upload
+- Network-ready benchmark identity metadata for sanitized private leaderboards
 - Dockerized local runner for customer pilots
 - Adapter interface for scientific model integrations
 - Dependency-light hashed SMILES fingerprints
@@ -74,6 +75,12 @@ Example config:
 ```yaml
 project: kinase-prediction-demo
 workflow: predictions
+
+benchmark:
+  id: kinase-private-prediction
+  version: "2026.05"
+  suite: molecular-property
+  domain: molecules
 
 input:
   path: examples/predictions_demo.csv

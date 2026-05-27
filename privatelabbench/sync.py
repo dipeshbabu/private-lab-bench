@@ -67,6 +67,11 @@ def sanitize_summary(summary: dict[str, Any], organization_id: str = "local-org"
 
     return SanitizedRunPayload(
         organization_id=organization_id,
+        run_id=summary.get("run_id"),
+        benchmark_id=summary.get("benchmark_id"),
+        benchmark_version=summary.get("benchmark_version"),
+        benchmark_suite=summary.get("benchmark_suite"),
+        domain=summary.get("domain"),
         project=str(summary.get("project", "unknown-project")),
         workflow=str(summary.get("workflow", "unknown-workflow")),
         task_type=summary.get("task_type"),

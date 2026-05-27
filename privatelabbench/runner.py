@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,7 @@ from privatelabbench.config import RunnerConfig, load_config, required, section
 from privatelabbench.eval.metrics import summarize_metrics
 from privatelabbench.eval.predictions import evaluate_prediction_csv
 from privatelabbench.federated.evaluator import evaluate_federated_directory
+from privatelabbench.identity import benchmark_metadata, runner_metadata
 from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
 from privatelabbench.reports.json import write_json_report
 from privatelabbench.reports.markdown import (
@@ -74,6 +76,20 @@ def _write_audit(config: RunnerConfig, summary: dict[str, Any]) -> str:
     return audit_path
 
 
+def _identity_metadata(config: RunnerConfig) -> dict[str, Any]:
+    return {**benchmark_metadata(config), **runner_metadata(config)}
+
+
+def _attach_report_identity(summary: dict[str, Any], json_path: Path, identity: dict[str, Any]) -> dict[str, Any]:
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    integrity = report.get("integrity", {}) if isinstance(report, dict) else {}
+    summary.update(identity)
+    summary["run_id"] = str(report.get("run_id", ""))
+    summary["report_payload_sha256"] = str(integrity.get("payload_sha256", ""))
+    summary["report_signed"] = bool(integrity.get("signed", False))
+    return summary
+
+
 def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     input_cfg = section(config, "input")
     path = _input_path(config, str(required(input_cfg, "path", section_name="input")))
@@ -82,6 +98,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     task_type = input_cfg.get("task_type")
     split_column = input_cfg.get("split_column")
     privacy_config = _privacy_config(config)
+    identity = _identity_metadata(config)
 
     result = evaluate_prediction_csv(
         path,
@@ -110,6 +127,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
             "privacy_risk": result.privacy_risk or {},
         },
         privacy_config=privacy_config,
+        extra=identity,
         config_snapshot=config.raw,
         signing_secret=_signing_secret(config),
     )
@@ -137,7 +155,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
         summary["privacy_attack_auc"] = result.privacy_risk.get("attack_auc")
         summary["privacy_member_advantage"] = result.privacy_risk.get("member_advantage")
         summary["split_column"] = result.split_column
-    return summary
+    return _attach_report_identity(summary, json_path, identity)
 
 
 def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
@@ -150,6 +168,7 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
     test_size = float(input_cfg.get("test_size", 0.25))
     seed = int(section(config, "privacy").get("seed", 13))
     privacy_config = _privacy_config(config)
+    identity = _identity_metadata(config)
 
     dataset = load_molecule_csv(path, target=target, smiles_column=smiles_column, task_type=task_type)
     adapter = build_molecule_adapter(model_cfg)
@@ -187,6 +206,7 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
             "privacy_risk": result.get("privacy_risk", {}),
         },
         privacy_config=privacy_config,
+        extra=identity,
         config_snapshot=config.raw,
         signing_secret=_signing_secret(config),
     )
@@ -206,7 +226,7 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
         summary["privacy_risk_level"] = privacy_risk.get("risk_level")
         summary["privacy_attack_auc"] = privacy_risk.get("attack_auc")
         summary["privacy_member_advantage"] = privacy_risk.get("member_advantage")
-    return summary
+    return _attach_report_identity(summary, json_path, identity)
 
 
 def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
@@ -218,6 +238,7 @@ def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
     test_size = float(input_cfg.get("test_size", 0.25))
     seed = int(section(config, "privacy").get("seed", 13))
     privacy_config = _privacy_config(config)
+    identity = _identity_metadata(config)
 
     result = evaluate_federated_directory(
         client_dir,
@@ -250,10 +271,11 @@ def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
             "aggregate_shift": result["aggregate_shift"],
         },
         privacy_config=privacy_config,
+        extra=identity,
         config_snapshot=config.raw,
         signing_secret=_signing_secret(config),
     )
-    return {
+    summary = {
         "project": config.project,
         "workflow": config.workflow,
         "n_clients": result["n_clients"],
@@ -264,6 +286,7 @@ def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
         "json_report": str(json_path),
         "privacy": privacy_summary(privacy_config),
     }
+    return _attach_report_identity(summary, json_path, identity)
 
 
 def run_config(config_path: str) -> dict[str, Any]:
@@ -284,6 +307,10 @@ def print_run_summary(summary: dict[str, Any]) -> None:
     print("PrivateLabBench config runner")
     print(f"Project: {summary['project']}")
     print(f"Workflow: {summary['workflow']}")
+    if "benchmark_id" in summary:
+        print(f"Benchmark: {summary['benchmark_id']}@{summary.get('benchmark_version', 'local')}")
+    if "run_id" in summary:
+        print(f"Run ID: {summary['run_id']}")
     if "task_type" in summary:
         print(f"Task: {summary['task_type']}")
     if "n_samples" in summary:

@@ -34,6 +34,9 @@ def test_dashboard_home_renders_sanitized_runs(tmp_path, monkeypatch):
     created = store.create_run(
         SanitizedRunPayload(
             organization_id="org_1",
+            run_id="source-run-1",
+            benchmark_id="kinase-private-v1",
+            benchmark_version="2026.05",
             project="kinase-demo",
             workflow="predictions",
             task_type="regression",
@@ -48,6 +51,7 @@ def test_dashboard_home_renders_sanitized_runs(tmp_path, monkeypatch):
 
     assert response.status_code == 200
     assert "PrivateLabBench Dashboard" in response.text
+    assert "kinase-private-v1@2026.05" in response.text
     assert "kinase-demo" in response.text
     assert "rmse" in response.text
     assert "0.4" in response.text
@@ -66,6 +70,11 @@ def test_dashboard_run_detail_renders_sanitized_metadata(tmp_path, monkeypatch):
     created = store.create_run(
         SanitizedRunPayload(
             organization_id="org_1",
+            run_id="source-run-1",
+            benchmark_id="kinase-private-v1",
+            benchmark_version="2026.05",
+            benchmark_suite="molecular-property",
+            domain="molecules",
             project="kinase-demo",
             workflow="predictions",
             task_type="regression",
@@ -87,6 +96,9 @@ def test_dashboard_run_detail_renders_sanitized_metadata(tmp_path, monkeypatch):
 
     assert response.status_code == 200
     assert f"Run {created.id}" in response.text
+    assert "source-run-1" in response.text
+    assert "kinase-private-v1" in response.text
+    assert "molecular-property" in response.text
     assert "kinase-demo" in response.text
     assert "rmse" in response.text
     assert "DP-style metric noise applied." in response.text
@@ -140,6 +152,11 @@ def test_sanitize_summary_excludes_private_fields(tmp_path):
         "task_type": "regression",
         "n_samples": 10,
         "reported_metrics": {"mae": 0.1, "rmse": 0.2},
+        "run_id": "source-run-1",
+        "benchmark_id": "kinase-private-v1",
+        "benchmark_version": "2026.05",
+        "benchmark_suite": "molecular-property",
+        "domain": "molecules",
         "clean_metrics": {"mae": 0.05},
         "dataset_path": "/secret/lab.csv",
         "prediction_summary": {"raw": "do-not-sync"},
@@ -151,6 +168,9 @@ def test_sanitize_summary_excludes_private_fields(tmp_path):
 
     assert payload.organization_id == "org_1"
     assert payload.project == "demo"
+    assert payload.run_id == "source-run-1"
+    assert payload.benchmark_id == "kinase-private-v1"
+    assert payload.benchmark_version == "2026.05"
     assert payload.metrics == {"mae": 0.1, "rmse": 0.2}
     assert payload.privacy == {"summary": "dp(epsilon=8.0, sensitivity=1.0)"}
     dumped = payload.model_dump_json()
@@ -163,6 +183,8 @@ def test_dashboard_store_roundtrip(tmp_path):
     store = DashboardStore(tmp_path / "dashboard.db")
     payload = SanitizedRunPayload(
         organization_id="org_1",
+        run_id="source-run-1",
+        benchmark_id="kinase-private-v1",
         project="kinase-demo",
         workflow="predictions",
         task_type="regression",
@@ -178,7 +200,11 @@ def test_dashboard_store_roundtrip(tmp_path):
 
     assert fetched is not None
     assert fetched.project == "kinase-demo"
+    assert fetched.source_run_id == "source-run-1"
+    assert fetched.benchmark_id == "kinase-private-v1"
     assert fetched.metrics == {"rmse": 0.4}
     assert len(runs) == 1
+    assert len(store.list_runs(benchmark_id="kinase-private-v1")) == 1
     assert len(events) == 1
     assert events[0].event_type == "run_synced"
+    assert events[0].payload["benchmark_id"] == "kinase-private-v1"
