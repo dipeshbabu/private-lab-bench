@@ -15,6 +15,7 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - Network-ready benchmark identity metadata for sanitized private leaderboards
 - Sanitized private leaderboard API and dashboard views by benchmark metric
 - Verifiable run manifests binding configs, reports, audit logs, and artifact hashes
+- Privacy-preserving runner attestation metadata in verification manifests
 - Dockerized local runner for customer pilots
 - Adapter interface for scientific model integrations
 - Dependency-light hashed SMILES fingerprints

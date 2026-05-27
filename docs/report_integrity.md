@@ -19,7 +19,13 @@ privatelabbench verify-report reports/kinase_prediction_eval.json
 
 Config-driven runs also write a run manifest. The manifest binds the config file,
 JSON report, Markdown report, audit log, benchmark identity, runner identity, and
-artifact hashes into one verification bundle.
+artifact hashes into one verification bundle. It also includes a privacy-preserving
+runner attestation claim with package/runtime metadata and optional managed-runner
+metadata from:
+
+- `PRIVATELABBENCH_CODE_REVISION`
+- `PRIVATELABBENCH_RUNNER_IMAGE_DIGEST`
+- `PRIVATELABBENCH_ATTESTATION_ID`
 
 ```bash
 privatelabbench verify-manifest reports/kinase_prediction_manifest.json
