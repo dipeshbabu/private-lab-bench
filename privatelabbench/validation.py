@@ -113,6 +113,7 @@ def _validate_reports(config: RunnerConfig, *, errors: list[str], warnings: list
     defaults = {
         "markdown": f"reports/{config.project}_{config.workflow}_eval.md",
         "json": f"reports/{config.project}_{config.workflow}_eval.json",
+        "manifest": f"reports/{config.project}_{config.workflow}_manifest.json",
     }
     for key, default in defaults.items():
         _validate_output_path(

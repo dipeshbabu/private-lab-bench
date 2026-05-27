@@ -15,6 +15,19 @@ The integrity block contains:
 privatelabbench verify-report reports/kinase_prediction_eval.json
 ```
 
+## Verify a run manifest
+
+Config-driven runs also write a run manifest. The manifest binds the config file,
+JSON report, Markdown report, audit log, benchmark identity, runner identity, and
+artifact hashes into one verification bundle.
+
+```bash
+privatelabbench verify-manifest reports/kinase_prediction_manifest.json
+```
+
+The manifest check recomputes artifact hashes and verifies the bound JSON report
+integrity metadata.
+
 ## Create a signed report
 
 Set `PRIVATELABBENCH_SIGNING_SECRET` in the local environment before running the config runner:
@@ -28,6 +41,7 @@ Then verify the signed report:
 
 ```bash
 privatelabbench verify-report reports/kinase_prediction_eval.json --signing-secret "$PRIVATELABBENCH_SIGNING_SECRET"
+privatelabbench verify-manifest reports/kinase_prediction_manifest.json --signing-secret "$PRIVATELABBENCH_SIGNING_SECRET"
 ```
 
 ## Config snapshot

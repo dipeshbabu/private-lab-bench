@@ -23,3 +23,4 @@ privacy:
 report:
   markdown: reports/molecule_baseline_eval.md
   json: reports/molecule_baseline_eval.json
+  manifest: reports/molecule_baseline_manifest.json

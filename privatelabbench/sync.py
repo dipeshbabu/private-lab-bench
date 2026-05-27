@@ -45,7 +45,12 @@ def sanitize_privacy(value: Any) -> dict[str, Any]:
 def sanitize_summary(summary: dict[str, Any], organization_id: str = "local-org") -> SanitizedRunPayload:
     metrics = summary.get("reported_metrics") or summary.get("aggregate_reported_metrics") or {}
     artifacts: list[ArtifactMetadata] = []
-    for key, kind in (("markdown_report", "markdown"), ("json_report", "json"), ("audit_log", "audit")):
+    for key, kind in (
+        ("markdown_report", "markdown"),
+        ("json_report", "json"),
+        ("audit_log", "audit"),
+        ("manifest", "manifest"),
+    ):
         path = summary.get(key)
         if path:
             artifacts.append(
@@ -61,7 +66,7 @@ def sanitize_summary(summary: dict[str, Any], organization_id: str = "local-org"
         for key, value in summary.items()
         if key not in PRIVATE_KEYS
         and key not in {"clean_metrics", "reported_metrics", "aggregate_clean_metrics", "aggregate_reported_metrics"}
-        and key not in {"markdown_report", "json_report", "audit_log", "privacy"}
+        and key not in {"markdown_report", "json_report", "audit_log", "manifest", "privacy"}
         and isinstance(value, (str, int, float, bool, type(None)))
     }
 

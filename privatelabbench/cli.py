@@ -13,6 +13,7 @@ from privatelabbench.models.sklearn_baseline import evaluate_random_forest
 from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
 from privatelabbench.production import assert_runtime
 from privatelabbench.reports.integrity import verify_report
+from privatelabbench.reports.manifest import verify_run_manifest
 from privatelabbench.reports.json import write_json_report
 from privatelabbench.reports.markdown import (
     write_federated_markdown_report,
@@ -71,6 +72,10 @@ def build_parser() -> argparse.ArgumentParser:
     verify = sub.add_parser("verify-report", help="Verify JSON report integrity metadata and optional HMAC signature.")
     verify.add_argument("json_report", help="Path to a PrivateLabBench JSON report.")
     verify.add_argument("--signing-secret", default=None, help="Optional HMAC signing secret. Defaults to PRIVATELABBENCH_SIGNING_SECRET.")
+
+    verify_manifest = sub.add_parser("verify-manifest", help="Verify a run manifest and its bound artifacts.")
+    verify_manifest.add_argument("manifest", help="Path to a PrivateLabBench run manifest.")
+    verify_manifest.add_argument("--signing-secret", default=None, help="Optional HMAC signing secret. Defaults to PRIVATELABBENCH_SIGNING_SECRET.")
 
     export = sub.add_parser("export-sanitized", help="Run a config and export dashboard-safe metadata only.")
     export.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
@@ -198,6 +203,23 @@ def verify_report_command(args: argparse.Namespace) -> int:
     print(f"Valid: {result['valid']}")
     print(f"Reason: {result['reason']}")
     print(f"Hash valid: {result['hash_valid']}")
+    if result["signature_valid"] is not None:
+        print(f"Signature valid: {result['signature_valid']}")
+    print(f"Payload SHA256: {result['payload_sha256']}")
+    return 0 if result["valid"] else 1
+
+
+def verify_manifest_command(args: argparse.Namespace) -> int:
+    secret = args.signing_secret or os.getenv("PRIVATELABBENCH_SIGNING_SECRET")
+    result = verify_run_manifest(args.manifest, signing_secret=secret)
+    print("PrivateLabBench manifest verification")
+    print(f"Manifest: {result['path']}")
+    print(f"Valid: {result['valid']}")
+    print(f"Reason: {result['reason']}")
+    print(f"Run ID: {result.get('run_id')}")
+    print(f"Manifest hash valid: {result['hash_valid']}")
+    print(f"Artifact hashes valid: {result['artifacts_valid']}")
+    print(f"Report integrity valid: {result['report_valid']}")
     if result["signature_valid"] is not None:
         print(f"Signature valid: {result['signature_valid']}")
     print(f"Payload SHA256: {result['payload_sha256']}")
@@ -345,6 +367,8 @@ def main() -> int:
         return compare_from_configs(args)
     if args.command == "verify-report":
         return verify_report_command(args)
+    if args.command == "verify-manifest":
+        return verify_manifest_command(args)
     if args.command == "eval-molecules":
         return eval_molecules(args)
     if args.command == "eval-federated":
