@@ -208,3 +208,73 @@ def test_dashboard_store_roundtrip(tmp_path):
     assert len(events) == 1
     assert events[0].event_type == "run_synced"
     assert events[0].payload["benchmark_id"] == "kinase-private-v1"
+
+
+def test_dashboard_store_leaderboard_filters_nonpublishable_runs(tmp_path):
+    store = DashboardStore(tmp_path / "dashboard.db")
+    store.create_run(
+        SanitizedRunPayload(
+            organization_id="org_1",
+            run_id="source-run-1",
+            benchmark_id="kinase-private-v1",
+            project="candidate-a",
+            workflow="predictions",
+            n_samples=20,
+            metrics={"rmse": 0.2},
+            metadata={"privacy_gate_publishable": True, "privacy_gate_status": "pass"},
+        )
+    )
+    store.create_run(
+        SanitizedRunPayload(
+            organization_id="org_2",
+            run_id="source-run-2",
+            benchmark_id="kinase-private-v1",
+            project="candidate-b",
+            workflow="predictions",
+            n_samples=20,
+            metrics={"rmse": 0.1},
+            metadata={"privacy_gate_publishable": False, "privacy_gate_status": "fail"},
+        )
+    )
+
+    publishable = store.leaderboard(benchmark_id="kinase-private-v1", metric="rmse")
+    all_entries = store.leaderboard(
+        benchmark_id="kinase-private-v1",
+        metric="rmse",
+        require_publishable=False,
+    )
+
+    assert [entry.project for entry in publishable] == ["candidate-a"]
+    assert [entry.project for entry in all_entries] == ["candidate-b", "candidate-a"]
+    assert all_entries[0].rank == 1
+
+
+def test_dashboard_leaderboard_endpoint_returns_sanitized_entries(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from privatelabbench.dashboard.api import app
+
+    monkeypatch.delenv("PRIVATELABBENCH_DASHBOARD_API_KEY", raising=False)
+    monkeypatch.setenv("PRIVATELABBENCH_DASHBOARD_DB", str(tmp_path / "dashboard.db"))
+    DashboardStore(tmp_path / "dashboard.db").create_run(
+        SanitizedRunPayload(
+            organization_id="org_1",
+            run_id="source-run-1",
+            benchmark_id="kinase-private-v1",
+            project="candidate-a",
+            workflow="predictions",
+            n_samples=20,
+            metrics={"rmse": 0.2},
+            metadata={"privacy_gate_publishable": True, "dataset_path": "/secret/lab.csv"},
+        )
+    )
+
+    api_response = TestClient(app).get("/v1/leaderboards/kinase-private-v1?metric=rmse")
+    html_response = TestClient(app).get("/leaderboards/kinase-private-v1?metric=rmse")
+
+    assert api_response.status_code == 200
+    assert api_response.json()[0]["project"] == "candidate-a"
+    assert html_response.status_code == 200
+    assert "Leaderboard kinase-private-v1" in html_response.text
+    assert "candidate-a" in html_response.text
+    assert "/secret/lab.csv" not in html_response.text

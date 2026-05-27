@@ -13,6 +13,7 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - Hosted dashboard API for sanitized run metadata
 - Dashboard-safe sync/export commands that avoid raw data upload
 - Network-ready benchmark identity metadata for sanitized private leaderboards
+- Sanitized private leaderboard API and dashboard views by benchmark metric
 - Verifiable run manifests binding configs, reports, audit logs, and artifact hashes
 - Dockerized local runner for customer pilots
 - Adapter interface for scientific model integrations
@@ -212,6 +213,7 @@ Inspect synced runs:
 
 ```bash
 curl -H 'x-api-key: dashboard-secret' http://127.0.0.1:8010/v1/runs
+curl -H 'x-api-key: dashboard-secret' 'http://127.0.0.1:8010/v1/leaderboards/kinase-private-prediction?metric=rmse'
 curl -H 'x-api-key: dashboard-secret' http://127.0.0.1:8010/v1/audit-events
 ```
 
@@ -222,6 +224,7 @@ http://127.0.0.1:8010/?api_key=dashboard-secret
 ```
 
 Click a run ID in the dashboard to inspect sanitized metrics, privacy metadata, artifact hashes, and related audit events.
+Open `/leaderboards/{benchmark_id}?metric=rmse` to rank sanitized, publishable runs for a benchmark.
 
 The sync layer intentionally excludes raw rows, SMILES strings, local dataset paths, prediction summaries, client-level raw details, and free-form private lab data.
 

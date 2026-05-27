@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from privatelabbench.dashboard.schemas import AuditEvent, BenchmarkRun, SanitizedRunPayload, utc_now
+from privatelabbench.dashboard.schemas import AuditEvent, BenchmarkRun, LeaderboardEntry, SanitizedRunPayload, utc_now
 
 
 class DashboardStore:
@@ -175,6 +175,49 @@ class DashboardStore:
         with self._connect() as conn:
             row = conn.execute("SELECT * FROM runs WHERE id = ?", (run_id,)).fetchone()
         return self._row_to_run(row) if row else None
+
+    def leaderboard(
+        self,
+        *,
+        benchmark_id: str,
+        metric: str,
+        order: str = "asc",
+        require_publishable: bool = True,
+        limit: int = 50,
+    ) -> list[LeaderboardEntry]:
+        if order not in {"asc", "desc"}:
+            raise ValueError("order must be 'asc' or 'desc'")
+        runs = self.list_runs(benchmark_id=benchmark_id, limit=200)
+        eligible: list[BenchmarkRun] = []
+        for run in runs:
+            if metric not in run.metrics:
+                continue
+            if require_publishable and run.metadata.get("privacy_gate_publishable") is False:
+                continue
+            eligible.append(run)
+
+        reverse = order == "desc"
+        eligible.sort(key=lambda run: (float(run.metrics[metric]), run.created_at), reverse=reverse)
+        entries: list[LeaderboardEntry] = []
+        for rank, run in enumerate(eligible[: max(1, min(limit, 200))], start=1):
+            entries.append(
+                LeaderboardEntry(
+                    rank=rank,
+                    run_id=run.id,
+                    source_run_id=run.source_run_id,
+                    organization_id=run.organization_id,
+                    project=run.project,
+                    benchmark_id=run.benchmark_id or benchmark_id,
+                    benchmark_version=run.benchmark_version,
+                    metric=metric,
+                    value=float(run.metrics[metric]),
+                    samples=run.total_samples or run.n_samples,
+                    privacy=run.privacy,
+                    metadata=run.metadata,
+                    created_at=run.created_at,
+                )
+            )
+        return entries
 
     def add_audit_event(self, organization_id: str, event_type: str, payload: dict[str, Any]) -> AuditEvent:
         event = AuditEvent(

@@ -93,6 +93,22 @@ class BenchmarkRun(BaseModel):
     created_at: str = Field(default_factory=utc_now)
 
 
+class LeaderboardEntry(BaseModel):
+    rank: int
+    run_id: str
+    source_run_id: str | None = None
+    organization_id: str
+    project: str
+    benchmark_id: str
+    benchmark_version: str | None = None
+    metric: str
+    value: float
+    samples: int | None = None
+    privacy: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: str
+
+
 class AuditEvent(BaseModel):
     id: str
     organization_id: str
