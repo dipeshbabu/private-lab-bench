@@ -15,7 +15,7 @@ except ImportError as exc:  # pragma: no cover
 
 from privatelabbench import __version__
 from privatelabbench.dashboard.auth import require_dashboard_api_key
-from privatelabbench.dashboard.schemas import AuditEvent, BenchmarkRun, SanitizedRunPayload
+from privatelabbench.dashboard.schemas import AuditEvent, BenchmarkRun, LeaderboardEntry, SanitizedRunPayload
 from privatelabbench.dashboard.store import DashboardStore
 
 
@@ -126,6 +126,8 @@ def _render_shell(title: str, body: str, eyebrow: str = "Sanitized benchmark run
       background: #ffffff;
       color: var(--text);
     }}
+    input[type="checkbox"] {{ width: auto; height: auto; }}
+    label {{ display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }}
     button, .button {{
       display: inline-flex;
       align-items: center;
@@ -382,6 +384,70 @@ def _render_run_detail(run: BenchmarkRun, events: list[AuditEvent], api_key: str
     return _render_shell(f"Run {run.id}", content, eyebrow="Sanitized run detail")
 
 
+def _render_leaderboard(
+    entries: list[LeaderboardEntry],
+    *,
+    benchmark_id: str,
+    metric: str,
+    order: str,
+    require_publishable: bool,
+    api_key: str | None = None,
+) -> str:
+    rows = []
+    for entry in entries:
+        detail_url = f"/runs/{escape(entry.run_id)}{_dashboard_query(api_key=api_key)}"
+        rows.append(
+            "<tr>"
+            f"<td>{entry.rank}</td>"
+            f'<td><a href="{detail_url}"><code>{escape(entry.run_id)}</code></a></td>'
+            f"<td>{escape(entry.project)}</td>"
+            f"<td>{escape(entry.organization_id)}</td>"
+            f"<td>{escape(_format_value(entry.value))}</td>"
+            f"<td>{escape(_format_value(entry.samples))}</td>"
+            f"<td>{escape(_format_value(entry.metadata.get('privacy_gate_status')))}</td>"
+            f"<td>{escape(entry.created_at)}</td>"
+            "</tr>"
+        )
+    body = (
+        "\n".join(rows)
+        if rows
+        else '<tr><td colspan="8" class="empty">No eligible sanitized runs found.</td></tr>'
+    )
+    hidden_api_key = f'<input type="hidden" name="api_key" value="{escape(api_key)}">' if api_key else ""
+    checked = "checked" if require_publishable else ""
+    content = f"""
+    <form method="get" action="/leaderboards/{escape(benchmark_id)}">
+      {hidden_api_key}
+      <input name="metric" value="{escape(metric)}" placeholder="Metric">
+      <input name="order" value="{escape(order)}" placeholder="asc or desc">
+      <label><input type="checkbox" name="require_publishable" value="true" {checked}> Publishable only</label>
+      <button type="submit">Update</button>
+    </form>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Run</th>
+            <th>Project</th>
+            <th>Organization</th>
+            <th>{escape(metric)}</th>
+            <th>Samples</th>
+            <th>Privacy Gate</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>{body}</tbody>
+      </table>
+    </div>
+"""
+    return _render_shell(
+        f"Leaderboard {benchmark_id}",
+        content,
+        eyebrow=f"Sanitized leaderboard | metric={metric} | order={order}",
+    )
+
+
 app = FastAPI(
     title="PrivateLabBench Dashboard API",
     version=__version__,
@@ -427,6 +493,34 @@ def dashboard_run_detail(run_id: str, api_key: str | None = None) -> HTMLRespons
     return HTMLResponse(_render_run_detail(run, events, api_key=api_key))
 
 
+@app.get("/leaderboards/{benchmark_id}", response_class=HTMLResponse, dependencies=[Depends(require_dashboard_api_key)])
+def dashboard_leaderboard(
+    benchmark_id: str,
+    metric: str,
+    order: str = "asc",
+    require_publishable: bool = True,
+    limit: int = 50,
+    api_key: str | None = None,
+) -> HTMLResponse:
+    entries = get_store().leaderboard(
+        benchmark_id=benchmark_id,
+        metric=metric,
+        order=order,
+        require_publishable=require_publishable,
+        limit=limit,
+    )
+    return HTMLResponse(
+        _render_leaderboard(
+            entries,
+            benchmark_id=benchmark_id,
+            metric=metric,
+            order=order,
+            require_publishable=require_publishable,
+            api_key=api_key,
+        )
+    )
+
+
 @app.post("/v1/runs", response_model=BenchmarkRun, dependencies=[Depends(require_dashboard_api_key)])
 def sync_run(payload: SanitizedRunPayload) -> BenchmarkRun:
     return get_store().create_run(payload)
@@ -443,6 +537,23 @@ def get_run(run_id: str) -> BenchmarkRun:
     if run is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown run_id: {run_id}")
     return run
+
+
+@app.get("/v1/leaderboards/{benchmark_id}", response_model=list[LeaderboardEntry], dependencies=[Depends(require_dashboard_api_key)])
+def get_leaderboard(
+    benchmark_id: str,
+    metric: str,
+    order: str = "asc",
+    require_publishable: bool = True,
+    limit: int = 50,
+) -> list[LeaderboardEntry]:
+    return get_store().leaderboard(
+        benchmark_id=benchmark_id,
+        metric=metric,
+        order=order,
+        require_publishable=require_publishable,
+        limit=limit,
+    )
 
 
 @app.get("/v1/audit-events", response_model=list[AuditEvent], dependencies=[Depends(require_dashboard_api_key)])
