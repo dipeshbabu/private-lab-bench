@@ -13,6 +13,7 @@ from privatelabbench.eval.predictions import evaluate_prediction_csv
 from privatelabbench.federated.evaluator import evaluate_federated_directory
 from privatelabbench.identity import benchmark_metadata, runner_metadata
 from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
+from privatelabbench.privacy.policy import PrivacyRiskPolicy, evaluate_privacy_gate
 from privatelabbench.reports.json import write_json_report
 from privatelabbench.reports.manifest import sha256_file, write_run_manifest
 from privatelabbench.reports.markdown import (
@@ -81,6 +82,14 @@ def _write_audit(config: RunnerConfig, summary: dict[str, Any]) -> str:
     return audit_path
 
 
+def _privacy_risk_policy(config: RunnerConfig) -> PrivacyRiskPolicy:
+    privacy = section(config, "privacy")
+    risk_policy = privacy.get("risk_policy")
+    if risk_policy is not None and not isinstance(risk_policy, dict):
+        raise ValueError("privacy.risk_policy must be a mapping when provided.")
+    return PrivacyRiskPolicy.from_config(risk_policy)
+
+
 def _identity_metadata(config: RunnerConfig) -> dict[str, Any]:
     return {**benchmark_metadata(config), **runner_metadata(config)}
 
@@ -114,6 +123,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     )
     clean_metrics = result.metrics
     reported_metrics = privatize_metrics(clean_metrics, privacy_config)
+    privacy_gate = evaluate_privacy_gate(result.privacy_risk, _privacy_risk_policy(config))
 
     json_path = write_json_report(
         _report_path(config, "json", f"reports/{config.project}_prediction_eval.json"),
@@ -130,6 +140,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
             "prediction_summary": result.prediction_summary,
             "split_column": result.split_column,
             "privacy_risk": result.privacy_risk or {},
+            "privacy_gate": privacy_gate,
         },
         privacy_config=privacy_config,
         extra=identity,
@@ -160,6 +171,8 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
         summary["privacy_attack_auc"] = result.privacy_risk.get("attack_auc")
         summary["privacy_member_advantage"] = result.privacy_risk.get("member_advantage")
         summary["split_column"] = result.split_column
+    summary["privacy_gate_status"] = privacy_gate["status"]
+    summary["privacy_gate_publishable"] = privacy_gate["publishable"]
     return _attach_report_identity(summary, json_path, identity)
 
 
@@ -180,6 +193,7 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
     result = adapter.evaluate(dataset, test_size=test_size, seed=seed)
     clean_metrics = dict(result["metrics"])
     reported_metrics = privatize_metrics(clean_metrics, privacy_config)
+    privacy_gate = evaluate_privacy_gate(result.get("privacy_risk"), _privacy_risk_policy(config))
 
     markdown_path = write_markdown_report(
         _report_path(config, "markdown", f"reports/{config.project}_molecule_eval.md"),
@@ -209,6 +223,7 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
             "shift": result["shift"],
             "error_slices": result.get("error_slices", {}),
             "privacy_risk": result.get("privacy_risk", {}),
+            "privacy_gate": privacy_gate,
         },
         privacy_config=privacy_config,
         extra=identity,
@@ -231,6 +246,8 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
         summary["privacy_risk_level"] = privacy_risk.get("risk_level")
         summary["privacy_attack_auc"] = privacy_risk.get("attack_auc")
         summary["privacy_member_advantage"] = privacy_risk.get("member_advantage")
+    summary["privacy_gate_status"] = privacy_gate["status"]
+    summary["privacy_gate_publishable"] = privacy_gate["publishable"]
     return _attach_report_identity(summary, json_path, identity)
 
 
@@ -347,6 +364,12 @@ def print_run_summary(summary: dict[str, Any]) -> None:
             "Privacy attack risk: "
             f"{summary['privacy_risk_level']} "
             f"(member advantage: {float(summary.get('privacy_member_advantage', 0.0)):.4f})"
+        )
+    if "privacy_gate_status" in summary:
+        print(
+            "Privacy gate: "
+            f"{summary['privacy_gate_status']} "
+            f"(publishable: {str(summary.get('privacy_gate_publishable')).lower()})"
         )
     print(f"Privacy: {summary['privacy']}")
     print(f"Markdown report saved to: {Path(summary['markdown_report'])}")

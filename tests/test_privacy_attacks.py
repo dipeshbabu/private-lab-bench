@@ -1,6 +1,7 @@
 import numpy as np
 
 from privatelabbench.privacy.attacks import membership_inference_risk
+from privatelabbench.privacy.policy import PrivacyRiskPolicy, evaluate_privacy_gate
 
 
 def test_membership_inference_risk_detects_train_test_loss_gap():
@@ -16,3 +17,28 @@ def test_membership_inference_risk_detects_train_test_loss_gap():
     assert risk["member_advantage"] > 0
     assert risk["attack_auc"] > 0.5
     assert risk["risk_level"] in {"moderate", "high"}
+
+
+def test_privacy_risk_gate_blocks_excessive_attack_signal():
+    gate = evaluate_privacy_gate(
+        {
+            "risk_level": "high",
+            "member_advantage": 0.42,
+            "attack_auc": 0.91,
+        },
+        PrivacyRiskPolicy(max_level="moderate", max_member_advantage=0.35, max_attack_auc=0.85),
+    )
+
+    assert gate["status"] == "fail"
+    assert gate["publishable"] is False
+    assert "risk_level_exceeds_policy" in gate["violations"]
+    assert "member_advantage_exceeds_policy" in gate["violations"]
+    assert "attack_auc_exceeds_policy" in gate["violations"]
+
+
+def test_privacy_risk_gate_can_require_attack_evidence():
+    gate = evaluate_privacy_gate(None, PrivacyRiskPolicy(require_attack=True))
+
+    assert gate["status"] == "fail"
+    assert gate["publishable"] is False
+    assert gate["violations"] == ["privacy_attack_required"]

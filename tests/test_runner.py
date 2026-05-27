@@ -91,6 +91,10 @@ input:
   task_type: regression
 privacy:
   mode: none
+  risk_policy:
+    max_level: low
+    max_member_advantage: 0.05
+    max_attack_auc: 0.55
 report:
   markdown: {md_path}
   json: {json_path}
@@ -142,6 +146,10 @@ input:
   task_type: regression
 privacy:
   mode: none
+  risk_policy:
+    max_level: low
+    max_member_advantage: 0.05
+    max_attack_auc: 0.55
 report:
   markdown: {md_path}
   json: {json_path}
@@ -154,10 +162,13 @@ report:
 
     assert summary["privacy_risk_level"] in {"moderate", "high"}
     assert summary["privacy_member_advantage"] > 0
+    assert summary["privacy_gate_status"] == "fail"
+    assert summary["privacy_gate_publishable"] is False
     assert "Privacy attack risk" in md_path.read_text(encoding="utf-8")
     payload = json.loads(json_path.read_text(encoding="utf-8"))
     assert payload["result"]["split_column"] == "split"
     assert payload["result"]["privacy_risk"]["attack"] == "loss_threshold_membership_inference"
+    assert payload["result"]["privacy_gate"]["status"] == "fail"
 
 
 def test_molecule_runner_writes_reports(tmp_path):

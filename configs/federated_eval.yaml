@@ -19,6 +19,10 @@ privacy:
   epsilon: 8
   sensitivity: 1
   seed: 13
+  risk_policy:
+    max_level: moderate
+    max_member_advantage: 0.35
+    max_attack_auc: 0.85
 
 report:
   markdown: reports/multi_lab_federated_eval.md
