@@ -23,6 +23,10 @@ privacy:
     max_level: moderate
     max_member_advantage: 0.35
     max_attack_auc: 0.85
+  aggregate_policy:
+    min_clients: 3
+    min_total_samples: 12
+    min_client_samples: 4
 
 report:
   markdown: reports/multi_lab_federated_eval.md

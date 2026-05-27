@@ -27,6 +27,7 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - DP-style metric reporting
 - Local membership-inference risk scoring for trained molecule baselines and split-labeled prediction exports
 - Privacy-risk publishability gates for benchmark release decisions
+- Aggregate release guards for cross-lab benchmark reports
 - Dataset and prediction summaries
 - Single-client local evaluation
 - Multi-client private evaluation over a directory of lab CSVs
@@ -103,6 +104,11 @@ privacy:
     max_level: moderate
     max_member_advantage: 0.35
     max_attack_auc: 0.85
+  # Federated workflows can also require aggregate release thresholds.
+  # aggregate_policy:
+  #   min_clients: 3
+  #   min_total_samples: 100
+  #   min_client_samples: 20
 
 report:
   markdown: reports/kinase_prediction_eval.md

@@ -10,6 +10,7 @@ import pandas as pd
 from privatelabbench.config import RunnerConfig, load_config, required, section
 from privatelabbench.privacy.dp import PrivacyConfig
 from privatelabbench.privacy.policy import PrivacyRiskPolicy
+from privatelabbench.privacy.release import AggregateReleasePolicy
 
 
 @dataclass(frozen=True)
@@ -109,6 +110,12 @@ def _validate_privacy(config: RunnerConfig, errors: list[str]) -> None:
         if risk_policy is not None and not isinstance(risk_policy, dict):
             raise ValueError("privacy.risk_policy must be a mapping.")
         PrivacyRiskPolicy.from_config(risk_policy)
+        aggregate_policy = privacy.get("aggregate_policy")
+        if aggregate_policy is not None and not isinstance(aggregate_policy, dict):
+            raise ValueError("privacy.aggregate_policy must be a mapping.")
+        aggregate = AggregateReleasePolicy.from_config(aggregate_policy)
+        if aggregate.min_clients < 1:
+            raise ValueError("privacy.aggregate_policy.min_clients must be at least 1.")
     except Exception as exc:  # noqa: BLE001 - validation should collect user-facing errors
         errors.append(f"Invalid privacy config: {exc}")
 

@@ -188,6 +188,10 @@ input:
 privacy:
   mode: none
   seed: 13
+  aggregate_policy:
+    min_clients: 3
+    min_total_samples: 12
+    min_client_samples: 4
 report:
   markdown: {md_path}
   json: {json_path}
@@ -227,6 +231,50 @@ report:
     summary = run_config(str(config_path))
     assert summary["workflow"] == "federated"
     assert summary["n_clients"] == 3
+    assert summary["aggregate_release_status"] == "pass"
+    assert summary["aggregate_release_publishable"] is True
     assert md_path.exists()
     assert json_path.exists()
     assert manifest_path.exists()
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    assert payload["result"]["aggregate_release"]["status"] == "pass"
+
+
+def test_federated_runner_marks_aggregate_release_fail_when_policy_is_not_met(tmp_path):
+    config_path = tmp_path / "federated_eval.yaml"
+    md_path = tmp_path / "federated.md"
+    json_path = tmp_path / "federated.json"
+    manifest_path = tmp_path / "federated_manifest.json"
+    config_path.write_text(
+        f"""
+project: test-federated-release
+workflow: federated
+input:
+  client_dir: examples/labs
+  target_column: label
+  smiles_column: smiles
+  task_type: regression
+privacy:
+  mode: none
+  seed: 13
+  aggregate_policy:
+    min_clients: 4
+    min_total_samples: 100
+    min_client_samples: 50
+report:
+  markdown: {md_path}
+  json: {json_path}
+  manifest: {manifest_path}
+""".strip()
+    )
+
+    summary = run_config(str(config_path))
+
+    assert summary["aggregate_release_status"] == "fail"
+    assert summary["aggregate_release_publishable"] is False
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    assert payload["result"]["aggregate_release"]["violations"] == [
+        "min_clients_not_met",
+        "min_total_samples_not_met",
+        "min_client_samples_not_met",
+    ]

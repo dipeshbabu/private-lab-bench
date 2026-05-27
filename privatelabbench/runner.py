@@ -14,6 +14,7 @@ from privatelabbench.federated.evaluator import evaluate_federated_directory
 from privatelabbench.identity import benchmark_metadata, runner_metadata
 from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
 from privatelabbench.privacy.policy import PrivacyRiskPolicy, evaluate_privacy_gate
+from privatelabbench.privacy.release import AggregateReleasePolicy, evaluate_aggregate_release
 from privatelabbench.reports.json import write_json_report
 from privatelabbench.reports.manifest import sha256_file, write_run_manifest
 from privatelabbench.reports.markdown import (
@@ -88,6 +89,14 @@ def _privacy_risk_policy(config: RunnerConfig) -> PrivacyRiskPolicy:
     if risk_policy is not None and not isinstance(risk_policy, dict):
         raise ValueError("privacy.risk_policy must be a mapping when provided.")
     return PrivacyRiskPolicy.from_config(risk_policy)
+
+
+def _aggregate_release_policy(config: RunnerConfig) -> AggregateReleasePolicy:
+    privacy = section(config, "privacy")
+    aggregate_policy = privacy.get("aggregate_policy")
+    if aggregate_policy is not None and not isinstance(aggregate_policy, dict):
+        raise ValueError("privacy.aggregate_policy must be a mapping when provided.")
+    return AggregateReleasePolicy.from_config(aggregate_policy)
 
 
 def _identity_metadata(config: RunnerConfig) -> dict[str, Any]:
@@ -271,6 +280,13 @@ def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
         seed=seed,
         privacy_config=privacy_config,
     )
+    aggregate_release = evaluate_aggregate_release(
+        n_clients=int(result["n_clients"]),
+        total_samples=int(result["total_samples"]),
+        client_sample_counts=[client.n_samples for client in result["clients"]],
+        policy=_aggregate_release_policy(config),
+    )
+    result["aggregate_release"] = aggregate_release
     markdown_path = write_federated_markdown_report(
         _report_path(config, "markdown", f"reports/{config.project}_federated_eval.md"),
         result=result,
@@ -291,6 +307,7 @@ def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
             "aggregate_clean_metrics": result["aggregate_clean_metrics"],
             "aggregate_reported_metrics": result["aggregate_reported_metrics"],
             "aggregate_shift": result["aggregate_shift"],
+            "aggregate_release": aggregate_release,
         },
         privacy_config=privacy_config,
         extra=identity,
@@ -307,6 +324,8 @@ def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
         "markdown_report": str(markdown_path),
         "json_report": str(json_path),
         "privacy": privacy_summary(privacy_config),
+        "aggregate_release_status": aggregate_release["status"],
+        "aggregate_release_publishable": aggregate_release["publishable"],
     }
     return _attach_report_identity(summary, json_path, identity)
 
@@ -370,6 +389,12 @@ def print_run_summary(summary: dict[str, Any]) -> None:
             "Privacy gate: "
             f"{summary['privacy_gate_status']} "
             f"(publishable: {str(summary.get('privacy_gate_publishable')).lower()})"
+        )
+    if "aggregate_release_status" in summary:
+        print(
+            "Aggregate release: "
+            f"{summary['aggregate_release_status']} "
+            f"(publishable: {str(summary.get('aggregate_release_publishable')).lower()})"
         )
     print(f"Privacy: {summary['privacy']}")
     print(f"Markdown report saved to: {Path(summary['markdown_report'])}")
