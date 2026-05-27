@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 from typing import Any
 from urllib import error, request
 
 from privatelabbench.dashboard.schemas import ArtifactMetadata, SanitizedRunPayload
+from privatelabbench.identity import RUNNER_ID_ENV
+from privatelabbench.signing import RUNNER_PRIVATE_KEY_ENV, SIGNATURE_ALGORITHM, payload_sha256, sign_payload
 
 
 PRIVATE_KEYS = {
@@ -98,12 +101,41 @@ def write_sanitized_payload(summary: dict[str, Any], path: str | Path, organizat
     return output
 
 
-def sync_payload(payload: SanitizedRunPayload, endpoint: str, api_key: str | None = None, timeout: float = 20.0) -> dict[str, Any]:
+def signed_sync_headers(
+    payload_bytes: bytes,
+    *,
+    runner_id: str | None = None,
+    private_key: str | None = None,
+) -> dict[str, str]:
+    key = private_key or os.getenv(RUNNER_PRIVATE_KEY_ENV)
+    resolved_runner_id = runner_id or os.getenv(RUNNER_ID_ENV)
+    if not key and not resolved_runner_id:
+        return {}
+    if not key or not resolved_runner_id:
+        raise ValueError("Signed sync requires both runner_id and runner private key.")
+    return {
+        "X-Runner-ID": resolved_runner_id,
+        "X-Runner-Signature-Alg": SIGNATURE_ALGORITHM,
+        "X-Runner-Payload-SHA256": payload_sha256(payload_bytes),
+        "X-Runner-Signature": sign_payload(payload_bytes, key),
+    }
+
+
+def sync_payload(
+    payload: SanitizedRunPayload,
+    endpoint: str,
+    api_key: str | None = None,
+    timeout: float = 20.0,
+    *,
+    runner_id: str | None = None,
+    runner_private_key: str | None = None,
+) -> dict[str, Any]:
     url = endpoint.rstrip("/") + "/v1/runs"
     data = payload.model_dump_json().encode("utf-8")
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["X-API-Key"] = api_key
+    headers.update(signed_sync_headers(data, runner_id=runner_id, private_key=runner_private_key))
     req = request.Request(url, data=data, headers=headers, method="POST")
     try:
         with request.urlopen(req, timeout=timeout) as response:  # noqa: S310 - user-supplied endpoint is expected for sync command

@@ -14,6 +14,7 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - Dashboard-safe sync/export commands that avoid raw data upload
 - Network-ready benchmark identity metadata for sanitized private leaderboards
 - Sanitized private leaderboard API and dashboard views by benchmark metric
+- Ed25519-signed dashboard sync with runner public-key verification
 - Verifiable run manifests binding configs, reports, audit logs, and artifact hashes
 - Privacy-preserving runner attestation metadata in verification manifests
 - Dockerized local runner for customer pilots
@@ -215,6 +216,16 @@ privatelabbench sync-dashboard configs/prediction_eval.yaml \
   --api-key dashboard-secret \
   --organization-id acme-lab
 ```
+
+Signed runner sync:
+
+```bash
+export PRIVATELABBENCH_RUNNER_ID=acme-runner-1
+export PRIVATELABBENCH_RUNNER_PRIVATE_KEY=/secure/acme-runner-ed25519.pem
+export PRIVATELABBENCH_RUNNER_PUBLIC_KEYS_FILE=/secure/dashboard-runner-public-keys.json
+```
+
+When the dashboard has `PRIVATELABBENCH_RUNNER_PUBLIC_KEYS` or `PRIVATELABBENCH_RUNNER_PUBLIC_KEYS_FILE` configured, `/v1/runs` accepts only payloads signed by a registered runner key.
 
 Inspect synced runs:
 

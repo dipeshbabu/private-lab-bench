@@ -16,6 +16,7 @@ Required dashboard values:
 PRIVATELABBENCH_ENV=production
 PRIVATELABBENCH_DASHBOARD_API_KEY=<unique-customer-secret>
 PRIVATELABBENCH_DASHBOARD_DB=/data/dashboard.db
+PRIVATELABBENCH_RUNNER_PUBLIC_KEYS_FILE=/data/runner_public_keys.json
 ```
 
 Optional local API values:
@@ -24,6 +25,15 @@ Optional local API values:
 PRIVATELABBENCH_API_KEY=<unique-local-api-secret>
 PRIVATELABBENCH_RUN_ROOT=/data/runs
 ```
+
+Signed sync runner values:
+
+```text
+PRIVATELABBENCH_RUNNER_ID=<registered-runner-id>
+PRIVATELABBENCH_RUNNER_PRIVATE_KEY=<ed25519-private-key-pem-or-path>
+```
+
+When `PRIVATELABBENCH_RUNNER_PUBLIC_KEYS` or `PRIVATELABBENCH_RUNNER_PUBLIC_KEYS_FILE` is configured on the dashboard, every `/v1/runs` sync must include a valid Ed25519 runner signature. The registry is a JSON object mapping runner IDs to public key PEM strings.
 
 Use one unique dashboard API key per customer environment. Do not reuse demo keys.
 
@@ -116,6 +126,7 @@ Before handing the environment to a customer:
 - Confirm `docker compose -f docker-compose.prod.yml --env-file .env ps` shows a healthy dashboard.
 - Confirm `/health` returns `status: ok`.
 - Confirm the dashboard requires the API key.
+- Confirm signed sync is enforced when runner public keys are configured.
 - Run one demo sync and open the run detail page.
 - Confirm synced dashboard payloads do not include raw rows, SMILES strings, dataset paths, prediction summaries, or full reports.
 - Confirm the Docker volume `privatelabbench_dashboard-data` is retained across restarts.

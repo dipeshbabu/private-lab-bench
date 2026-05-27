@@ -90,6 +90,10 @@ class BenchmarkRun(BaseModel):
     privacy: dict[str, Any] = Field(default_factory=dict)
     artifacts: list[ArtifactMetadata] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    sync_runner_id: str | None = None
+    signature_verified: bool | None = None
+    signature_algorithm: str | None = None
+    signed_payload_sha256: str | None = None
     created_at: str = Field(default_factory=utc_now)
 
 

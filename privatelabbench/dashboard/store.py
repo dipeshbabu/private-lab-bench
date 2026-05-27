@@ -49,6 +49,10 @@ class DashboardStore:
                     privacy_json TEXT NOT NULL,
                     artifacts_json TEXT NOT NULL,
                     metadata_json TEXT NOT NULL,
+                    sync_runner_id TEXT,
+                    signature_verified INTEGER,
+                    signature_algorithm TEXT,
+                    signed_payload_sha256 TEXT,
                     created_at TEXT NOT NULL
                 )
                 """
@@ -69,6 +73,10 @@ class DashboardStore:
             self._ensure_column(conn, "runs", "benchmark_version", "TEXT")
             self._ensure_column(conn, "runs", "benchmark_suite", "TEXT")
             self._ensure_column(conn, "runs", "domain", "TEXT")
+            self._ensure_column(conn, "runs", "sync_runner_id", "TEXT")
+            self._ensure_column(conn, "runs", "signature_verified", "INTEGER")
+            self._ensure_column(conn, "runs", "signature_algorithm", "TEXT")
+            self._ensure_column(conn, "runs", "signed_payload_sha256", "TEXT")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_project ON runs(project)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_org ON runs(organization_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_benchmark ON runs(benchmark_id)")
@@ -80,7 +88,8 @@ class DashboardStore:
         if column not in columns:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
-    def create_run(self, payload: SanitizedRunPayload) -> BenchmarkRun:
+    def create_run(self, payload: SanitizedRunPayload, signature: dict[str, object] | None = None) -> BenchmarkRun:
+        signature = signature or {}
         run = BenchmarkRun(
             id=uuid.uuid4().hex[:12],
             organization_id=payload.organization_id,
@@ -99,6 +108,14 @@ class DashboardStore:
             privacy=payload.privacy,
             artifacts=payload.artifacts,
             metadata=payload.metadata,
+            sync_runner_id=signature.get("runner_id") if isinstance(signature.get("runner_id"), str) else None,
+            signature_verified=(
+                bool(signature["verified"]) if isinstance(signature.get("verified"), bool) else None
+            ),
+            signature_algorithm=signature.get("algorithm") if isinstance(signature.get("algorithm"), str) else None,
+            signed_payload_sha256=(
+                signature.get("payload_sha256") if isinstance(signature.get("payload_sha256"), str) else None
+            ),
             created_at=payload.created_at or utc_now(),
         )
         with self._connect() as conn:
@@ -109,8 +126,10 @@ class DashboardStore:
                     benchmark_version, benchmark_suite, domain, project,
                     workflow, status, task_type,
                     n_samples, n_clients, total_samples, metrics_json,
-                    privacy_json, artifacts_json, metadata_json, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    privacy_json, artifacts_json, metadata_json,
+                    sync_runner_id, signature_verified, signature_algorithm,
+                    signed_payload_sha256, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     run.id,
@@ -131,6 +150,10 @@ class DashboardStore:
                     json.dumps(run.privacy, sort_keys=True),
                     json.dumps([artifact.model_dump() for artifact in run.artifacts], sort_keys=True),
                     json.dumps(run.metadata, sort_keys=True),
+                    run.sync_runner_id,
+                    None if run.signature_verified is None else int(run.signature_verified),
+                    run.signature_algorithm,
+                    run.signed_payload_sha256,
                     run.created_at,
                 ),
             )
@@ -142,6 +165,8 @@ class DashboardStore:
                 "run_id": run.id,
                 "source_run_id": run.source_run_id,
                 "benchmark_id": run.benchmark_id,
+                "sync_runner_id": run.sync_runner_id,
+                "signature_verified": run.signature_verified,
                 "project": run.project,
             },
         )
@@ -280,5 +305,11 @@ class DashboardStore:
             privacy=json.loads(row["privacy_json"]),
             artifacts=json.loads(row["artifacts_json"]),
             metadata=json.loads(row["metadata_json"]),
+            sync_runner_id=row["sync_runner_id"],
+            signature_verified=(
+                None if row["signature_verified"] is None else bool(row["signature_verified"])
+            ),
+            signature_algorithm=row["signature_algorithm"],
+            signed_payload_sha256=row["signed_payload_sha256"],
             created_at=row["created_at"],
         )
