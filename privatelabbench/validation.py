@@ -9,6 +9,7 @@ import pandas as pd
 
 from privatelabbench.config import RunnerConfig, load_config, required, section
 from privatelabbench.privacy.dp import PrivacyConfig
+from privatelabbench.privacy.policy import PrivacyRiskPolicy
 
 
 @dataclass(frozen=True)
@@ -104,6 +105,10 @@ def _validate_privacy(config: RunnerConfig, errors: list[str]) -> None:
             sensitivity=float(privacy.get("sensitivity", 1.0)),
             seed=int(privacy.get("seed", 13)),
         ).validate()
+        risk_policy = privacy.get("risk_policy")
+        if risk_policy is not None and not isinstance(risk_policy, dict):
+            raise ValueError("privacy.risk_policy must be a mapping.")
+        PrivacyRiskPolicy.from_config(risk_policy)
     except Exception as exc:  # noqa: BLE001 - validation should collect user-facing errors
         errors.append(f"Invalid privacy config: {exc}")
 

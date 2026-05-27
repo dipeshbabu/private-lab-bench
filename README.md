@@ -24,6 +24,7 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - Error slice analysis for model debugging
 - DP-style metric reporting
 - Local membership-inference risk scoring for trained molecule baselines and split-labeled prediction exports
+- Privacy-risk publishability gates for benchmark release decisions
 - Dataset and prediction summaries
 - Single-client local evaluation
 - Multi-client private evaluation over a directory of lab CSVs
@@ -96,6 +97,10 @@ privacy:
   epsilon: 8
   sensitivity: 1
   seed: 13
+  risk_policy:
+    max_level: moderate
+    max_member_advantage: 0.35
+    max_attack_auc: 0.85
 
 report:
   markdown: reports/kinase_prediction_eval.md

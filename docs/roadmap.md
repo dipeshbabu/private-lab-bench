@@ -102,6 +102,7 @@ Implemented:
 - train/holdout attack AUC, attack accuracy, member advantage, and risk level
 - report-safe privacy-risk metadata in molecule and prediction Markdown/JSON reports
 - optional `input.split_column` and `--split-column` support for external prediction workflows
+- config-driven privacy-risk gates for publishable/private leaderboard decisions
 
 Planned features:
 
