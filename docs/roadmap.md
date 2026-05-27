@@ -103,6 +103,7 @@ Implemented:
 - report-safe privacy-risk metadata in molecule and prediction Markdown/JSON reports
 - optional `input.split_column` and `--split-column` support for external prediction workflows
 - config-driven privacy-risk gates for publishable/private leaderboard decisions
+- aggregate release guards for cross-lab benchmark publication thresholds
 
 Planned features:
 

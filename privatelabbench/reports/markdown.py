@@ -151,6 +151,10 @@ def write_federated_markdown_report(
     lines.extend(_format_metric_lines(result["aggregate_reported_metrics"]))
     lines.extend(["", "## Aggregate dataset shift summary"])
     lines.extend(_format_metric_lines(result["aggregate_shift"]))
+    aggregate_release = result.get("aggregate_release")
+    if aggregate_release:
+        lines.extend(["", "## Aggregate release gate"])
+        lines.extend(_format_value_lines(aggregate_release))
 
     lines.extend(["", "## Per-client results"])
     for client in clients:
