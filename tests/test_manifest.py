@@ -49,6 +49,10 @@ def test_run_manifest_verifies_bound_artifacts(tmp_path):
     assert result["run_id"] == report["run_id"]
     assert result["artifacts_valid"] is True
     assert result["report_valid"] is True
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["attestation"]["schema_version"] == "runner-attestation/v0.1"
+    assert manifest["attestation"]["package"]["name"] == "private-lab-bench"
+    assert manifest["attestation"]["attestation_id"]
 
 
 def test_run_manifest_detects_tampered_artifact(tmp_path):

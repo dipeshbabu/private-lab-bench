@@ -9,6 +9,7 @@ from typing import Any, Mapping
 from uuid import uuid4
 
 from privatelabbench import __version__
+from privatelabbench.attestation import collect_runner_attestation
 from privatelabbench.reports.integrity import attach_integrity_metadata, verify_report
 
 
@@ -85,6 +86,7 @@ def build_run_manifest(
             "id": summary.get("runner_id"),
             "label": summary.get("runner_label"),
         },
+        "attestation": collect_runner_attestation(),
         "privacy": report.get("privacy", {}),
         "artifacts": artifacts,
     }
