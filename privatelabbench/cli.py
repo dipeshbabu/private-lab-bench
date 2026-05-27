@@ -87,6 +87,12 @@ def build_parser() -> argparse.ArgumentParser:
     sync.add_argument("--endpoint", required=True, help="Dashboard API base URL, e.g. http://127.0.0.1:8010")
     sync.add_argument("--api-key", default=None, help="Dashboard API key. Defaults to PRIVATELABBENCH_DASHBOARD_API_KEY.")
     sync.add_argument("--organization-id", default="local-org", help="Organization id to include in sanitized metadata.")
+    sync.add_argument("--runner-id", default=None, help="Runner id for signed sync. Defaults to PRIVATELABBENCH_RUNNER_ID.")
+    sync.add_argument(
+        "--runner-private-key",
+        default=None,
+        help="Ed25519 private key PEM or path for signed sync. Defaults to PRIVATELABBENCH_RUNNER_PRIVATE_KEY.",
+    )
 
     eval_mol = sub.add_parser("eval-molecules", help="Evaluate a molecular property prediction CSV locally.")
     eval_mol.add_argument("csv_path", help="Path to a CSV containing SMILES and target columns.")
@@ -178,11 +184,19 @@ def export_sanitized(args: argparse.Namespace) -> int:
 def sync_dashboard(args: argparse.Namespace) -> int:
     summary = run_config(args.config_path)
     payload = sanitize_summary(summary, organization_id=args.organization_id)
-    result = sync_payload(payload, endpoint=args.endpoint, api_key=args.api_key or os.getenv("PRIVATELABBENCH_DASHBOARD_API_KEY"))
+    result = sync_payload(
+        payload,
+        endpoint=args.endpoint,
+        api_key=args.api_key or os.getenv("PRIVATELABBENCH_DASHBOARD_API_KEY"),
+        runner_id=args.runner_id,
+        runner_private_key=args.runner_private_key,
+    )
     print("PrivateLabBench dashboard sync")
     print(f"Project: {payload.project}")
     print(f"Workflow: {payload.workflow}")
     print(f"Synced run id: {result.get('id')}")
+    if result.get("signature_verified") is not None:
+        print(f"Runner signature verified: {result.get('signature_verified')}")
     return 0
 
 

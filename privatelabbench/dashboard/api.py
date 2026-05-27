@@ -8,7 +8,7 @@ from typing import Any
 from urllib.parse import urlencode
 
 try:
-    from fastapi import Depends, FastAPI, HTTPException, status
+    from fastapi import Depends, FastAPI, HTTPException, Request, status
     from fastapi.responses import HTMLResponse
 except ImportError as exc:  # pragma: no cover
     raise RuntimeError("Dashboard API dependencies are missing. Install with: pip install -e '.[api]'") from exc
@@ -17,6 +17,7 @@ from privatelabbench import __version__
 from privatelabbench.dashboard.auth import require_dashboard_api_key
 from privatelabbench.dashboard.schemas import AuditEvent, BenchmarkRun, LeaderboardEntry, SanitizedRunPayload
 from privatelabbench.dashboard.store import DashboardStore
+from privatelabbench.signing import verification_result
 
 
 DASHBOARD_DB_ENV = "PRIVATELABBENCH_DASHBOARD_DB"
@@ -347,6 +348,10 @@ def _render_run_detail(run: BenchmarkRun, events: list[AuditEvent], api_key: str
             ("Samples", run.n_samples),
             ("Clients", run.n_clients),
             ("Total samples", run.total_samples),
+            ("Sync runner", run.sync_runner_id),
+            ("Signature verified", run.signature_verified),
+            ("Signature algorithm", run.signature_algorithm),
+            ("Signed payload SHA256", run.signed_payload_sha256),
             ("Created", run.created_at),
         ]
     )
@@ -522,8 +527,16 @@ def dashboard_leaderboard(
 
 
 @app.post("/v1/runs", response_model=BenchmarkRun, dependencies=[Depends(require_dashboard_api_key)])
-def sync_run(payload: SanitizedRunPayload) -> BenchmarkRun:
-    return get_store().create_run(payload)
+async def sync_run(request: Request) -> BenchmarkRun:
+    body = await request.body()
+    signature = verification_result(payload=body, headers=request.headers)
+    if signature.get("required") and not signature.get("verified"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Runner signature verification failed: {signature.get('reason')}",
+        )
+    payload = SanitizedRunPayload.model_validate_json(body)
+    return get_store().create_run(payload, signature=signature)
 
 
 @app.get("/v1/runs", response_model=list[BenchmarkRun], dependencies=[Depends(require_dashboard_api_key)])
