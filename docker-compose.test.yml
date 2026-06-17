@@ -1,0 +1,20 @@
+name: privatelabbench-test
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: privatelabbench_test
+      POSTGRES_USER: privatelabbench
+      POSTGRES_PASSWORD: privatelabbench
+    ports:
+      - "${PRIVATELABBENCH_TEST_POSTGRES_PORT:-55432}:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U privatelabbench -d privatelabbench_test",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20

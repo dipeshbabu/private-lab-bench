@@ -1,6 +1,6 @@
 # PrivateLabBench adapters
 
-PrivateLabBench now has an adapter layer so the product can move beyond a single demo baseline and support customer-owned scientific models.
+PrivateLabBench has an adapter layer so the product can produce trusted private evidence for customer-owned, vendor-owned, and internally trained scientific models.
 
 ## Why this matters
 
@@ -8,7 +8,7 @@ The commercial workflow is not "upload your private lab data to us." The workflo
 
 1. A lab runs a local adapter against its own model or prediction CSV.
 2. PrivateLabBench computes metrics, shift summaries, error slices, audit metadata, and optional DP-noised reported metrics.
-3. The customer can share only the report artifact with collaborators, vendors, or regulators.
+3. The customer can share only the evidence artifact with collaborators, vendors, leadership, legal, or auditors.
 
 ## Built-in adapters
 

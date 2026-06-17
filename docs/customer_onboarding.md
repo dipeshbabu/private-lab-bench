@@ -1,6 +1,6 @@
 # PrivateLabBench Customer Onboarding Guide
 
-PrivateLabBench is designed for scientific teams that need to evaluate AI models on private lab data without uploading raw samples to a third-party service.
+PrivateLabBench is designed for scientific teams that need trusted evidence about AI model performance on private lab data without uploading raw samples to a third-party service.
 
 ## What the customer gets
 
@@ -10,6 +10,7 @@ PrivateLabBench is designed for scientific teams that need to evaluate AI models
 - JSON reports for dashboards and audit trails
 - JSON report integrity hashes
 - Optional signed reports
+- Verifiable model-claim evidence packages
 - Local audit logs for config-driven evaluations
 - DP-style reported metrics
 - Support for customer-owned model predictions
@@ -17,11 +18,19 @@ PrivateLabBench is designed for scientific teams that need to evaluate AI models
 
 ## Recommended pilot workflow
 
-### 1. Pick one narrow evaluation task
+### 1. Pick one model claim to verify
 
-Good first pilot tasks:
+Good first claims:
+
+- "This vendor model is better than our baseline on our assay."
+- "This internal model generalizes across lab batches."
+- "This ADMET predictor is reliable enough for program triage."
+- "This partner model can be evaluated without receiving our dataset."
+
+Good first task types:
 
 - molecular property prediction
+- ADMET-style regression/classification
 - assay activity prediction
 - protein binding score prediction
 - reaction yield prediction
@@ -52,7 +61,14 @@ input:
   path: /data/customer_predictions.csv
   target_column: label
   prediction_column: pred
+  baseline_prediction_column: baseline_pred
   task_type: regression
+
+claim:
+  text: Candidate model improves RMSE versus the internal baseline on private assay data
+  decision_metric: rmse
+  direction: lower_is_better
+  minimum_lift: 0.10
 
 privacy:
   mode: dp
@@ -63,6 +79,9 @@ privacy:
 report:
   markdown: /data/reports/customer_assay_eval.md
   json: /data/reports/customer_assay_eval.json
+  evidence_markdown: /data/reports/customer_assay_evidence.md
+  evidence_json: /data/reports/customer_assay_evidence.json
+  evidence_manifest: /data/reports/customer_assay_evidence_manifest.json
 
 audit:
   path: /data/reports/customer_assay_audit.jsonl
@@ -74,6 +93,7 @@ audit:
 pip install -e .
 privatelabbench validate-config configs/prediction_eval.yaml
 privatelabbench run configs/prediction_eval.yaml
+privatelabbench evidence configs/prediction_eval.yaml
 privatelabbench verify-report reports/kinase_prediction_eval.json
 ```
 
@@ -135,6 +155,7 @@ A pilot is successful if the customer can answer:
 - Can the evaluation be repeated from a config file?
 - Can our team share only the report, not the raw data?
 - Can our team verify the report has not been changed after generation?
+- Can scientific leadership make a go/no-go decision from the evidence package?
 
 ## Suggested 4-week paid pilot
 
@@ -160,7 +181,7 @@ A pilot is successful if the customer can answer:
 
 ### Week 4: Decision package
 
-- Final benchmark report
+- Final model-claim evidence report
 - Privacy/utility summary
 - Report verification summary
 - Deployment recommendation
@@ -178,4 +199,4 @@ Until implemented and audited, do not claim:
 
 ## Best first customer profile
 
-The best first customer is an AI-first biotech or scientific ML team with proprietary assay data and one or more internal models they want to benchmark privately.
+The best first customer is an AI-first biotech, pharma computational chemistry group, CRO data science team, or scientific model vendor with proprietary assay data and one model claim they need to prove or disprove privately.

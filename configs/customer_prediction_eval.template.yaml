@@ -8,11 +8,21 @@ input:
   path: /path/to/customer_predictions.csv
   target_column: label
   prediction_column: prediction
+  # Optional. Use this for model-claim evidence reports that compare a vendor
+  # or candidate model against an incumbent/internal baseline.
+  # baseline_prediction_column: baseline_prediction
   # Optional: include a train/test split column to estimate membership-inference risk.
   # Accepted values include train, test, member, nonmember, 1, and 0.
   # split_column: split
   # Use "regression" for continuous labels or "classification" for 0/1 labels.
   task_type: regression
+
+claim:
+  # Used by `privatelabbench evidence`.
+  text: Candidate model improves RMSE versus the internal baseline on private assay data
+  decision_metric: rmse
+  direction: lower_is_better
+  minimum_lift: 0.10
 
 privacy:
   # Use "dp" for DP-style reported metric noise, or "none" for exact local metrics.
@@ -24,6 +34,9 @@ privacy:
 report:
   markdown: reports/customer_prediction_eval.md
   json: reports/customer_prediction_eval.json
+  evidence_markdown: reports/customer_evidence_report.md
+  evidence_json: reports/customer_evidence_report.json
+  evidence_manifest: reports/customer_evidence_manifest.json
   # Optional. Prefer setting PRIVATELABBENCH_SIGNING_SECRET in the environment.
   # signing_secret: replace-with-local-secret
 

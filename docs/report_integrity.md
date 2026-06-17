@@ -1,6 +1,6 @@
-# Report integrity and audit logs
+# Report Integrity And Audit Logs
 
-PrivateLabBench JSON reports include an `integrity` block.
+PrivateLabBench JSON reports include an `integrity` block. This is the foundation for turning a local model evaluation into a verifiable evidence artifact.
 
 The integrity block contains:
 
@@ -18,7 +18,7 @@ privatelabbench verify-report reports/kinase_prediction_eval.json
 ## Verify a run manifest
 
 Config-driven runs also write a run manifest. The manifest binds the config file,
-JSON report, Markdown report, audit log, benchmark identity, runner identity, and
+JSON report, Markdown report, audit log, evaluation-suite identity, runner identity, and
 artifact hashes into one verification bundle. It also includes a privacy-preserving
 runner attestation claim with package/runtime metadata and optional managed-runner
 metadata from:
@@ -33,6 +33,20 @@ privatelabbench verify-manifest reports/kinase_prediction_manifest.json
 
 The manifest check recomputes artifact hashes and verifies the bound JSON report
 integrity metadata.
+
+## Evidence bundle manifest
+
+`privatelabbench evidence` also writes an evidence manifest. The evidence manifest
+binds:
+
+- evidence JSON report
+- evidence Markdown report
+- source run manifest
+- evidence report payload hash
+- source run manifest hash
+
+This lets a customer share one evidence bundle while preserving a verifiable chain
+back to the source local evaluation.
 
 ## Create a signed report
 

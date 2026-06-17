@@ -1,14 +1,14 @@
 # PrivateLabBench Pilot Checklist
 
-Use this checklist before starting a customer pilot.
+Use this checklist before starting a customer pilot for private scientific AI evaluation.
 
 ## Customer qualification
 
 - [ ] Customer has proprietary scientific data.
 - [ ] Customer has at least one model or model output column to evaluate.
-- [ ] Customer has a narrow evaluation task.
+- [ ] Customer has one narrow model claim to prove or disprove.
 - [ ] Customer can run a local Python package or Docker image.
-- [ ] Customer is comfortable sharing aggregate metrics and reports.
+- [ ] Customer is comfortable sharing sanitized evidence metadata and local reports.
 
 ## Data readiness
 
@@ -45,10 +45,12 @@ Use this checklist before starting a customer pilot.
 
 ## Pilot deliverables
 
-- [ ] Baseline report.
+- [ ] Model-claim evidence report.
+- [ ] Baseline or incumbent comparison.
 - [ ] Private reported metrics.
 - [ ] Dataset or prediction summary.
 - [ ] Model comparison if multiple prediction files are available.
+- [ ] Signed report or manifest verification output.
 - [ ] Recommendation for next integration step.
 
 ## Commercial next step
