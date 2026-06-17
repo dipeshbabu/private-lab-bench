@@ -1,6 +1,6 @@
 # Production Deployment
 
-This guide is for a customer pilot or production-like demo where the hosted dashboard runs as a service and customers run evaluations locally.
+This guide is for a customer pilot or production-like demo where the hosted evidence dashboard runs as a service and customers run evaluations locally.
 
 ## 1. Prepare Environment
 
@@ -10,14 +10,26 @@ Copy the example environment file and replace every `change-me` value:
 cp .env.example .env
 ```
 
-Required dashboard values:
+Required evidence dashboard values:
 
 ```text
 PRIVATELABBENCH_ENV=production
 PRIVATELABBENCH_DASHBOARD_API_KEY=<unique-customer-secret>
-PRIVATELABBENCH_DASHBOARD_DB=/data/dashboard.db
+PRIVATELABBENCH_DASHBOARD_API_KEYS={"customer-lab":"<unique-customer-secret>"}
+PRIVATELABBENCH_DASHBOARD_DATABASE_URL=postgresql://privatelabbench:<password>@postgres.example.com:5432/privatelabbench
+PRIVATELABBENCH_DASHBOARD_RATE_LIMIT_PER_MINUTE=300
+PRIVATELABBENCH_AUDIT_RETENTION_DAYS=365
+PRIVATELABBENCH_DASHBOARD_TRUSTED_IDENTITY_HEADER=x-auth-request-email
+PRIVATELABBENCH_DASHBOARD_ALLOWED_IDENTITY_DOMAINS=customer.com
 PRIVATELABBENCH_RUNNER_PUBLIC_KEYS_FILE=/data/runner_public_keys.json
 ```
+
+Use either `PRIVATELABBENCH_DASHBOARD_API_KEY` for a single-tenant deployment or `PRIVATELABBENCH_DASHBOARD_API_KEYS` for organization-scoped enterprise pilots. If both are set, the global key acts as an operator key and organization-specific keys are enforced for tenant sync payloads.
+
+Set `PRIVATELABBENCH_DASHBOARD_TRUSTED_IDENTITY_HEADER` only when the dashboard is behind a trusted OIDC/SAML proxy that authenticates users and injects that header. Organization-scoped API keys still protect customer sync payloads.
+
+Use `PRIVATELABBENCH_DASHBOARD_DATABASE_URL` for PostgreSQL production storage. For local pilots, use `PRIVATELABBENCH_DASHBOARD_DB=/data/dashboard.db` instead.
+Before relying on the PostgreSQL backend, run the live integration suite in [`postgres_integration_testing.md`](postgres_integration_testing.md).
 
 Optional local API values:
 
@@ -37,7 +49,7 @@ When `PRIVATELABBENCH_RUNNER_PUBLIC_KEYS` or `PRIVATELABBENCH_RUNNER_PUBLIC_KEYS
 
 Use one unique dashboard API key per customer environment. Do not reuse demo keys.
 
-## 2. Start The Dashboard
+## 2. Start The Evidence Dashboard
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env up -d dashboard
@@ -47,6 +59,13 @@ Check health:
 
 ```bash
 curl http://localhost:8010/health
+curl http://localhost:8010/ready
+```
+
+Metrics endpoint:
+
+```bash
+curl http://localhost:8010/metrics
 ```
 
 Open the browser UI:
@@ -65,10 +84,19 @@ Customers keep their CSVs and full reports in their own environment. Before runn
 privatelabbench validate-config configs/customer_prediction_eval.yaml
 ```
 
-Run and sync sanitized metadata:
+Run and sync sanitized evaluation evidence:
 
 ```bash
 privatelabbench sync-dashboard configs/customer_prediction_eval.yaml \
+  --endpoint https://dashboard.example.com \
+  --api-key "$PRIVATELABBENCH_DASHBOARD_API_KEY" \
+  --organization-id customer-lab
+```
+
+Generate and sync a model-claim evidence package:
+
+```bash
+privatelabbench sync-evidence configs/customer_prediction_eval.yaml \
   --endpoint https://dashboard.example.com \
   --api-key "$PRIVATELABBENCH_DASHBOARD_API_KEY" \
   --organization-id customer-lab
@@ -125,11 +153,50 @@ Before handing the environment to a customer:
 
 - Confirm `docker compose -f docker-compose.prod.yml --env-file .env ps` shows a healthy dashboard.
 - Confirm `/health` returns `status: ok`.
+- Confirm `/ready` returns database counts.
+- Confirm `/metrics` exposes dashboard run, evidence, and audit counters.
 - Confirm the dashboard requires the API key.
+- If using SSO proxy auth, confirm the proxy strips spoofed identity headers before forwarding requests.
 - Confirm signed sync is enforced when runner public keys are configured.
+- Confirm organization-scoped API keys reject the wrong `organization_id`.
+- Confirm rate limiting is configured for the exposed dashboard endpoint.
 - Run one demo sync and open the run detail page.
+- Run one evidence sync and open `/evidence`.
 - Confirm synced dashboard payloads do not include raw rows, SMILES strings, dataset paths, prediction summaries, or full reports.
+- Confirm the synced run can support a model claim decision without exposing private data.
+- Confirm retried `sync-evidence` calls are idempotent and do not create duplicate records.
+- Create a dashboard backup and verify it restores into a test database.
 - Confirm the Docker volume `privatelabbench_dashboard-data` is retained across restarts.
+
+Backup the SQLite dashboard database:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env exec dashboard \
+  privatelabbench backup-dashboard --out /data/backups/dashboard-$(date +%Y%m%d).db
+```
+
+Restore the configured dashboard database only during a planned maintenance window:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env exec dashboard \
+  privatelabbench restore-dashboard \
+    --from-backup /data/backups/dashboard-20260616.db \
+    --force
+```
+
+Run audit retention explicitly:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env exec dashboard \
+  privatelabbench prune-dashboard-audit --retention-days 365
+```
+
+For PostgreSQL production storage, use managed database backups or:
+
+```bash
+pg_dump "$PRIVATELABBENCH_DASHBOARD_DATABASE_URL" > privatelabbench-dashboard.sql
+pg_restore --dbname "$PRIVATELABBENCH_DASHBOARD_DATABASE_URL" privatelabbench-dashboard.dump
+```
 
 ## 6. Troubleshooting
 

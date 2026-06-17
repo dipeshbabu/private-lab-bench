@@ -1,16 +1,41 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import uuid
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from privatelabbench.dashboard.schemas import AuditEvent, BenchmarkRun, LeaderboardEntry, SanitizedRunPayload, utc_now
+from privatelabbench.dashboard.schemas import (
+    AuditEvent,
+    BenchmarkRun,
+    EvidenceRecord,
+    LeaderboardEntry,
+    SanitizedEvidencePayload,
+    SanitizedRunPayload,
+    utc_now,
+)
+
+
+DASHBOARD_DB_ENV = "PRIVATELABBENCH_DASHBOARD_DB"
+DASHBOARD_DATABASE_URL_ENV = "PRIVATELABBENCH_DASHBOARD_DATABASE_URL"
+
+
+def create_dashboard_store() -> Any:
+    database_url = os.getenv(DASHBOARD_DATABASE_URL_ENV, "").strip()
+    if database_url:
+        if database_url.startswith(("postgres://", "postgresql://")):
+            from privatelabbench.dashboard.postgres_store import PostgresDashboardStore
+
+            return PostgresDashboardStore(database_url)
+        raise ValueError(f"{DASHBOARD_DATABASE_URL_ENV} must start with postgresql:// or postgres://")
+    return DashboardStore(Path(os.getenv(DASHBOARD_DB_ENV, ".privatelabbench_dashboard/dashboard.db")))
 
 
 class DashboardStore:
-    """Small SQLite store for hosted-dashboard pilots.
+    """Small SQLite store for evidence-dashboard pilots.
 
     The store keeps only sanitized run metadata. It is intentionally tiny so the
     same code can run locally, in a demo container, or behind a hosted FastAPI app.
@@ -68,6 +93,40 @@ class DashboardStore:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS evidence (
+                    id TEXT PRIMARY KEY,
+                    organization_id TEXT NOT NULL,
+                    source_run_id TEXT,
+                    source_evidence_id TEXT,
+                    benchmark_id TEXT,
+                    benchmark_version TEXT,
+                    benchmark_suite TEXT,
+                    domain TEXT,
+                    project TEXT NOT NULL,
+                    claim TEXT NOT NULL,
+                    recommendation TEXT NOT NULL,
+                    decision_status TEXT NOT NULL,
+                    decision_metric TEXT NOT NULL,
+                    direction TEXT NOT NULL,
+                    minimum_lift REAL NOT NULL,
+                    candidate_value REAL,
+                    baseline_value REAL,
+                    absolute_delta REAL,
+                    relative_lift REAL,
+                    privacy_json TEXT NOT NULL,
+                    verification_json TEXT NOT NULL,
+                    artifacts_json TEXT NOT NULL,
+                    metadata_json TEXT NOT NULL,
+                    sync_runner_id TEXT,
+                    signature_verified INTEGER,
+                    signature_algorithm TEXT,
+                    signed_payload_sha256 TEXT,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
             self._ensure_column(conn, "runs", "source_run_id", "TEXT")
             self._ensure_column(conn, "runs", "benchmark_id", "TEXT")
             self._ensure_column(conn, "runs", "benchmark_version", "TEXT")
@@ -80,6 +139,11 @@ class DashboardStore:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_project ON runs(project)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_org ON runs(organization_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_benchmark ON runs(benchmark_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_source ON runs(organization_id, source_run_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_evidence_project ON evidence(project)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_evidence_org ON evidence(organization_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_evidence_recommendation ON evidence(recommendation)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_evidence_source ON evidence(organization_id, source_evidence_id)")
             conn.commit()
 
     @staticmethod
@@ -90,6 +154,14 @@ class DashboardStore:
 
     def create_run(self, payload: SanitizedRunPayload, signature: dict[str, object] | None = None) -> BenchmarkRun:
         signature = signature or {}
+        if payload.run_id:
+            with self._connect() as conn:
+                existing = conn.execute(
+                    "SELECT * FROM runs WHERE organization_id = ? AND source_run_id = ? ORDER BY created_at DESC LIMIT 1",
+                    (payload.organization_id, payload.run_id),
+                ).fetchone()
+            if existing:
+                return self._row_to_run(existing)
         run = BenchmarkRun(
             id=uuid.uuid4().hex[:12],
             organization_id=payload.organization_id,
@@ -172,6 +244,115 @@ class DashboardStore:
         )
         return run
 
+    def create_evidence(
+        self,
+        payload: SanitizedEvidencePayload,
+        signature: dict[str, object] | None = None,
+    ) -> EvidenceRecord:
+        signature = signature or {}
+        if payload.source_evidence_id:
+            with self._connect() as conn:
+                existing = conn.execute(
+                    "SELECT * FROM evidence WHERE organization_id = ? AND source_evidence_id = ? ORDER BY created_at DESC LIMIT 1",
+                    (payload.organization_id, payload.source_evidence_id),
+                ).fetchone()
+            if existing:
+                return self._row_to_evidence(existing)
+        evidence = EvidenceRecord(
+            id=uuid.uuid4().hex[:12],
+            organization_id=payload.organization_id,
+            source_run_id=payload.source_run_id,
+            source_evidence_id=payload.source_evidence_id,
+            benchmark_id=payload.benchmark_id,
+            benchmark_version=payload.benchmark_version,
+            benchmark_suite=payload.benchmark_suite,
+            domain=payload.domain,
+            project=payload.project,
+            claim=payload.claim,
+            recommendation=payload.recommendation,
+            decision_status=payload.decision_status,
+            decision_metric=payload.decision_metric,
+            direction=payload.direction,
+            minimum_lift=payload.minimum_lift,
+            candidate_value=payload.candidate_value,
+            baseline_value=payload.baseline_value,
+            absolute_delta=payload.absolute_delta,
+            relative_lift=payload.relative_lift,
+            privacy=payload.privacy,
+            verification=payload.verification,
+            artifacts=payload.artifacts,
+            metadata=payload.metadata,
+            sync_runner_id=signature.get("runner_id") if isinstance(signature.get("runner_id"), str) else None,
+            signature_verified=(
+                bool(signature["verified"]) if isinstance(signature.get("verified"), bool) else None
+            ),
+            signature_algorithm=signature.get("algorithm") if isinstance(signature.get("algorithm"), str) else None,
+            signed_payload_sha256=(
+                signature.get("payload_sha256") if isinstance(signature.get("payload_sha256"), str) else None
+            ),
+            created_at=payload.created_at or utc_now(),
+        )
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO evidence (
+                    id, organization_id, source_run_id, source_evidence_id,
+                    benchmark_id, benchmark_version, benchmark_suite, domain,
+                    project, claim, recommendation, decision_status,
+                    decision_metric, direction, minimum_lift,
+                    candidate_value, baseline_value, absolute_delta, relative_lift,
+                    privacy_json, verification_json, artifacts_json, metadata_json,
+                    sync_runner_id, signature_verified, signature_algorithm,
+                    signed_payload_sha256, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    evidence.id,
+                    evidence.organization_id,
+                    evidence.source_run_id,
+                    evidence.source_evidence_id,
+                    evidence.benchmark_id,
+                    evidence.benchmark_version,
+                    evidence.benchmark_suite,
+                    evidence.domain,
+                    evidence.project,
+                    evidence.claim,
+                    evidence.recommendation,
+                    evidence.decision_status,
+                    evidence.decision_metric,
+                    evidence.direction,
+                    evidence.minimum_lift,
+                    evidence.candidate_value,
+                    evidence.baseline_value,
+                    evidence.absolute_delta,
+                    evidence.relative_lift,
+                    json.dumps(evidence.privacy, sort_keys=True),
+                    json.dumps(evidence.verification, sort_keys=True),
+                    json.dumps([artifact.model_dump() for artifact in evidence.artifacts], sort_keys=True),
+                    json.dumps(evidence.metadata, sort_keys=True),
+                    evidence.sync_runner_id,
+                    None if evidence.signature_verified is None else int(evidence.signature_verified),
+                    evidence.signature_algorithm,
+                    evidence.signed_payload_sha256,
+                    evidence.created_at,
+                ),
+            )
+            conn.commit()
+        self.add_audit_event(
+            evidence.organization_id,
+            "evidence_synced",
+            {
+                "evidence_id": evidence.id,
+                "source_run_id": evidence.source_run_id,
+                "source_evidence_id": evidence.source_evidence_id,
+                "recommendation": evidence.recommendation,
+                "project": evidence.project,
+                "sync_runner_id": evidence.sync_runner_id,
+                "signature_verified": evidence.signature_verified,
+            },
+        )
+        return evidence
+
     def list_runs(
         self,
         project: str | None = None,
@@ -200,6 +381,35 @@ class DashboardStore:
         with self._connect() as conn:
             row = conn.execute("SELECT * FROM runs WHERE id = ?", (run_id,)).fetchone()
         return self._row_to_run(row) if row else None
+
+    def list_evidence(
+        self,
+        project: str | None = None,
+        recommendation: str | None = None,
+        limit: int = 50,
+    ) -> list[EvidenceRecord]:
+        limit = max(1, min(limit, 200))
+        query = "SELECT * FROM evidence"
+        params: list[Any] = []
+        where: list[str] = []
+        if project:
+            where.append("project = ?")
+            params.append(project)
+        if recommendation:
+            where.append("recommendation = ?")
+            params.append(recommendation)
+        if where:
+            query += " WHERE " + " AND ".join(where)
+        query += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [self._row_to_evidence(row) for row in rows]
+
+    def get_evidence(self, evidence_id: str) -> EvidenceRecord | None:
+        with self._connect() as conn:
+            row = conn.execute("SELECT * FROM evidence WHERE id = ?", (evidence_id,)).fetchone()
+        return self._row_to_evidence(row) if row else None
 
     def leaderboard(
         self,
@@ -284,6 +494,42 @@ class DashboardStore:
             for row in rows
         ]
 
+    def prune_audit_events(self, retention_days: int) -> int:
+        if retention_days < 1:
+            raise ValueError("retention_days must be at least 1")
+        cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+        cutoff_value = cutoff.isoformat()
+        with self._connect() as conn:
+            cursor = conn.execute("DELETE FROM audit_events WHERE created_at < ?", (cutoff_value,))
+            conn.commit()
+            return int(cursor.rowcount or 0)
+
+    def counts(self) -> dict[str, int]:
+        with self._connect() as conn:
+            return {
+                "runs": int(conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0]),
+                "evidence": int(conn.execute("SELECT COUNT(*) FROM evidence").fetchone()[0]),
+                "audit_events": int(conn.execute("SELECT COUNT(*) FROM audit_events").fetchone()[0]),
+            }
+
+    def backup_to(self, destination: str | Path) -> Path:
+        backup_path = Path(destination)
+        backup_path.parent.mkdir(parents=True, exist_ok=True)
+        with self._connect() as source, sqlite3.connect(backup_path) as target:
+            source.backup(target)
+        return backup_path
+
+    @classmethod
+    def restore_database(cls, source: str | Path, destination: str | Path) -> "DashboardStore":
+        source_path = Path(source)
+        if not source_path.is_file():
+            raise FileNotFoundError(f"Dashboard backup not found: {source_path}")
+        destination_path = Path(destination)
+        destination_path.parent.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(source_path) as source_conn, sqlite3.connect(destination_path) as target_conn:
+            source_conn.backup(target_conn)
+        return cls(destination_path)
+
     @staticmethod
     def _row_to_run(row: sqlite3.Row) -> BenchmarkRun:
         return BenchmarkRun(
@@ -303,6 +549,41 @@ class DashboardStore:
             total_samples=row["total_samples"],
             metrics=json.loads(row["metrics_json"]),
             privacy=json.loads(row["privacy_json"]),
+            artifacts=json.loads(row["artifacts_json"]),
+            metadata=json.loads(row["metadata_json"]),
+            sync_runner_id=row["sync_runner_id"],
+            signature_verified=(
+                None if row["signature_verified"] is None else bool(row["signature_verified"])
+            ),
+            signature_algorithm=row["signature_algorithm"],
+            signed_payload_sha256=row["signed_payload_sha256"],
+            created_at=row["created_at"],
+        )
+
+    @staticmethod
+    def _row_to_evidence(row: sqlite3.Row) -> EvidenceRecord:
+        return EvidenceRecord(
+            id=row["id"],
+            organization_id=row["organization_id"],
+            source_run_id=row["source_run_id"],
+            source_evidence_id=row["source_evidence_id"],
+            benchmark_id=row["benchmark_id"],
+            benchmark_version=row["benchmark_version"],
+            benchmark_suite=row["benchmark_suite"],
+            domain=row["domain"],
+            project=row["project"],
+            claim=row["claim"],
+            recommendation=row["recommendation"],
+            decision_status=row["decision_status"],
+            decision_metric=row["decision_metric"],
+            direction=row["direction"],
+            minimum_lift=row["minimum_lift"],
+            candidate_value=row["candidate_value"],
+            baseline_value=row["baseline_value"],
+            absolute_delta=row["absolute_delta"],
+            relative_lift=row["relative_lift"],
+            privacy=json.loads(row["privacy_json"]),
+            verification=json.loads(row["verification_json"]),
             artifacts=json.loads(row["artifacts_json"]),
             metadata=json.loads(row["metadata_json"]),
             sync_runner_id=row["sync_runner_id"],

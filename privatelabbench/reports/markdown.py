@@ -85,6 +85,8 @@ def write_prediction_markdown_report(
     private_metrics: Mapping[str, float],
     privacy_config: PrivacyConfig,
     json_report_path: str | None = None,
+    baseline_prediction_column: str | None = None,
+    baseline_metrics: Mapping[str, float] | None = None,
 ) -> Path:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -101,6 +103,9 @@ def write_prediction_markdown_report(
         "## Clean local metrics",
     ]
     lines.extend(_format_metric_lines(clean_metrics))
+    if baseline_prediction_column and baseline_metrics:
+        lines.extend(["", "## Baseline comparison", f"- Baseline prediction column: `{baseline_prediction_column}`", ""])
+        lines.extend(_format_metric_lines(baseline_metrics))
     lines.extend(["", "## Privacy-preserving reported metrics"])
     lines.extend(_format_metric_lines(private_metrics))
     lines.extend(["", "## Prediction summary"])

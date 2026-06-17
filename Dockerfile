@@ -13,7 +13,7 @@ COPY examples ./examples
 COPY docs ./docs
 
 RUN python -m pip install --upgrade pip && \
-    pip install -e '.[api]'
+    pip install -e '.[api,postgres]'
 
 RUN useradd --create-home --shell /bin/bash appuser && \
     mkdir -p /app/reports /data /app/.privatelabbench_api/runs && \

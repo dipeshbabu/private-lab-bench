@@ -4,10 +4,13 @@ import argparse
 import json
 import os
 from pathlib import Path
+from typing import Any
 
 from privatelabbench.compare import compare_configs
+from privatelabbench.dashboard.store import DashboardStore, create_dashboard_store
 from privatelabbench.eval.metrics import summarize_metrics
 from privatelabbench.eval.predictions import evaluate_prediction_csv
+from privatelabbench.evidence import print_evidence_summary, run_evidence
 from privatelabbench.federated.evaluator import evaluate_federated_directory
 from privatelabbench.models.sklearn_baseline import evaluate_random_forest
 from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
@@ -21,7 +24,13 @@ from privatelabbench.reports.markdown import (
     write_prediction_markdown_report,
 )
 from privatelabbench.runner import print_run_summary, run_config
-from privatelabbench.sync import sanitize_summary, sync_payload, write_sanitized_payload
+from privatelabbench.sync import (
+    sanitize_evidence_summary,
+    sanitize_summary,
+    sync_evidence_payload,
+    sync_payload,
+    write_sanitized_payload,
+)
 from privatelabbench.tasks.molecules import load_molecule_csv
 from privatelabbench.validation import ConfigValidationResult, validate_config
 
@@ -44,12 +53,18 @@ def add_common_eval_args(parser: argparse.ArgumentParser) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="privatelabbench",
-        description="Local-first private evaluation for scientific AI models.",
+        description="Private scientific AI evaluation and trust infrastructure.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
     run = sub.add_parser("run", help="Run an evaluation workflow from a YAML config file.")
     run.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
+
+    evidence = sub.add_parser("evidence", help="Run a private prediction evaluation and generate a model-claim evidence report.")
+    evidence.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
+    evidence.add_argument("--claim", default=None, help="Model claim text to evaluate. Overrides claim.text in the config.")
+    evidence.add_argument("--evidence-markdown", default=None, help="Output path for the evidence Markdown report.")
+    evidence.add_argument("--evidence-json", default=None, help="Output path for the evidence JSON report.")
 
     validate = sub.add_parser("validate-config", help="Validate a YAML config before running it.")
     validate.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
@@ -59,7 +74,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--port", type=int, default=8000, help="Port for the API server.")
     serve.add_argument("--reload", action="store_true", help="Enable uvicorn auto-reload for local development.")
 
-    dashboard = sub.add_parser("serve-dashboard", help="Start the hosted-dashboard API for sanitized run metadata.")
+    dashboard = sub.add_parser("serve-dashboard", help="Start the evidence dashboard API for sanitized evaluation metadata.")
     dashboard.add_argument("--host", default="127.0.0.1", help="Host interface for the dashboard API.")
     dashboard.add_argument("--port", type=int, default=8010, help="Port for the dashboard API.")
     dashboard.add_argument("--reload", action="store_true", help="Enable uvicorn auto-reload for local development.")
@@ -77,12 +92,12 @@ def build_parser() -> argparse.ArgumentParser:
     verify_manifest.add_argument("manifest", help="Path to a PrivateLabBench run manifest.")
     verify_manifest.add_argument("--signing-secret", default=None, help="Optional HMAC signing secret. Defaults to PRIVATELABBENCH_SIGNING_SECRET.")
 
-    export = sub.add_parser("export-sanitized", help="Run a config and export dashboard-safe metadata only.")
+    export = sub.add_parser("export-sanitized", help="Run a config and export dashboard-safe evaluation evidence only.")
     export.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
     export.add_argument("--out", default="reports/sanitized_payload.json", help="Output JSON payload path.")
     export.add_argument("--organization-id", default="local-org", help="Organization id to include in sanitized metadata.")
 
-    sync = sub.add_parser("sync-dashboard", help="Run a config and sync sanitized metrics to a dashboard API.")
+    sync = sub.add_parser("sync-dashboard", help="Run a config and sync sanitized evaluation evidence to a dashboard API.")
     sync.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
     sync.add_argument("--endpoint", required=True, help="Dashboard API base URL, e.g. http://127.0.0.1:8010")
     sync.add_argument("--api-key", default=None, help="Dashboard API key. Defaults to PRIVATELABBENCH_DASHBOARD_API_KEY.")
@@ -94,12 +109,35 @@ def build_parser() -> argparse.ArgumentParser:
         help="Ed25519 private key PEM or path for signed sync. Defaults to PRIVATELABBENCH_RUNNER_PRIVATE_KEY.",
     )
 
+    sync_evidence = sub.add_parser("sync-evidence", help="Generate and sync sanitized model-claim evidence to a dashboard API.")
+    sync_evidence.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
+    sync_evidence.add_argument("--endpoint", required=True, help="Dashboard API base URL, e.g. http://127.0.0.1:8010")
+    sync_evidence.add_argument("--api-key", default=None, help="Dashboard API key. Defaults to PRIVATELABBENCH_DASHBOARD_API_KEY.")
+    sync_evidence.add_argument("--organization-id", default="local-org", help="Organization id to include in sanitized metadata.")
+    sync_evidence.add_argument("--claim", default=None, help="Model claim text to evaluate. Overrides claim.text in the config.")
+    sync_evidence.add_argument("--runner-id", default=None, help="Runner id for signed sync. Defaults to PRIVATELABBENCH_RUNNER_ID.")
+    sync_evidence.add_argument(
+        "--runner-private-key",
+        default=None,
+        help="Ed25519 private key PEM or path for signed sync. Defaults to PRIVATELABBENCH_RUNNER_PRIVATE_KEY.",
+    )
+
+    backup_dashboard = sub.add_parser("backup-dashboard", help="Create a SQLite backup of the evidence dashboard database.")
+    backup_dashboard.add_argument("--out", required=True, help="Output path for the dashboard database backup.")
+
+    restore_dashboard = sub.add_parser("restore-dashboard", help="Restore the evidence dashboard database from a SQLite backup.")
+    restore_dashboard.add_argument("--from-backup", required=True, help="Path to a dashboard database backup.")
+    restore_dashboard.add_argument("--force", action="store_true", help="Required to replace the current dashboard database.")
+
+    prune_dashboard_audit = sub.add_parser("prune-dashboard-audit", help="Delete dashboard audit events older than a retention window.")
+    prune_dashboard_audit.add_argument("--retention-days", type=int, required=True, help="Keep audit events from this many days.")
+
     eval_mol = sub.add_parser("eval-molecules", help="Evaluate a molecular property prediction CSV locally.")
     eval_mol.add_argument("csv_path", help="Path to a CSV containing SMILES and target columns.")
     add_common_eval_args(eval_mol)
     eval_mol.add_argument("--report", default="reports/molecule_eval_report.md")
 
-    eval_fed = sub.add_parser("eval-federated", help="Evaluate multiple private lab CSVs and aggregate reported metrics.")
+    eval_fed = sub.add_parser("eval-federated", help="Evaluate multiple private lab CSVs and aggregate reported evidence.")
     eval_fed.add_argument("client_dir", help="Directory containing one CSV per private lab/client.")
     add_common_eval_args(eval_fed)
     eval_fed.add_argument("--report", default="reports/federated_eval_report.md")
@@ -123,6 +161,17 @@ def make_privacy_config(args: argparse.Namespace) -> PrivacyConfig:
 def run_from_config(args: argparse.Namespace) -> int:
     summary = run_config(args.config_path)
     print_run_summary(summary)
+    return 0
+
+
+def evidence_from_config(args: argparse.Namespace) -> int:
+    summary = run_evidence(
+        args.config_path,
+        claim_override=args.claim,
+        markdown_path=args.evidence_markdown,
+        json_path=args.evidence_json,
+    )
+    print_evidence_summary(summary)
     return 0
 
 
@@ -169,11 +218,15 @@ def serve_dashboard_api(args: argparse.Namespace) -> int:
     return 0
 
 
+def dashboard_store_from_env() -> Any:
+    return create_dashboard_store()
+
+
 def export_sanitized(args: argparse.Namespace) -> int:
     summary = run_config(args.config_path)
     output = write_sanitized_payload(summary, args.out, organization_id=args.organization_id)
     payload = sanitize_summary(summary, organization_id=args.organization_id)
-    print("PrivateLabBench sanitized export")
+    print("PrivateLabBench sanitized evidence export")
     print(f"Project: {payload.project}")
     print(f"Workflow: {payload.workflow}")
     print(f"Metrics: {summarize_metrics(payload.metrics)}")
@@ -191,12 +244,62 @@ def sync_dashboard(args: argparse.Namespace) -> int:
         runner_id=args.runner_id,
         runner_private_key=args.runner_private_key,
     )
-    print("PrivateLabBench dashboard sync")
+    print("PrivateLabBench evidence dashboard sync")
     print(f"Project: {payload.project}")
     print(f"Workflow: {payload.workflow}")
     print(f"Synced run id: {result.get('id')}")
     if result.get("signature_verified") is not None:
         print(f"Runner signature verified: {result.get('signature_verified')}")
+    return 0
+
+
+def sync_evidence_dashboard(args: argparse.Namespace) -> int:
+    summary = run_evidence(args.config_path, claim_override=args.claim)
+    payload = sanitize_evidence_summary(summary, organization_id=args.organization_id)
+    result = sync_evidence_payload(
+        payload,
+        endpoint=args.endpoint,
+        api_key=args.api_key or os.getenv("PRIVATELABBENCH_DASHBOARD_API_KEY"),
+        runner_id=args.runner_id,
+        runner_private_key=args.runner_private_key,
+    )
+    print("PrivateLabBench evidence dashboard sync")
+    print(f"Project: {payload.project}")
+    print(f"Claim: {payload.claim}")
+    print(f"Recommendation: {payload.recommendation}")
+    print(f"Synced evidence id: {result.get('id')}")
+    if result.get("signature_verified") is not None:
+        print(f"Runner signature verified: {result.get('signature_verified')}")
+    return 0
+
+
+def backup_dashboard(args: argparse.Namespace) -> int:
+    store = dashboard_store_from_env()
+    backup_path = store.backup_to(args.out)
+    print("PrivateLabBench dashboard backup")
+    print(f"Database: {store.path}")
+    print(f"Backup saved to: {backup_path}")
+    return 0
+
+
+def restore_dashboard(args: argparse.Namespace) -> int:
+    if os.getenv("PRIVATELABBENCH_DASHBOARD_DATABASE_URL", "").strip():
+        raise SystemExit("PostgreSQL dashboard restores must use pg_restore or managed database restore tooling.")
+    if not args.force:
+        raise SystemExit("Refusing to restore without --force because this replaces the dashboard database.")
+    destination = Path(os.getenv("PRIVATELABBENCH_DASHBOARD_DB", ".privatelabbench_dashboard/dashboard.db"))
+    restored = DashboardStore.restore_database(args.from_backup, destination)
+    print("PrivateLabBench dashboard restore")
+    print(f"Restored from: {Path(args.from_backup)}")
+    print(f"Database: {restored.path}")
+    return 0
+
+
+def prune_dashboard_audit(args: argparse.Namespace) -> int:
+    deleted = dashboard_store_from_env().prune_audit_events(args.retention_days)
+    print("PrivateLabBench dashboard audit retention")
+    print(f"Retention days: {args.retention_days}")
+    print(f"Deleted audit events: {deleted}")
     return 0
 
 
@@ -367,6 +470,8 @@ def main() -> int:
     args = parser.parse_args()
     if args.command == "run":
         return run_from_config(args)
+    if args.command == "evidence":
+        return evidence_from_config(args)
     if args.command == "validate-config":
         return validate_config_command(args)
     if args.command == "serve":
@@ -377,6 +482,14 @@ def main() -> int:
         return export_sanitized(args)
     if args.command == "sync-dashboard":
         return sync_dashboard(args)
+    if args.command == "sync-evidence":
+        return sync_evidence_dashboard(args)
+    if args.command == "backup-dashboard":
+        return backup_dashboard(args)
+    if args.command == "restore-dashboard":
+        return restore_dashboard(args)
+    if args.command == "prune-dashboard-audit":
+        return prune_dashboard_audit(args)
     if args.command == "compare":
         return compare_from_configs(args)
     if args.command == "verify-report":

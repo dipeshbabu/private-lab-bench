@@ -134,6 +134,18 @@ def _validate_reports(config: RunnerConfig, *, errors: list[str], warnings: list
             errors=errors,
             warnings=warnings,
         )
+    optional_outputs = {
+        "evidence_markdown": f"reports/{config.project}_evidence_report.md",
+        "evidence_json": f"reports/{config.project}_evidence_report.json",
+    }
+    for key, default in optional_outputs.items():
+        if key in report:
+            _validate_output_path(
+                report.get(key, default),
+                label=f"report.{key}",
+                errors=errors,
+                warnings=warnings,
+            )
     audit = section(config, "audit")
     _validate_output_path(
         audit.get("path", f"reports/{config.project}_audit.jsonl"),
@@ -148,12 +160,15 @@ def _validate_predictions(config: RunnerConfig, *, config_path: Path, errors: li
     path_value = required(input_cfg, "path", section_name="input")
     target = str(required(input_cfg, "target_column", section_name="input"))
     prediction_column = str(required(input_cfg, "prediction_column", section_name="input"))
+    baseline_prediction_column = input_cfg.get("baseline_prediction_column")
     split_column = input_cfg.get("split_column")
     _validate_task_type(input_cfg.get("task_type"), errors)
     path = _validate_input_file(path_value, config_path=config_path, errors=errors)
     if path is None:
         return
     required_columns = {target, prediction_column}
+    if baseline_prediction_column:
+        required_columns.add(str(baseline_prediction_column))
     if split_column:
         required_columns.add(str(split_column))
     _require_columns(path, _csv_columns(path), required_columns, errors)

@@ -1,6 +1,8 @@
 # PrivateLabBench Roadmap
 
-PrivateLabBench is being built as secure evaluation infrastructure for scientific AI. The product wedge is private model evaluation before federated training.
+PrivateLabBench is being built as private scientific AI evaluation and trust infrastructure. The product wedge is private model-claim evaluation before federated training, data sharing, or model licensing.
+
+The north-star artifact is an evidence bundle: signed reports, privacy-risk metadata, reproducible config snapshots, sanitized dashboard records, and optional private leaderboard entries that let a scientific team trust or reject a model claim.
 
 ## v0.1: Local private molecule evaluation
 
@@ -112,18 +114,35 @@ Planned features:
 - DP budget reporting
 - privacy/utility tradeoff plots
 
-## v0.9: Local runner + hosted dashboard
+## v0.9: Local runner + evidence dashboard
 
 Goal: make the workflow product-like while keeping raw data local.
 
 Status: implemented for sanitized dashboard sync pilots.
 
 - local runner agent
-- hosted aggregate dashboard
+- hosted evidence dashboard
 - signed reports
 - team/project organization
 - sanitized export and sync commands
 - private benchmark network prototype remains future work
+
+## v0.10: Trust-layer pivot
+
+Status: in progress.
+
+- Reposition product as private scientific AI evaluation and trust infrastructure
+- Introduce model-claim evidence language across docs and user-facing surfaces
+- Add customer-facing trust-report templates for vendor diligence and internal go/no-go reviews
+- Package signed manifests, privacy risk, sanitized metrics, and artifact hashes as an evaluation evidence bundle
+- Prioritize prediction-file workflows as the lowest-friction paid pilot path
+
+## Next commercial milestones
+
+- One paid pilot for vendor model diligence on private assay or ADMET-style data
+- One paid pilot for internal model comparison across private batches/sites
+- One sanitized evidence dashboard deployed per customer environment
+- One repeatable report format that a buyer can forward to scientific leadership, legal, and external partners
 
 ## Long-term domains
 

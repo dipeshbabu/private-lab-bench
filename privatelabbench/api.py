@@ -28,7 +28,7 @@ API_KEY_ENV = "PRIVATELABBENCH_API_KEY"
 
 
 class RunRequest(BaseModel):
-    """Request body for launching a benchmark run.
+    """Request body for launching a private evaluation run.
 
     Use either `config_path` for an existing YAML config on disk, or `config` for an
     inline YAML-equivalent mapping. Inline configs are written into the run folder
@@ -53,7 +53,7 @@ class RunRecord(BaseModel):
 app = FastAPI(
     title="PrivateLabBench API",
     version=__version__,
-    description="Local-first API for running private scientific model evaluations without uploading raw lab data.",
+    description="Local API for producing private scientific AI evaluation evidence without uploading raw lab data.",
 )
 
 

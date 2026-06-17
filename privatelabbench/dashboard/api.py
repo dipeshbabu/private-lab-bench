@@ -3,24 +3,32 @@ from __future__ import annotations
 from html import escape
 import json
 import os
-from pathlib import Path
+import time
 from typing import Any
 from urllib.parse import urlencode
 
 try:
     from fastapi import Depends, FastAPI, HTTPException, Request, status
-    from fastapi.responses import HTMLResponse
+    from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 except ImportError as exc:  # pragma: no cover
     raise RuntimeError("Dashboard API dependencies are missing. Install with: pip install -e '.[api]'") from exc
 
 from privatelabbench import __version__
-from privatelabbench.dashboard.auth import require_dashboard_api_key
-from privatelabbench.dashboard.schemas import AuditEvent, BenchmarkRun, LeaderboardEntry, SanitizedRunPayload
-from privatelabbench.dashboard.store import DashboardStore
+from privatelabbench.dashboard.auth import require_dashboard_api_key, require_dashboard_api_key_for_org
+from privatelabbench.dashboard.schemas import (
+    AuditEvent,
+    BenchmarkRun,
+    EvidenceRecord,
+    LeaderboardEntry,
+    SanitizedEvidencePayload,
+    SanitizedRunPayload,
+)
+from privatelabbench.dashboard.store import create_dashboard_store
 from privatelabbench.signing import verification_result
 
 
-DASHBOARD_DB_ENV = "PRIVATELABBENCH_DASHBOARD_DB"
+DASHBOARD_RATE_LIMIT_ENV = "PRIVATELABBENCH_DASHBOARD_RATE_LIMIT_PER_MINUTE"
+AUDIT_RETENTION_DAYS_ENV = "PRIVATELABBENCH_AUDIT_RETENTION_DAYS"
 PRIVATE_METADATA_KEYS = {
     "dataset_path",
     "directory",
@@ -33,10 +41,44 @@ PRIVATE_METADATA_KEYS = {
     "shift",
     "error_slices",
 }
+_RATE_LIMIT_BUCKETS: dict[str, list[float]] = {}
 
 
-def get_store() -> DashboardStore:
-    return DashboardStore(Path(os.getenv(DASHBOARD_DB_ENV, ".privatelabbench_dashboard/dashboard.db")))
+def get_store() -> Any:
+    store = create_dashboard_store()
+    retention_days = _audit_retention_days()
+    if retention_days:
+        store.prune_audit_events(retention_days)
+    return store
+
+
+def _audit_retention_days() -> int:
+    raw = os.getenv(AUDIT_RETENTION_DAYS_ENV, "").strip()
+    if not raw:
+        return 0
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 0
+
+
+def _dashboard_rate_limit() -> int:
+    raw = os.getenv(DASHBOARD_RATE_LIMIT_ENV, "").strip()
+    if not raw:
+        return 0
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 0
+
+
+def _rate_limit_key(request: Request) -> str:
+    provided = request.headers.get("x-api-key") or request.query_params.get("api_key")
+    if provided:
+        return f"api-key:{provided}"
+    if request.client and request.client.host:
+        return f"client:{request.client.host}"
+    return "client:unknown"
 
 
 def _format_value(value: Any) -> str:
@@ -72,7 +114,7 @@ def _dashboard_query(api_key: str | None = None, **params: Any) -> str:
     return f"?{urlencode(query)}" if query else ""
 
 
-def _render_shell(title: str, body: str, eyebrow: str = "Sanitized benchmark runs only") -> str:
+def _render_shell(title: str, body: str, eyebrow: str = "Sanitized evaluation evidence only") -> str:
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -239,7 +281,7 @@ def _render_dashboard(
     <form method="get" action="/">
       {hidden_api_key}
       <input name="project" value="{project_value}" placeholder="Filter by project">
-      <input name="benchmark_id" value="{benchmark_value}" placeholder="Filter by benchmark">
+      <input name="benchmark_id" value="{benchmark_value}" placeholder="Filter by evaluation suite">
       <button type="submit">Filter</button>
     </form>
     <div class="table-wrap">
@@ -247,7 +289,7 @@ def _render_dashboard(
         <thead>
           <tr>
             <th>Run</th>
-            <th>Benchmark</th>
+            <th>Evaluation Suite</th>
             <th>Project</th>
             <th>Workflow</th>
             <th>Task</th>
@@ -265,7 +307,69 @@ def _render_dashboard(
     return _render_shell(
         "PrivateLabBench Dashboard",
         content,
-        eyebrow=f"Sanitized benchmark runs only | Showing {len(runs)} of {limit}",
+        eyebrow=f"Sanitized evaluation evidence only | Showing {len(runs)} of {limit}",
+    )
+
+
+def _render_evidence_dashboard(
+    evidence: list[EvidenceRecord],
+    project: str | None,
+    recommendation: str | None,
+    limit: int,
+    api_key: str | None = None,
+) -> str:
+    rows = []
+    for item in evidence:
+        detail_url = f"/evidence/{escape(item.id)}{_dashboard_query(api_key=api_key)}"
+        lift = "" if item.relative_lift is None else _format_value(item.relative_lift)
+        rows.append(
+            "<tr>"
+            f'<td><a href="{detail_url}"><code>{escape(item.id)}</code></a></td>'
+            f"<td>{escape(item.project)}</td>"
+            f"<td>{escape(item.recommendation)}</td>"
+            f"<td>{escape(item.decision_metric)}</td>"
+            f"<td>{escape(lift)}</td>"
+            f"<td>{escape(_format_value(item.privacy.get('gate_status')))}</td>"
+            f"<td>{escape(_format_value(item.verification.get('manifest_valid')))}</td>"
+            f"<td>{escape(item.claim)}</td>"
+            f"<td>{escape(item.created_at)}</td>"
+            "</tr>"
+        )
+
+    body = "\n".join(rows) if rows else '<tr><td colspan="9" class="empty">No synced evidence found.</td></tr>'
+    project_value = escape(project or "")
+    recommendation_value = escape(recommendation or "")
+    hidden_api_key = f'<input type="hidden" name="api_key" value="{escape(api_key)}">' if api_key else ""
+    content = f"""
+    <form method="get" action="/evidence">
+      {hidden_api_key}
+      <input name="project" value="{project_value}" placeholder="Filter by project">
+      <input name="recommendation" value="{recommendation_value}" placeholder="go, no-go, needs-review">
+      <button type="submit">Filter</button>
+    </form>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Evidence</th>
+            <th>Project</th>
+            <th>Recommendation</th>
+            <th>Metric</th>
+            <th>Relative Lift</th>
+            <th>Privacy Gate</th>
+            <th>Manifest Valid</th>
+            <th>Claim</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>{body}</tbody>
+      </table>
+    </div>
+"""
+    return _render_shell(
+        "PrivateLabBench Evidence",
+        content,
+        eyebrow=f"Sanitized model-claim evidence only | Showing {len(evidence)} of {limit}",
     )
 
 
@@ -297,6 +401,25 @@ def _render_artifact_table(run: BenchmarkRun) -> str:
         return '<span class="muted">None</span>'
     rows = []
     for artifact in run.artifacts:
+        rows.append(
+            "<tr>"
+            f"<td>{escape(artifact.name)}</td>"
+            f"<td>{escape(artifact.kind)}</td>"
+            f"<td><code>{escape(artifact.sha256 or '')}</code></td>"
+            "</tr>"
+        )
+    return (
+        '<div class="table-wrap"><table><thead><tr>'
+        "<th>Name</th><th>Kind</th><th>SHA256</th>"
+        f"</tr></thead><tbody>{''.join(rows)}</tbody></table></div>"
+    )
+
+
+def _render_evidence_artifact_table(evidence: EvidenceRecord) -> str:
+    if not evidence.artifacts:
+        return '<span class="muted">None</span>'
+    rows = []
+    for artifact in evidence.artifacts:
         rows.append(
             "<tr>"
             f"<td>{escape(artifact.name)}</td>"
@@ -389,6 +512,70 @@ def _render_run_detail(run: BenchmarkRun, events: list[AuditEvent], api_key: str
     return _render_shell(f"Run {run.id}", content, eyebrow="Sanitized run detail")
 
 
+def _render_evidence_detail(evidence: EvidenceRecord, events: list[AuditEvent], api_key: str | None = None) -> str:
+    overview = _render_definition_list(
+        [
+            ("Evidence ID", evidence.id),
+            ("Source run ID", evidence.source_run_id),
+            ("Source evidence ID", evidence.source_evidence_id),
+            ("Organization", evidence.organization_id),
+            ("Project", evidence.project),
+            ("Benchmark", evidence.benchmark_id),
+            ("Benchmark version", evidence.benchmark_version),
+            ("Benchmark suite", evidence.benchmark_suite),
+            ("Recommendation", evidence.recommendation),
+            ("Decision status", evidence.decision_status),
+            ("Decision metric", evidence.decision_metric),
+            ("Direction", evidence.direction),
+            ("Minimum lift", evidence.minimum_lift),
+            ("Candidate value", evidence.candidate_value),
+            ("Baseline value", evidence.baseline_value),
+            ("Absolute delta", evidence.absolute_delta),
+            ("Relative lift", evidence.relative_lift),
+            ("Sync runner", evidence.sync_runner_id),
+            ("Signature verified", evidence.signature_verified),
+            ("Signed payload SHA256", evidence.signed_payload_sha256),
+            ("Created", evidence.created_at),
+        ]
+    )
+    back_url = f"/evidence{_dashboard_query(api_key=api_key)}"
+    safe_metadata = _safe_metadata(evidence.metadata)
+    content = f"""
+    <div class="stack">
+      <div><a class="button" href="{back_url}">Back to evidence</a></div>
+      <section class="panel">
+        <h2>Claim</h2>
+        <p>{escape(evidence.claim)}</p>
+      </section>
+      <section class="panel">
+        <h2>Overview</h2>
+        {overview}
+      </section>
+      <section class="panel">
+        <h2>Privacy</h2>
+        {_render_json_block(evidence.privacy)}
+      </section>
+      <section class="panel">
+        <h2>Verification</h2>
+        {_render_json_block(evidence.verification)}
+      </section>
+      <section class="panel">
+        <h2>Artifacts</h2>
+        {_render_evidence_artifact_table(evidence)}
+      </section>
+      <section class="panel">
+        <h2>Sanitized Metadata</h2>
+        {_render_json_block(safe_metadata)}
+      </section>
+      <section class="panel">
+        <h2>Audit Events</h2>
+        {_render_audit_events(events)}
+      </section>
+    </div>
+"""
+    return _render_shell(f"Evidence {evidence.id}", content, eyebrow="Sanitized model-claim evidence detail")
+
+
 def _render_leaderboard(
     entries: list[LeaderboardEntry],
     *,
@@ -456,13 +643,69 @@ def _render_leaderboard(
 app = FastAPI(
     title="PrivateLabBench Dashboard API",
     version=__version__,
-    description="Hosted-dashboard API for sanitized scientific-model benchmark results.",
+    description="Evidence dashboard API for sanitized private scientific AI evaluation results.",
 )
+
+
+@app.middleware("http")
+async def rate_limit_requests(request: Request, call_next):
+    if request.url.path in {"/health", "/ready", "/metrics"}:
+        return await call_next(request)
+    limit = _dashboard_rate_limit()
+    if limit <= 0:
+        return await call_next(request)
+
+    now = time.monotonic()
+    window_start = now - 60
+    key = _rate_limit_key(request)
+    bucket = [timestamp for timestamp in _RATE_LIMIT_BUCKETS.get(key, []) if timestamp >= window_start]
+    if len(bucket) >= limit:
+        _RATE_LIMIT_BUCKETS[key] = bucket
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={"detail": "Dashboard API rate limit exceeded."},
+            headers={"Retry-After": "60"},
+        )
+    bucket.append(now)
+    _RATE_LIMIT_BUCKETS[key] = bucket
+    return await call_next(request)
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "privatelabbench-dashboard", "version": __version__}
+
+
+@app.get("/ready")
+def ready() -> dict[str, object]:
+    try:
+        store = get_store()
+        return {
+            "status": "ready",
+            "service": "privatelabbench-dashboard",
+            "version": __version__,
+            "database": str(store.path),
+            "counts": store.counts(),
+        }
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+def metrics() -> PlainTextResponse:
+    counts = get_store().counts()
+    lines = [
+        "# HELP privatelabbench_dashboard_runs Sanitized benchmark runs stored.",
+        "# TYPE privatelabbench_dashboard_runs gauge",
+        f"privatelabbench_dashboard_runs {counts['runs']}",
+        "# HELP privatelabbench_dashboard_evidence Model claim evidence records stored.",
+        "# TYPE privatelabbench_dashboard_evidence gauge",
+        f"privatelabbench_dashboard_evidence {counts['evidence']}",
+        "# HELP privatelabbench_dashboard_audit_events Audit events stored.",
+        "# TYPE privatelabbench_dashboard_audit_events gauge",
+        f"privatelabbench_dashboard_audit_events {counts['audit_events']}",
+    ]
+    return PlainTextResponse("\n".join(lines) + "\n")
 
 
 @app.get("/", response_class=HTMLResponse, dependencies=[Depends(require_dashboard_api_key)])
@@ -484,6 +727,25 @@ def dashboard_home(
     )
 
 
+@app.get("/evidence", response_class=HTMLResponse, dependencies=[Depends(require_dashboard_api_key)])
+def dashboard_evidence_home(
+    project: str | None = None,
+    recommendation: str | None = None,
+    limit: int = 50,
+    api_key: str | None = None,
+) -> HTMLResponse:
+    evidence = get_store().list_evidence(project=project, recommendation=recommendation, limit=limit)
+    return HTMLResponse(
+        _render_evidence_dashboard(
+            evidence,
+            project=project,
+            recommendation=recommendation,
+            limit=max(1, min(limit, 200)),
+            api_key=api_key,
+        )
+    )
+
+
 @app.get("/runs/{run_id}", response_class=HTMLResponse, dependencies=[Depends(require_dashboard_api_key)])
 def dashboard_run_detail(run_id: str, api_key: str | None = None) -> HTMLResponse:
     store = get_store()
@@ -496,6 +758,20 @@ def dashboard_run_detail(run_id: str, api_key: str | None = None) -> HTMLRespons
         if event.payload.get("run_id") == run.id
     ]
     return HTMLResponse(_render_run_detail(run, events, api_key=api_key))
+
+
+@app.get("/evidence/{evidence_id}", response_class=HTMLResponse, dependencies=[Depends(require_dashboard_api_key)])
+def dashboard_evidence_detail(evidence_id: str, api_key: str | None = None) -> HTMLResponse:
+    store = get_store()
+    evidence = store.get_evidence(evidence_id)
+    if evidence is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown evidence_id: {evidence_id}")
+    events = [
+        event
+        for event in store.list_audit_events(organization_id=evidence.organization_id, limit=200)
+        if event.payload.get("evidence_id") == evidence.id
+    ]
+    return HTMLResponse(_render_evidence_detail(evidence, events, api_key=api_key))
 
 
 @app.get("/leaderboards/{benchmark_id}", response_class=HTMLResponse, dependencies=[Depends(require_dashboard_api_key)])
@@ -536,12 +812,44 @@ async def sync_run(request: Request) -> BenchmarkRun:
             detail=f"Runner signature verification failed: {signature.get('reason')}",
         )
     payload = SanitizedRunPayload.model_validate_json(body)
+    require_dashboard_api_key_for_org(
+        payload.organization_id,
+        x_api_key=request.headers.get("x-api-key"),
+        api_key=request.query_params.get("api_key"),
+    )
     return get_store().create_run(payload, signature=signature)
+
+
+@app.post("/v1/evidence", response_model=EvidenceRecord, dependencies=[Depends(require_dashboard_api_key)])
+async def sync_evidence(request: Request) -> EvidenceRecord:
+    body = await request.body()
+    signature = verification_result(payload=body, headers=request.headers)
+    if signature.get("required") and not signature.get("verified"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Runner signature verification failed: {signature.get('reason')}",
+        )
+    payload = SanitizedEvidencePayload.model_validate_json(body)
+    require_dashboard_api_key_for_org(
+        payload.organization_id,
+        x_api_key=request.headers.get("x-api-key"),
+        api_key=request.query_params.get("api_key"),
+    )
+    return get_store().create_evidence(payload, signature=signature)
 
 
 @app.get("/v1/runs", response_model=list[BenchmarkRun], dependencies=[Depends(require_dashboard_api_key)])
 def list_runs(project: str | None = None, benchmark_id: str | None = None, limit: int = 50) -> list[BenchmarkRun]:
     return get_store().list_runs(project=project, benchmark_id=benchmark_id, limit=limit)
+
+
+@app.get("/v1/evidence", response_model=list[EvidenceRecord], dependencies=[Depends(require_dashboard_api_key)])
+def list_evidence(
+    project: str | None = None,
+    recommendation: str | None = None,
+    limit: int = 50,
+) -> list[EvidenceRecord]:
+    return get_store().list_evidence(project=project, recommendation=recommendation, limit=limit)
 
 
 @app.get("/v1/runs/{run_id}", response_model=BenchmarkRun, dependencies=[Depends(require_dashboard_api_key)])
@@ -550,6 +858,14 @@ def get_run(run_id: str) -> BenchmarkRun:
     if run is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown run_id: {run_id}")
     return run
+
+
+@app.get("/v1/evidence/{evidence_id}", response_model=EvidenceRecord, dependencies=[Depends(require_dashboard_api_key)])
+def get_evidence(evidence_id: str) -> EvidenceRecord:
+    evidence = get_store().get_evidence(evidence_id)
+    if evidence is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unknown evidence_id: {evidence_id}")
+    return evidence
 
 
 @app.get("/v1/leaderboards/{benchmark_id}", response_model=list[LeaderboardEntry], dependencies=[Depends(require_dashboard_api_key)])

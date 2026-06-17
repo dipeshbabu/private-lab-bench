@@ -1,20 +1,37 @@
 # PrivateLabBench
 
-PrivateLabBench is a local-first evaluation framework for scientific AI models on proprietary lab datasets.
+PrivateLabBench is private scientific AI evaluation and trust infrastructure.
 
-It lets labs run model evaluations locally, compute privacy-preserving metrics, generate benchmark reports, and sync only sanitized benchmark metadata to a hosted dashboard. The initial product wedge is private molecular property prediction evaluation from CSV files.
+It helps biotech, pharma, CRO, and scientific ML teams prove whether an AI model works on proprietary lab data without exposing raw rows, model code, or sensitive prediction outputs. Teams run evaluations locally, produce signed evidence packages, quantify privacy risk, and sync only sanitized evaluation metadata to a hosted dashboard.
+
+The initial product wedge is private evaluation of molecular property, ADMET, assay activity, and other scientific prediction models from customer-owned prediction CSVs. The larger product is the trust layer for scientific AI model claims: before a model is bought, licensed, published, deployed, or used in a program decision, PrivateLabBench can generate reproducible evidence on private data.
+
+## Product thesis
+
+Scientific AI buyers do not just need another model or benchmark. They need defensible answers to these questions:
+
+- Does this model work on our private assay, chemistry, biology, or lab-batch distribution?
+- Did performance hold across sites, batches, targets, partners, or time periods?
+- Can we share evidence with leadership, legal, vendors, partners, or auditors without exposing raw data?
+- Can a model vendor prove a claim without receiving the customer's proprietary dataset?
+- Can every reported result be reproduced, verified, and traced back to the exact config and artifacts?
+
+PrivateLabBench turns local private evaluations into signed, sanitized trust artifacts.
 
 ## Current scope
 
-- Molecular property prediction from `smiles,target` CSV files
-- External prediction evaluation for customer-owned models
+- Private scientific model-claim evaluation from customer-owned prediction CSVs
+- Molecular property, ADMET-style, assay activity, and generic regression/classification workflows
+- External prediction evaluation for customer-owned or vendor-owned models
 - Config-based local runner with YAML workflows
 - Local FastAPI service for product-style integrations
-- Hosted dashboard API for sanitized run metadata
+- Evidence dashboard API for sanitized run metadata
 - Dashboard-safe sync/export commands that avoid raw data upload
-- Network-ready benchmark identity metadata for sanitized private leaderboards
-- Sanitized private leaderboard API and dashboard views by benchmark metric
+- Network-ready evaluation-suite identity metadata for sanitized private leaderboards
+- Sanitized private leaderboard API and dashboard views by evaluation metric
 - Ed25519-signed dashboard sync with runner public-key verification
+- Organization-scoped dashboard API keys, trusted-header SSO proxy support, idempotent sync, rate limits, readiness/metrics, audit retention, and SQLite backup/restore
+- PostgreSQL dashboard storage for production deployments
 - Verifiable run manifests binding configs, reports, audit logs, and artifact hashes
 - Privacy-preserving runner attestation metadata in verification manifests
 - Dockerized local runner for customer pilots
@@ -27,12 +44,12 @@ It lets labs run model evaluations locally, compute privacy-preserving metrics, 
 - Error slice analysis for model debugging
 - DP-style metric reporting
 - Local membership-inference risk scoring for trained molecule baselines and split-labeled prediction exports
-- Privacy-risk publishability gates for benchmark release decisions
-- Aggregate release guards for cross-lab benchmark reports
+- Privacy-risk publishability gates for model-claim release decisions
+- Aggregate release guards for cross-lab evaluation evidence
 - Dataset and prediction summaries
 - Single-client local evaluation
 - Multi-client private evaluation over a directory of lab CSVs
-- Weighted aggregate benchmark reports
+- Weighted aggregate evaluation reports
 - Model comparison reports across multiple configs
 - Markdown and JSON report export
 - CLI entrypoint
@@ -175,9 +192,9 @@ privatelabbench verify-manifest reports/kinase_prediction_manifest.json
 
 When `PRIVATELABBENCH_SIGNING_SECRET` or `report.signing_secret` is set, the JSON report and manifest are both HMAC-signed.
 
-## Hosted dashboard sync
+## Evidence dashboard sync
 
-PrivateLabBench now has a hosted-dashboard path that keeps raw lab data local. The local runner evaluates data, writes full local reports, then sends only sanitized metadata such as project name, workflow, sample counts, reported/private metrics, privacy mode, and artifact hashes.
+PrivateLabBench has a hosted evidence-dashboard path that keeps raw lab data local. The local runner evaluates data, writes full local reports, then sends only sanitized metadata such as project name, workflow, sample counts, reported/private metrics, privacy mode, and artifact hashes.
 
 One-command local demo on Windows:
 
@@ -231,8 +248,11 @@ Inspect synced runs:
 
 ```bash
 curl -H 'x-api-key: dashboard-secret' http://127.0.0.1:8010/v1/runs
+curl -H 'x-api-key: dashboard-secret' http://127.0.0.1:8010/v1/evidence
 curl -H 'x-api-key: dashboard-secret' 'http://127.0.0.1:8010/v1/leaderboards/kinase-private-prediction?metric=rmse'
 curl -H 'x-api-key: dashboard-secret' http://127.0.0.1:8010/v1/audit-events
+curl http://127.0.0.1:8010/ready
+curl http://127.0.0.1:8010/metrics
 ```
 
 Browser dashboard:
@@ -242,7 +262,19 @@ http://127.0.0.1:8010/?api_key=dashboard-secret
 ```
 
 Click a run ID in the dashboard to inspect sanitized metrics, privacy metadata, artifact hashes, and related audit events.
-Open `/leaderboards/{benchmark_id}?metric=rmse` to rank sanitized, publishable runs for a benchmark.
+Open `/evidence` to inspect synced model-claim evidence, recommendations, privacy gates, and verification status.
+Open `/leaderboards/{benchmark_id}?metric=rmse` to rank sanitized, publishable runs for an evaluation suite.
+
+Dashboard operators can back up, restore, and prune audit events:
+
+```bash
+privatelabbench backup-dashboard --out backups/dashboard.db
+privatelabbench restore-dashboard --from-backup backups/dashboard.db --force
+privatelabbench prune-dashboard-audit --retention-days 365
+```
+
+For production storage, set `PRIVATELABBENCH_DASHBOARD_DATABASE_URL=postgresql://...` and install the `postgres` extra. SQLite remains the default for local pilots.
+Use [`docs/postgres_integration_testing.md`](docs/postgres_integration_testing.md) to validate the live PostgreSQL backend with Docker.
 
 The sync layer intentionally excludes raw rows, SMILES strings, local dataset paths, prediction summaries, client-level raw details, and free-form private lab data.
 
@@ -374,6 +406,45 @@ c1ccccc1,0.74,0.71
 
 This is the easiest customer workflow: they run their own model locally, add a prediction column, and PrivateLabBench generates privacy-preserving Markdown and JSON evaluation reports.
 
+## Model claim evidence reports
+
+Generate a signed evidence package for a specific model claim:
+
+```bash
+privatelabbench evidence configs/customer_prediction_eval.yaml \
+  --claim "Vendor model improves RMSE versus our internal baseline on private assay data"
+```
+
+For baseline comparison, include a baseline prediction column in the same local CSV and config:
+
+```yaml
+claim:
+  text: Vendor model improves RMSE versus internal baseline
+  decision_metric: rmse
+  direction: lower_is_better
+  minimum_lift: 0.10
+
+input:
+  target_column: label
+  prediction_column: vendor_pred
+  baseline_prediction_column: baseline_pred
+```
+
+The evidence command writes a Markdown report and signed JSON report with the claim, metrics, baseline comparison, privacy gate, manifest verification result, sharing boundary, and a `go`, `no-go`, or `needs-review` recommendation.
+It also writes an evidence manifest that binds the evidence Markdown, evidence JSON, and source run manifest into one verification bundle.
+
+Sync sanitized model-claim evidence to the hosted dashboard:
+
+```bash
+privatelabbench sync-evidence configs/customer_prediction_eval.yaml \
+  --endpoint https://dashboard.example.com \
+  --api-key replace-with-customer-secret \
+  --organization-id customer-lab
+```
+
+The dashboard stores only sanitized decision metadata: claim text, recommendation, decision metric, relative lift, privacy gate status, manifest verification status, and artifact hashes.
+Evidence sync is idempotent by organization and evidence payload hash, so retrying a sync does not create duplicate evidence records.
+
 If the CSV includes a split column, PrivateLabBench can also estimate aggregate membership-inference risk from train/member rows versus test/nonmember rows:
 
 ```bash
@@ -434,6 +505,7 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 - [`docs/customer_onboarding.md`](docs/customer_onboarding.md): customer pilot guide
 - [`docs/dashboard_deployment.md`](docs/dashboard_deployment.md): hosted dashboard deployment guide
 - [`docs/production_deployment.md`](docs/production_deployment.md): production compose and customer pilot runbook
+- [`docs/postgres_integration_testing.md`](docs/postgres_integration_testing.md): live PostgreSQL backend test workflow
 - [`docs/pilot_quickstart.md`](docs/pilot_quickstart.md): customer self-service pilot quickstart
 - [`docs/pilot_checklist.md`](docs/pilot_checklist.md): pilot readiness checklist
 - [`docs/roadmap.md`](docs/roadmap.md): staged product and research roadmap
@@ -443,6 +515,7 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 
 ## Roadmap
 
+- Trust-report templates for model vendor diligence, partner data collaborations, and internal go/no-go reviews
 - Dashboard filters, run detail pages, and deployment templates
 - ChemBERTa, MolFormer, Uni-Mol, and GNN adapters
 - Protein, microscopy, robotics, and materials prediction tasks
@@ -452,4 +525,4 @@ For classification tasks, labels should be `0` or `1`. For regression tasks, lab
 
 ## Non-goals for the current MVP
 
-PrivateLabBench is not a clinical or regulated diagnostic product, does not upload raw data, and does not perform federated training yet. It is a local-first private evaluation skeleton intended to become secure scientific AI evaluation infrastructure.
+PrivateLabBench is not a clinical or regulated diagnostic product, does not upload raw data, and does not perform federated training yet. It is a private evaluation and trust layer for scientific AI claims, designed to start with local evidence generation before expanding into secure multi-party benchmark networks.

@@ -97,6 +97,73 @@ class BenchmarkRun(BaseModel):
     created_at: str = Field(default_factory=utc_now)
 
 
+class SanitizedEvidencePayload(BaseModel):
+    """Sanitized model-claim evidence payload safe for hosted dashboard sync."""
+
+    organization_id: str = "local-org"
+    source_run_id: str | None = None
+    source_evidence_id: str | None = None
+    benchmark_id: str | None = None
+    benchmark_version: str | None = None
+    benchmark_suite: str | None = None
+    domain: str | None = None
+    project: str
+    claim: str
+    recommendation: str
+    decision_status: str
+    decision_metric: str
+    direction: str
+    minimum_lift: float = 0.0
+    candidate_value: float | None = None
+    baseline_value: float | None = None
+    absolute_delta: float | None = None
+    relative_lift: float | None = None
+    privacy: dict[str, Any] = Field(default_factory=dict)
+    verification: dict[str, Any] = Field(default_factory=dict)
+    artifacts: list[ArtifactMetadata] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: str = Field(default_factory=utc_now)
+
+    @field_validator("recommendation")
+    @classmethod
+    def validate_recommendation(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in {"go", "no-go", "needs-review"}:
+            raise ValueError("recommendation must be go, no-go, or needs-review.")
+        return normalized
+
+
+class EvidenceRecord(BaseModel):
+    id: str
+    organization_id: str
+    source_run_id: str | None = None
+    source_evidence_id: str | None = None
+    benchmark_id: str | None = None
+    benchmark_version: str | None = None
+    benchmark_suite: str | None = None
+    domain: str | None = None
+    project: str
+    claim: str
+    recommendation: str
+    decision_status: str
+    decision_metric: str
+    direction: str
+    minimum_lift: float = 0.0
+    candidate_value: float | None = None
+    baseline_value: float | None = None
+    absolute_delta: float | None = None
+    relative_lift: float | None = None
+    privacy: dict[str, Any] = Field(default_factory=dict)
+    verification: dict[str, Any] = Field(default_factory=dict)
+    artifacts: list[ArtifactMetadata] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    sync_runner_id: str | None = None
+    signature_verified: bool | None = None
+    signature_algorithm: str | None = None
+    signed_payload_sha256: str | None = None
+    created_at: str = Field(default_factory=utc_now)
+
+
 class LeaderboardEntry(BaseModel):
     rank: int
     run_id: str

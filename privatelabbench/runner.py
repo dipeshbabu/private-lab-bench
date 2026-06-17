@@ -103,6 +103,28 @@ def _identity_metadata(config: RunnerConfig) -> dict[str, Any]:
     return {**benchmark_metadata(config), **runner_metadata(config)}
 
 
+def _baseline_prediction_metrics(
+    config: RunnerConfig,
+    *,
+    path: str,
+    target: str,
+    task_type: Any,
+    split_column: Any,
+) -> tuple[str | None, dict[str, float] | None]:
+    input_cfg = section(config, "input")
+    baseline_column = input_cfg.get("baseline_prediction_column")
+    if not baseline_column:
+        return None, None
+    baseline = evaluate_prediction_csv(
+        path,
+        target=target,
+        prediction_column=str(baseline_column),
+        task_type=task_type,
+        split_column=str(split_column) if split_column else None,
+    )
+    return str(baseline_column), baseline.metrics
+
+
 def _attach_report_identity(summary: dict[str, Any], json_path: Path, identity: dict[str, Any]) -> dict[str, Any]:
     report = json.loads(json_path.read_text(encoding="utf-8"))
     integrity = report.get("integrity", {}) if isinstance(report, dict) else {}
@@ -120,6 +142,13 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     prediction_column = str(required(input_cfg, "prediction_column", section_name="input"))
     task_type = input_cfg.get("task_type")
     split_column = input_cfg.get("split_column")
+    baseline_prediction_column, baseline_metrics = _baseline_prediction_metrics(
+        config,
+        path=path,
+        target=target,
+        task_type=task_type,
+        split_column=split_column,
+    )
     privacy_config = _privacy_config(config)
     identity = _identity_metadata(config)
 
@@ -147,6 +176,8 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
             "clean_metrics": clean_metrics,
             "reported_metrics": reported_metrics,
             "prediction_summary": result.prediction_summary,
+            "baseline_prediction_column": baseline_prediction_column,
+            "baseline_metrics": baseline_metrics or {},
             "split_column": result.split_column,
             "privacy_risk": result.privacy_risk or {},
             "privacy_gate": privacy_gate,
@@ -163,6 +194,8 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
         private_metrics=reported_metrics,
         privacy_config=privacy_config,
         json_report_path=str(json_path),
+        baseline_prediction_column=baseline_prediction_column,
+        baseline_metrics=baseline_metrics,
     )
     summary = {
         "project": config.project,
@@ -171,6 +204,8 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
         "n_samples": result.n_samples,
         "clean_metrics": clean_metrics,
         "reported_metrics": reported_metrics,
+        "baseline_prediction_column": baseline_prediction_column,
+        "baseline_metrics": baseline_metrics or {},
         "markdown_report": str(markdown_path),
         "json_report": str(json_path),
         "privacy": privacy_summary(privacy_config),
