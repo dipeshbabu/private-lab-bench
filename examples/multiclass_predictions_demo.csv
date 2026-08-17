@@ -1,0 +1,10 @@
+sample_id,target,p_alpha,p_beta,p_gamma,site,batch
+mc001,alpha,0.82,0.10,0.08,north,b1
+mc002,beta,0.08,0.84,0.08,north,b1
+mc003,gamma,0.10,0.12,0.78,north,b2
+mc004,alpha,0.74,0.16,0.10,south,b2
+mc005,beta,0.15,0.75,0.10,south,b3
+mc006,gamma,0.07,0.13,0.80,south,b3
+mc007,alpha,0.68,0.22,0.10,east,b4
+mc008,beta,0.12,0.71,0.17,east,b4
+mc009,gamma,0.11,0.16,0.73,east,b5
