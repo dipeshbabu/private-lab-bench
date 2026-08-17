@@ -5,7 +5,8 @@ from pathlib import Path
 import pytest
 
 from privatelabbench.config import load_config
-from privatelabbench.core.registry import get_task, has_task, register_task
+from privatelabbench.core import registry
+from privatelabbench.core.registry import TaskSpec, get_task, has_task, register_task
 from privatelabbench.runner import ensure_builtin_tasks_registered, run_config
 
 
@@ -19,8 +20,10 @@ def test_builtin_tasks_are_registered() -> None:
 
 def test_duplicate_task_ids_are_rejected() -> None:
     task_id = "test-duplicate-task"
+
     def runner(config):
         return {"project": config.project}
+
     if not has_task(task_id):
         register_task(task_id, runner)
     with pytest.raises(ValueError, match="already registered"):
@@ -29,13 +32,49 @@ def test_duplicate_task_ids_are_rejected() -> None:
 
 def test_custom_task_can_be_registered_and_resolved() -> None:
     task_id = "test-custom-task"
+
     def runner(config):
         return {"project": config.project, "json_report": "", "markdown_report": ""}
+
     if not has_task(task_id):
         register_task(task_id, runner, description="test task")
     spec = get_task(task_id)
     assert spec.id == task_id
     assert spec.description == "test task"
+
+
+def test_third_party_task_is_discovered_from_entry_point(monkeypatch: pytest.MonkeyPatch) -> None:
+    task_id = "test-entrypoint-task"
+
+    def task_runner(config):
+        return {"project": config.project}
+
+    def task_provider() -> TaskSpec:
+        return TaskSpec(id=task_id, runner=task_runner, description="entry-point task")
+
+    class FakeEntryPoint:
+        name = "test-plugin"
+
+        @staticmethod
+        def load():
+            return task_provider
+
+    class FakeEntryPoints(tuple):
+        def select(self, *, group: str):
+            assert group == registry.ENTRYPOINT_GROUP
+            return self
+
+    monkeypatch.setattr(
+        registry.metadata,
+        "entry_points",
+        lambda: FakeEntryPoints((FakeEntryPoint(),)),
+    )
+
+    discovered = registry.discover_entrypoint_tasks(force=True)
+
+    assert [spec.id for spec in discovered] == [task_id]
+    assert get_task(task_id).source == "entrypoint:test-plugin"
+    assert get_task(task_id).description == "entry-point task"
 
 
 def test_task_key_is_preferred_but_workflow_remains_compatible(tmp_path: Path) -> None:
