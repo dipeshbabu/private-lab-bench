@@ -1,0 +1,45 @@
+name: Public Release Audit Result
+
+on:
+  workflow_run:
+    workflows: ["Public Release Audit"]
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  record-result:
+    if: >-
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record audit result on issue #9
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const conclusion = context.payload.workflow_run.conclusion;
+            const sha = context.payload.workflow_run.head_sha;
+            const url = context.payload.workflow_run.html_url;
+            const issue_number = 9;
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+            });
+            const marker = '<!-- public-release-audit-result -->';
+            const previous = issue.body || '';
+            const cleaned = previous.replace(/\n?<!-- public-release-audit-result -->[\s\S]*$/m, '').trimEnd();
+            const success = conclusion === 'success';
+            const resultBlock = success
+              ? `${marker}\n\n## Automated main-branch audit result\n\n- [x] Full-history repository policy audit passed.\n- [x] Gitleaks full-history scan passed.\n- [x] TruffleHog history scan passed.\n- [x] Audit commit: \`${sha}\`.\n\nWorkflow: ${url}\n\nThe automated audit is green. Issue #9 intentionally remains open for the final manual release review, including historical author-email privacy exposure and the decision on whether any history rewrite is warranted. Repository visibility is still unchanged.`
+              : `${marker}\n\n## Automated main-branch audit result\n\n**Audit status: ${conclusion}.** Issue remains open.\n\nAudit commit: \`${sha}\`\n\nWorkflow: ${url}\n\nDo not make the repository public until the failing audit is resolved and a subsequent full-history run passes.`;
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              body: `${cleaned}\n\n${resultBlock}\n`,
+              state: 'open',
+            });
