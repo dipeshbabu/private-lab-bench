@@ -6,8 +6,11 @@ from typing import Literal
 import numpy as np
 from sklearn.metrics import roc_auc_score
 
+from privatelabbench.privacy.attack_registry import has_privacy_attack, register_privacy_attack
+
 
 RiskLevel = Literal["low", "moderate", "high"]
+LOSS_THRESHOLD_ATTACK_ID = "loss-threshold-membership-inference"
 
 
 def _prediction_loss(y_true: np.ndarray, y_score: np.ndarray, task_type: str) -> np.ndarray:
@@ -33,11 +36,11 @@ def membership_inference_risk(
     test_y: np.ndarray,
     test_score: np.ndarray,
     task_type: str,
-) -> dict[str, float | str]:
-    """Estimate aggregate membership-inference risk from train/test prediction loss.
+) -> dict[str, float | str | bool]:
+    """Baseline empirical membership-inference audit from train/test prediction loss.
 
-    The attack is intentionally simple and local: samples with unusually low loss are
-    treated as likely members. Only aggregate risk metrics are returned.
+    This is an attack diagnostic, not a privacy guarantee. A low measured attack
+    signal does not imply differential privacy or prove absence of leakage.
     """
     if task_type not in {"regression", "classification"}:
         raise ValueError("task_type must be 'regression' or 'classification'")
@@ -76,7 +79,12 @@ def membership_inference_risk(
     level = _risk_level(max(advantage, auc_for_level))
 
     return {
+        # Keep the historical machine-readable identifier for report compatibility.
         "attack": "loss_threshold_membership_inference",
+        "registry_id": LOSS_THRESHOLD_ATTACK_ID,
+        "baseline": True,
+        "evidence_level": "empirical_audit",
+        "guarantee": "none",
         "risk_level": level,
         "member_advantage": float(advantage),
         "attack_auc": auc,
@@ -88,3 +96,14 @@ def membership_inference_risk(
         "n_member": int(len(member_loss)),
         "n_nonmember": int(len(nonmember_loss)),
     }
+
+
+def ensure_builtin_privacy_attacks_registered() -> None:
+    if not has_privacy_attack(LOSS_THRESHOLD_ATTACK_ID):
+        register_privacy_attack(
+            LOSS_THRESHOLD_ATTACK_ID,
+            membership_inference_risk,
+            description="Simple loss-threshold membership-inference baseline for regression and binary classification.",
+            evidence_level="empirical_audit",
+            baseline=True,
+        )
