@@ -1,0 +1,82 @@
+schema_version: public-release-audit/v1
+
+examples:
+  - path: examples/labs/lab_a.csv
+    provenance: synthetic
+    license: CC0-1.0
+  - path: examples/labs/lab_b.csv
+    provenance: synthetic
+    license: CC0-1.0
+  - path: examples/labs/lab_c.csv
+    provenance: synthetic
+    license: CC0-1.0
+  - path: examples/molecules_demo.csv
+    provenance: synthetic
+    license: CC0-1.0
+  - path: examples/multiclass_predictions_demo.csv
+    provenance: synthetic
+    license: CC0-1.0
+  - path: examples/predictions_demo.csv
+    provenance: synthetic
+    license: CC0-1.0
+  - path: examples/predictions_with_baseline_demo.csv
+    provenance: synthetic
+    license: CC0-1.0
+  - path: examples/tabular_predictions_demo.csv
+    provenance: synthetic
+    license: CC0-1.0
+
+direct_dependencies:
+  numpy:
+    license: BSD-3-Clause
+    compatible_with_mit_project: true
+    source: https://github.com/numpy/numpy/blob/main/LICENSE.txt
+  pandas:
+    license: BSD-3-Clause
+    compatible_with_mit_project: true
+    source: https://github.com/pandas-dev/pandas/blob/main/LICENSE
+  scikit-learn:
+    license: BSD-3-Clause
+    compatible_with_mit_project: true
+    source: https://github.com/scikit-learn/scikit-learn/blob/main/COPYING
+  PyYAML:
+    license: MIT
+    compatible_with_mit_project: true
+    source: https://github.com/yaml/pyyaml/blob/main/LICENSE
+
+allowed_author_email_suffixes:
+  - "@users.noreply.github.com"
+allowed_author_emails:
+  - noreply@github.com
+
+forbidden_current_paths:
+  - .env
+  - .env.example
+  - docker-compose.prod.yml
+  - docker-compose.test.yml
+  - configs/customer_prediction_eval.template.yaml
+  - docs/customer_onboarding.md
+  - docs/dashboard_deployment.md
+  - docs/pilot_checklist.md
+  - docs/pilot_quickstart.md
+  - docs/postgres_integration_testing.md
+  - docs/production_deployment.md
+  - privatelabbench/api.py
+  - privatelabbench/dashboard
+  - privatelabbench/evidence.py
+  - privatelabbench/production.py
+  - privatelabbench/signing.py
+  - privatelabbench/sync.py
+  - scripts/demo_dashboard.ps1
+  - scripts/demo_dashboard.sh
+  - scripts/smoke_product.sh
+
+historical_sensitive_path_patterns:
+  - "(^|/)\\.env($|\\.)"
+  - "customer"
+  - "pilot"
+  - "dashboard"
+  - "postgres"
+  - "production"
+  - "sync"
+  - "evidence"
