@@ -1,0 +1,20 @@
+{
+  "created_at": "2026-08-17T00:00:00+00:00",
+  "integrity": {"algorithm": "sha256", "payload_sha256": "7377bd4266a09e158c185bdeddc7e95bb95493d4963b104d24ecb3f3f26c256b", "signed": false},
+  "receipt_id": "known-good:molecules-regression@1.0.0",
+  "schema_version": "evaluation-receipt/v1",
+  "scope": "shareable",
+  "shareable": {
+    "artifacts": [],
+    "benchmark": {"domain": "molecules", "id": "community-molecules-regression", "protocol": "prediction-table/v1", "suite": "community-pack", "version": "1.0.0"},
+    "evaluation": {
+      "input_schema": {"class_labels": [], "metadata_columns": ["smiles", "series"], "prediction_columns": ["pred"], "sample_id_column": "sample_id", "sample_id_status": "present", "schema_version": "prediction-table/v1", "slice_columns": ["series"], "split_column": null, "target_column": "label"},
+      "metric_source": "reported_metrics",
+      "metrics": {"mae": 0.027500000000000004, "r2": 0.9779489775398548, "rmse": 0.02819574435974337},
+      "sample_counts": {"n_samples": 20}, "slices": {}, "task_type": "regression", "uncertainty": {}
+    },
+    "privacy": {"audits": {}, "mechanism": {"formal_dp": false, "guarantee_level": "none", "mode": "none"}, "release": {"status": "pass"}},
+    "provenance": {"attestation_id": "known-good", "package": {"name": "private-lab-bench", "version": "0.11.0"}},
+    "run": {"created_at": "2026-08-17T00:00:00+00:00", "project": "community-molecules-regression", "report_type": "prediction_evaluation", "run_id": "known-good", "task": "predictions"}
+  }
+}

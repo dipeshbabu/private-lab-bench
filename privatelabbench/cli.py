@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 
+from privatelabbench.benchmark_packs import discover_benchmark_packs, run_benchmark_pack
 from privatelabbench.compare import compare_configs
 from privatelabbench.core.registry import discover_entrypoint_tasks, list_tasks
 from privatelabbench.eval.metrics import summarize_metrics
@@ -36,12 +37,7 @@ def add_privacy_args(parser: argparse.ArgumentParser) -> None:
         ),
     )
     parser.add_argument("--epsilon", type=float, default=8.0, help="Epsilon-like noise parameter for metric_perturbation.")
-    parser.add_argument(
-        "--sensitivity",
-        type=float,
-        default=1.0,
-        help="User-supplied noise-scale sensitivity for metric_perturbation; not framework-verified global sensitivity.",
-    )
+    parser.add_argument("--sensitivity", type=float, default=1.0, help="User-supplied noise-scale sensitivity for metric_perturbation; not framework-verified global sensitivity.")
 
 
 def add_common_eval_args(parser: argparse.ArgumentParser) -> None:
@@ -64,6 +60,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("list-tasks", help="List built-in and installed third-party evaluation tasks.")
     sub.add_parser("list-privacy-attacks", help="List registered empirical privacy-audit attacks.")
+    sub.add_parser("list-packs", help="List bundled/source community benchmark packs.")
+
+    run_pack = sub.add_parser("run-pack", help="Run a versioned community benchmark pack.")
+    run_pack.add_argument("pack", help="Pack ID or explicit id@version reference.")
 
     compare = sub.add_parser("compare", help="Run multiple configs and generate a comparison report.")
     compare.add_argument("config_paths", nargs="+", help="Two or more config files to compare.")
@@ -116,10 +116,8 @@ def make_privacy_config(args: argparse.Namespace) -> PrivacyConfig:
     return PrivacyConfig(mode=args.privacy, epsilon=args.epsilon, sensitivity=args.sensitivity, seed=args.seed)
 
 
-def run_from_config(args: argparse.Namespace) -> int:
-    summary = run_config(args.config_path)
-    print_run_summary(summary)
-    manifest = Path(summary["manifest"])
+def _print_receipt_paths(summary: dict[str, object]) -> None:
+    manifest = Path(str(summary["manifest"]))
     base = manifest.stem[: -len("_manifest")] if manifest.stem.endswith("_manifest") else manifest.stem
     receipt = manifest.with_name(f"{base}_receipt.json")
     shareable = manifest.with_name(f"{base}_receipt.shareable.json")
@@ -128,6 +126,12 @@ def run_from_config(args: argparse.Namespace) -> int:
         print(f"Local receipt saved to: {receipt}")
         print(f"Shareable receipt saved to: {shareable}")
         print(f"Receipt Markdown saved to: {markdown}")
+
+
+def run_from_config(args: argparse.Namespace) -> int:
+    summary = run_config(args.config_path)
+    print_run_summary(summary)
+    _print_receipt_paths(summary)
     return 0
 
 
@@ -168,6 +172,21 @@ def list_privacy_attacks_command() -> int:
         baseline = " [baseline]" if spec.baseline else ""
         description = f" — {spec.description}" if spec.description else ""
         print(f"{spec.id}{baseline} — {spec.evidence_level}{description}")
+    return 0
+
+
+def list_packs_command() -> int:
+    print("PrivateLabBench benchmark packs")
+    for pack in discover_benchmark_packs():
+        print(f"{pack.ref} — {pack.domain} — {pack.description}")
+    return 0
+
+
+def run_pack_command(args: argparse.Namespace) -> int:
+    summary = run_benchmark_pack(args.pack)
+    print_run_summary(summary)
+    print(f"Benchmark pack: {summary['benchmark_pack']}")
+    _print_receipt_paths(summary)
     return 0
 
 
@@ -314,6 +333,10 @@ def main() -> int:
         return list_tasks_command()
     if args.command == "list-privacy-attacks":
         return list_privacy_attacks_command()
+    if args.command == "list-packs":
+        return list_packs_command()
+    if args.command == "run-pack":
+        return run_pack_command(args)
     if args.command == "compare":
         return compare_from_configs(args)
     if args.command == "verify":

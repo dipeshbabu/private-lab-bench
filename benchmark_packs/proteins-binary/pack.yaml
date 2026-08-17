@@ -1,0 +1,15 @@
+schema_version: benchmark-pack/v1
+id: community-proteins-binary
+version: "1.0.0"
+task: predictions
+domain: proteins
+description: Synthetic protein-sequence binary classification predictions with protein-family slices.
+license: CC0-1.0
+provenance:
+  type: synthetic
+  derived_from: none
+  note: Sequences, labels, families, and predictions are fabricated for evaluation-framework testing and are not derived from a biological database.
+files:
+  config: config.yaml
+  predictions: predictions.csv
+  expected_receipt: expected_receipt.json
