@@ -45,34 +45,56 @@ def build_parser() -> argparse.ArgumentParser:
         description="Local-first evaluation for scientific machine learning on private data.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
+
     run = sub.add_parser("run", help="Run a local evaluation task from a YAML config file.")
     run.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
+
     validate = sub.add_parser("validate-config", help="Validate a YAML config before running it.")
     validate.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
+
     sub.add_parser("list-tasks", help="List built-in and installed third-party evaluation tasks.")
+
     compare = sub.add_parser("compare", help="Run multiple configs and generate a comparison report.")
     compare.add_argument("config_paths", nargs="+", help="Two or more config files to compare.")
     compare.add_argument("--report", default="reports/model_comparison.md")
     compare.add_argument("--json-report", default="reports/model_comparison.json")
+
     verify = sub.add_parser("verify-report", help="Verify JSON report integrity and optional HMAC signature.")
     verify.add_argument("json_report", help="Path to a PrivateLabBench JSON report.")
     verify.add_argument("--signing-secret", default=None, help="Optional HMAC signing secret.")
+
     verify_manifest = sub.add_parser("verify-manifest", help="Verify a run manifest and its bound artifacts.")
     verify_manifest.add_argument("manifest", help="Path to a PrivateLabBench run manifest.")
     verify_manifest.add_argument("--signing-secret", default=None, help="Optional HMAC signing secret.")
+
     eval_mol = sub.add_parser("eval-molecules", help="Evaluate a molecular property prediction CSV locally.")
     eval_mol.add_argument("csv_path", help="Path to a CSV containing SMILES and target columns.")
     add_common_eval_args(eval_mol)
     eval_mol.add_argument("--report", default="reports/molecule_eval_report.md")
+
     eval_fed = sub.add_parser("eval-federated", help="Evaluate multiple local lab CSVs and aggregate metrics.")
     eval_fed.add_argument("client_dir", help="Directory containing one CSV per lab/site.")
     add_common_eval_args(eval_fed)
     eval_fed.add_argument("--report", default="reports/federated_eval_report.md")
-    eval_pred = sub.add_parser("eval-predictions", help="Evaluate externally generated predictions from a local CSV.")
-    eval_pred.add_argument("csv_path", help="Path to a CSV containing target and prediction columns.")
+
+    eval_pred = sub.add_parser("eval-predictions", help="Evaluate a local prediction table.")
+    eval_pred.add_argument("csv_path", help="Path to a CSV prediction table.")
     eval_pred.add_argument("--target", required=True, help="Target column name.")
-    eval_pred.add_argument("--prediction-column", required=True, help="Prediction column name.")
-    eval_pred.add_argument("--task-type", choices=["regression", "classification"], default=None)
+    prediction_group = eval_pred.add_mutually_exclusive_group(required=True)
+    prediction_group.add_argument("--prediction-column", help="Single prediction/probability column for regression or binary classification.")
+    prediction_group.add_argument("--prediction-columns", nargs="+", help="Ordered probability columns for multiclass classification.")
+    eval_pred.add_argument(
+        "--task-type",
+        choices=["regression", "classification", "multiclass"],
+        default=None,
+        help="Problem type. Multiclass is inferred when --prediction-columns has multiple columns.",
+    )
+    eval_pred.add_argument("--class-labels", nargs="+", default=None, help="Ordered class labels matching --prediction-columns.")
+    eval_pred.add_argument("--sample-id-column", default="sample_id", help="Stable sample identifier column.")
+    eval_pred.add_argument("--require-sample-id", action="store_true", help="Fail if the sample ID column is missing.")
+    eval_pred.add_argument("--metadata-columns", nargs="*", default=None, help="Metadata columns that must be present.")
+    eval_pred.add_argument("--slice-columns", nargs="*", default=None, help="Metadata columns to aggregate metrics by.")
+    eval_pred.add_argument("--min-slice-size", type=int, default=2, help="Do not report metrics for slices smaller than this count.")
     eval_pred.add_argument("--split-column", default=None, help="Optional train/test split column for membership-risk scoring.")
     add_privacy_args(eval_pred)
     eval_pred.add_argument("--report", default="reports/prediction_eval_report.md")
@@ -221,7 +243,14 @@ def eval_predictions(args: argparse.Namespace) -> int:
         args.csv_path,
         target=args.target,
         prediction_column=args.prediction_column,
+        prediction_columns=args.prediction_columns,
         task_type=args.task_type,
+        sample_id_column=args.sample_id_column,
+        require_sample_id=args.require_sample_id,
+        metadata_columns=args.metadata_columns,
+        slice_columns=args.slice_columns,
+        min_slice_size=args.min_slice_size,
+        class_labels=args.class_labels,
         split_column=args.split_column,
     )
     clean_metrics = result.metrics
@@ -231,15 +260,23 @@ def eval_predictions(args: argparse.Namespace) -> int:
         report_type="prediction_evaluation",
         result={
             "dataset_path": result.dataset_path,
+            "prediction_table_schema": result.schema.as_dict(),
             "target_column": result.target_column,
             "prediction_column": result.prediction_column,
+            "prediction_columns": list(result.prediction_columns),
+            "class_labels": list(result.class_labels),
             "task_type": result.task_type,
             "n_samples": result.n_samples,
             "clean_metrics": clean_metrics,
             "reported_metrics": reported_metrics,
             "prediction_summary": result.prediction_summary,
+            "slice_metrics": result.slice_metrics,
             "split_column": result.split_column,
             "privacy_risk": result.privacy_risk or {},
+            "sharing_boundary": {
+                "row_level_values_included": False,
+                "aggregate_fields": ["metrics", "prediction_summary", "slice_metrics", "privacy_risk", "schema column names"],
+            },
         },
         privacy_config=privacy_config,
     )
@@ -254,6 +291,9 @@ def eval_predictions(args: argparse.Namespace) -> int:
     print("PrivateLabBench prediction evaluation")
     print(f"Task: {result.task_type}")
     print(f"Samples: {result.n_samples}")
+    print(f"Sample IDs: {result.sample_id_status}")
+    if result.schema.slice_columns:
+        print(f"Slices: {', '.join(result.schema.slice_columns)}")
     print(f"Clean metrics: {summarize_metrics(clean_metrics)}")
     print(f"Reported metrics: {summarize_metrics(reported_metrics)}")
     if result.privacy_risk:

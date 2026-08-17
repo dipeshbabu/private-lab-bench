@@ -8,12 +8,7 @@ from typing import Any
 from privatelabbench.adapters.sklearn_adapter import build_molecule_adapter
 from privatelabbench.audit import write_audit_event
 from privatelabbench.config import RunnerConfig, load_config, required, section
-from privatelabbench.core.registry import (
-    discover_entrypoint_tasks,
-    get_task,
-    has_task,
-    register_task,
-)
+from privatelabbench.core.registry import discover_entrypoint_tasks, get_task, has_task, register_task
 from privatelabbench.eval.metrics import summarize_metrics
 from privatelabbench.eval.predictions import evaluate_prediction_csv
 from privatelabbench.federated.evaluator import evaluate_federated_directory
@@ -109,6 +104,14 @@ def _identity_metadata(config: RunnerConfig) -> dict[str, Any]:
     return {**benchmark_metadata(config), **runner_metadata(config)}
 
 
+def _string_list(value: Any, *, key: str) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError(f"{key} must be a YAML list")
+    return [str(item) for item in value]
+
+
 def _baseline_prediction_metrics(
     config: RunnerConfig,
     *,
@@ -116,16 +119,21 @@ def _baseline_prediction_metrics(
     target: str,
     task_type: Any,
     split_column: Any,
+    sample_id_column: str | None,
 ) -> tuple[str | None, dict[str, float] | None]:
     input_cfg = section(config, "input")
     baseline_column = input_cfg.get("baseline_prediction_column")
     if not baseline_column:
         return None, None
+    if str(task_type or "").lower() == "multiclass" or input_cfg.get("prediction_columns"):
+        raise ValueError("baseline_prediction_column currently supports regression and binary classification only")
     baseline = evaluate_prediction_csv(
         path,
         target=target,
         prediction_column=str(baseline_column),
         task_type=task_type,
+        sample_id_column=sample_id_column,
+        require_sample_id=False,
         split_column=str(split_column) if split_column else None,
     )
     return str(baseline_column), baseline.metrics
@@ -145,15 +153,27 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     input_cfg = section(config, "input")
     path = _input_path(config, str(required(input_cfg, "path", section_name="input")))
     target = str(required(input_cfg, "target_column", section_name="input"))
-    prediction_column = str(required(input_cfg, "prediction_column", section_name="input"))
+    prediction_column = input_cfg.get("prediction_column")
+    prediction_columns = _string_list(input_cfg.get("prediction_columns"), key="input.prediction_columns")
+    if prediction_column is None and not prediction_columns:
+        raise ValueError("Missing required config value: input.prediction_column or input.prediction_columns")
     task_type = input_cfg.get("task_type")
+    sample_id_column_value = input_cfg.get("sample_id_column", "sample_id")
+    sample_id_column = str(sample_id_column_value) if sample_id_column_value not in (None, "") else None
+    require_sample_id = bool(input_cfg.get("require_sample_id", False))
+    metadata_columns = _string_list(input_cfg.get("metadata_columns"), key="input.metadata_columns")
+    slice_columns = _string_list(input_cfg.get("slice_columns"), key="input.slice_columns")
+    class_labels = _string_list(input_cfg.get("class_labels"), key="input.class_labels")
+    min_slice_size = int(input_cfg.get("min_slice_size", 2))
     split_column = input_cfg.get("split_column")
+
     baseline_prediction_column, baseline_metrics = _baseline_prediction_metrics(
         config,
         path=path,
         target=target,
         task_type=task_type,
         split_column=split_column,
+        sample_id_column=sample_id_column,
     )
     privacy_config = _privacy_config(config)
     identity = _identity_metadata(config)
@@ -161,8 +181,15 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     result = evaluate_prediction_csv(
         path,
         target=target,
-        prediction_column=prediction_column,
-        task_type=task_type,
+        prediction_column=str(prediction_column) if prediction_column is not None else None,
+        prediction_columns=prediction_columns or None,
+        task_type=str(task_type) if task_type else None,
+        sample_id_column=sample_id_column,
+        require_sample_id=require_sample_id,
+        metadata_columns=metadata_columns or None,
+        slice_columns=slice_columns or None,
+        min_slice_size=min_slice_size,
+        class_labels=class_labels or None,
         split_column=str(split_column) if split_column else None,
     )
     clean_metrics = result.metrics
@@ -175,18 +202,32 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
         result={
             "project": config.project,
             "dataset_path": result.dataset_path,
+            "prediction_table_schema": result.schema.as_dict(),
             "target_column": result.target_column,
             "prediction_column": result.prediction_column,
+            "prediction_columns": list(result.prediction_columns),
+            "class_labels": list(result.class_labels),
             "task_type": result.task_type,
             "n_samples": result.n_samples,
             "clean_metrics": clean_metrics,
             "reported_metrics": reported_metrics,
             "prediction_summary": result.prediction_summary,
+            "slice_metrics": result.slice_metrics,
             "baseline_prediction_column": baseline_prediction_column,
             "baseline_metrics": baseline_metrics or {},
             "split_column": result.split_column,
             "privacy_risk": result.privacy_risk or {},
             "privacy_gate": privacy_gate,
+            "sharing_boundary": {
+                "row_level_values_included": False,
+                "aggregate_fields": [
+                    "metrics",
+                    "prediction_summary",
+                    "slice_metrics",
+                    "privacy_risk",
+                    "schema column names",
+                ],
+            },
         },
         privacy_config=privacy_config,
         extra=identity,
@@ -211,6 +252,8 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
         "n_samples": result.n_samples,
         "clean_metrics": clean_metrics,
         "reported_metrics": reported_metrics,
+        "sample_id_status": result.sample_id_status,
+        "slice_columns": list(result.schema.slice_columns),
         "baseline_prediction_column": baseline_prediction_column,
         "baseline_metrics": baseline_metrics or {},
         "markdown_report": str(markdown_path),
@@ -375,38 +418,16 @@ def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
 
 
 def ensure_builtin_tasks_registered() -> None:
-    """Register the tasks shipped with PrivateLabBench once per process."""
-
     builtins = (
-        (
-            "predictions",
-            run_prediction_workflow,
-            "Evaluate a local table of targets and externally generated predictions.",
-        ),
-        (
-            "tabular",
-            run_prediction_workflow,
-            "Domain-neutral tabular prediction evaluation using the prediction-table interface.",
-        ),
-        (
-            "molecules",
-            run_molecule_workflow,
-            "Evaluate the built-in molecular property baseline and diagnostics.",
-        ),
-        (
-            "multi-site",
-            run_federated_workflow,
-            "Evaluate multiple local lab/site CSVs and aggregate metrics.",
-        ),
-        (
-            "federated",
-            run_federated_workflow,
-            "Legacy alias for the multi-site evaluation task.",
-        ),
+        ("predictions", run_prediction_workflow, "Evaluate a local table of targets and externally generated predictions."),
+        ("tabular", run_prediction_workflow, "Domain-neutral tabular prediction evaluation using the prediction-table interface."),
+        ("molecules", run_molecule_workflow, "Evaluate the built-in molecular property baseline and diagnostics."),
+        ("multi-site", run_federated_workflow, "Evaluate multiple local lab/site CSVs and aggregate metrics."),
+        ("federated", run_federated_workflow, "Legacy alias for the multi-site evaluation task."),
     )
-    for task_id, runner, description in builtins:
+    for task_id, task_runner, description in builtins:
         if not has_task(task_id):
-            register_task(task_id, runner, description=description)
+            register_task(task_id, task_runner, description=description)
 
 
 def run_config(config_path: str) -> dict[str, Any]:
@@ -444,6 +465,10 @@ def print_run_summary(summary: dict[str, Any]) -> None:
         print(f"Problem type: {summary['task_type']}")
     if "n_samples" in summary:
         print(f"Samples: {summary['n_samples']}")
+    if "sample_id_status" in summary:
+        print(f"Sample IDs: {summary['sample_id_status']}")
+    if summary.get("slice_columns"):
+        print(f"Slices: {', '.join(summary['slice_columns'])}")
     if "n_clients" in summary:
         print(f"Clients: {summary['n_clients']}")
         print(f"Total samples: {summary['total_samples']}")

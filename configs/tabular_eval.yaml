@@ -9,9 +9,15 @@ benchmark:
 
 input:
   path: examples/tabular_predictions_demo.csv
+  sample_id_column: sample_id
+  require_sample_id: true
   target_column: target
   prediction_column: prediction
   task_type: regression
+  slice_columns:
+    - site
+    - batch
+  min_slice_size: 2
 
 privacy:
   mode: none

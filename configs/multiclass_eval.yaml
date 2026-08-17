@@ -1,0 +1,36 @@
+project: multiclass-demo
+task: tabular
+
+benchmark:
+  id: generic-private-multiclass
+  version: "0.1"
+  suite: generic-tabular
+  domain: tabular
+
+input:
+  path: examples/multiclass_predictions_demo.csv
+  sample_id_column: sample_id
+  require_sample_id: true
+  target_column: target
+  prediction_columns:
+    - p_alpha
+    - p_beta
+    - p_gamma
+  class_labels:
+    - alpha
+    - beta
+    - gamma
+  task_type: multiclass
+  slice_columns:
+    - site
+    - batch
+  min_slice_size: 2
+
+privacy:
+  mode: none
+  seed: 13
+
+report:
+  markdown: reports/multiclass_demo_eval.md
+  json: reports/multiclass_demo_eval.json
+  manifest: reports/multiclass_demo_manifest.json

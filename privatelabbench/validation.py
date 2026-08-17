@@ -9,6 +9,7 @@ import pandas as pd
 
 from privatelabbench.config import RunnerConfig, load_config, required, section
 from privatelabbench.core.registry import discover_entrypoint_tasks, get_task
+from privatelabbench.eval.predictions import evaluate_prediction_csv
 from privatelabbench.privacy.dp import PrivacyConfig
 from privatelabbench.privacy.policy import PrivacyRiskPolicy
 from privatelabbench.privacy.release import AggregateReleasePolicy
@@ -94,8 +95,22 @@ def _validate_output_path(path_value: Any, *, label: str, errors: list[str], war
 
 
 def _validate_task_type(value: Any, errors: list[str]) -> None:
-    if value not in (None, "", "regression", "classification"):
-        errors.append("input.task_type must be 'regression' or 'classification' when provided.")
+    if value not in (None, "", "regression", "classification", "multiclass"):
+        errors.append("input.task_type must be 'regression', 'classification', or 'multiclass' when provided.")
+
+
+def _string_list(value: Any, *, key: str, errors: list[str]) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        errors.append(f"{key} must be a YAML list.")
+        return []
+    out = [str(item).strip() for item in value]
+    if any(not item for item in out):
+        errors.append(f"{key} cannot contain empty values.")
+    if len(out) != len(set(out)):
+        errors.append(f"{key} cannot contain duplicate values.")
+    return out
 
 
 def _validate_privacy(config: RunnerConfig, errors: list[str]) -> None:
@@ -139,23 +154,91 @@ def _validate_reports(config: RunnerConfig, *, errors: list[str], warnings: list
     )
 
 
-def _validate_predictions(config: RunnerConfig, *, config_path: Path, errors: list[str]) -> None:
+def _validate_predictions(
+    config: RunnerConfig,
+    *,
+    config_path: Path,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
     input_cfg = section(config, "input")
     path_value = required(input_cfg, "path", section_name="input")
     target = str(required(input_cfg, "target_column", section_name="input"))
-    prediction_column = str(required(input_cfg, "prediction_column", section_name="input"))
-    baseline_prediction_column = input_cfg.get("baseline_prediction_column")
+    prediction_column = input_cfg.get("prediction_column")
+    prediction_columns = _string_list(input_cfg.get("prediction_columns"), key="input.prediction_columns", errors=errors)
+    if prediction_column is None and not prediction_columns:
+        errors.append("input.prediction_column or input.prediction_columns is required.")
+    if prediction_column is not None and prediction_columns:
+        errors.append("Use either input.prediction_column or input.prediction_columns, not both.")
+
+    metadata_columns = _string_list(input_cfg.get("metadata_columns"), key="input.metadata_columns", errors=errors)
+    slice_columns = _string_list(input_cfg.get("slice_columns"), key="input.slice_columns", errors=errors)
+    class_labels = _string_list(input_cfg.get("class_labels"), key="input.class_labels", errors=errors)
     split_column = input_cfg.get("split_column")
+    baseline_prediction_column = input_cfg.get("baseline_prediction_column")
+    sample_id_value = input_cfg.get("sample_id_column", "sample_id")
+    sample_id_column = str(sample_id_value) if sample_id_value not in (None, "") else None
+    require_sample_id = bool(input_cfg.get("require_sample_id", False))
+    min_slice_size = int(input_cfg.get("min_slice_size", 2))
     _validate_task_type(input_cfg.get("task_type"), errors)
+
+    if min_slice_size < 1:
+        errors.append("input.min_slice_size must be at least 1.")
+
     path = _validate_input_file(path_value, config_path=config_path, errors=errors)
     if path is None:
         return
-    required_columns = {target, prediction_column}
+
+    columns = _csv_columns(path)
+    required_columns = {target, *prediction_columns, *metadata_columns, *slice_columns}
+    if prediction_column is not None:
+        required_columns.add(str(prediction_column))
     if baseline_prediction_column:
         required_columns.add(str(baseline_prediction_column))
     if split_column:
         required_columns.add(str(split_column))
-    _require_columns(path, _csv_columns(path), required_columns, errors)
+    _require_columns(path, columns, required_columns, errors)
+
+    if sample_id_column and sample_id_column not in columns:
+        message = (
+            f"Prediction table has no '{sample_id_column}' column. "
+            "Stable sample IDs are strongly recommended for reproducibility."
+        )
+        if require_sample_id:
+            errors.append(message)
+        else:
+            warnings.append(message)
+
+    task_type = input_cfg.get("task_type")
+    if task_type == "multiclass" and len(prediction_columns) < 2:
+        errors.append("multiclass evaluation requires input.prediction_columns with at least two columns.")
+    if class_labels and prediction_columns and len(class_labels) != len(prediction_columns):
+        errors.append("input.class_labels must contain exactly one label per input.prediction_columns entry.")
+
+    if errors:
+        return
+
+    try:
+        result = evaluate_prediction_csv(
+            str(path),
+            target=target,
+            prediction_column=str(prediction_column) if prediction_column is not None else None,
+            prediction_columns=prediction_columns or None,
+            task_type=str(task_type) if task_type else None,
+            sample_id_column=sample_id_column,
+            require_sample_id=require_sample_id,
+            metadata_columns=metadata_columns or None,
+            slice_columns=slice_columns or None,
+            min_slice_size=min_slice_size,
+            class_labels=class_labels or None,
+            split_column=str(split_column) if split_column else None,
+        )
+        if result.sample_id_status != "present" and not require_sample_id:
+            warnings.append(
+                "Run can proceed without stable sample IDs, but reproducibility across reordered prediction tables is weaker."
+            )
+    except Exception as exc:
+        errors.append(f"Invalid prediction table: {exc}")
 
 
 def _validate_molecules(config: RunnerConfig, *, config_path: Path, errors: list[str]) -> None:
@@ -202,22 +285,21 @@ def validate_config(config_path: str) -> ConfigValidationResult:
         ensure_builtin_tasks_registered()
         discover_entrypoint_tasks()
         get_task(config.task_id)
-        validators = {
-            "predictions": _validate_predictions,
-            "tabular": _validate_predictions,
-            "molecules": _validate_molecules,
-            "multi-site": _validate_federated,
-            "federated": _validate_federated,
-        }
-        validator = validators.get(config.task_id)
-        if validator is not None:
-            validator(config, config_path=path, errors=errors)
+
+        if config.task_id in {"predictions", "tabular"}:
+            _validate_predictions(config, config_path=path, errors=errors, warnings=warnings)
+        elif config.task_id == "molecules":
+            _validate_molecules(config, config_path=path, errors=errors)
+        elif config.task_id in {"multi-site", "federated"}:
+            _validate_federated(config, config_path=path, errors=errors)
         else:
             warnings.append(f"Task '{config.task_id}' is provided by a plugin; only common config validation was run.")
+
         _validate_privacy(config, errors)
         _validate_reports(config, errors=errors, warnings=warnings)
     except Exception as exc:
         return ConfigValidationResult(config_path=config_path, errors=[str(exc)])
+
     return ConfigValidationResult(
         config_path=config_path,
         project=project,

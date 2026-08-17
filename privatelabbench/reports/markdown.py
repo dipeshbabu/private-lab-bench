@@ -32,7 +32,6 @@ def write_markdown_report(
 ) -> Path:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-
     lines = [
         "# PrivateLabBench Evaluation Report",
         "",
@@ -51,30 +50,37 @@ def write_markdown_report(
         "## Clean local metrics",
     ]
     lines.extend(_format_metric_lines(clean_metrics))
-
     lines.extend(["", "## Privacy-preserving reported metrics"])
     lines.extend(_format_metric_lines(private_metrics))
-
     lines.extend(["", "## Privacy mode", privacy_summary(privacy_config), "", "## Dataset shift summary"])
     lines.extend(_format_metric_lines(dict(result["shift"])))
-
     error_slices = dict(result.get("error_slices", {}))
     if error_slices:
         lines.extend(["", "## Error slices"])
         lines.extend(_format_metric_lines(error_slices))
-
     privacy_risk = dict(result.get("privacy_risk", {}))
     if privacy_risk:
         lines.extend(["", "## Privacy attack risk"])
         lines.extend(_format_value_lines(privacy_risk))
-
-    lines.extend([
-        "",
-        "## Notes",
-        "PrivateLabBench runs evaluation locally and reports only metrics. Raw scientific samples are not uploaded by this CLI.",
-    ])
+    lines.extend(["", "## Notes", "PrivateLabBench runs evaluation locally. Raw scientific samples are not uploaded by this CLI."])
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
+
+
+def _append_slice_metrics(lines: list[str], slice_metrics: Mapping[str, object]) -> None:
+    if not slice_metrics:
+        return
+    lines.extend(["", "## Slice metrics"])
+    for column, groups_value in slice_metrics.items():
+        groups = dict(groups_value)
+        lines.extend(["", f"### `{column}`"])
+        for group, entry_value in groups.items():
+            entry = dict(entry_value)
+            lines.append(f"- **{group}** — n={entry.get('n', 0)}, status={entry.get('status', 'unknown')}")
+            metrics = entry.get("metrics")
+            if isinstance(metrics, Mapping):
+                for key, value in metrics.items():
+                    lines.append(f"  - {key}: {float(value):.6f}")
 
 
 def write_prediction_markdown_report(
@@ -90,15 +96,28 @@ def write_prediction_markdown_report(
 ) -> Path:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    schema = result.schema.as_dict()
+    prediction_columns = ", ".join(f"`{column}`" for column in schema["prediction_columns"])
+    metadata_columns = ", ".join(f"`{column}`" for column in schema["metadata_columns"]) or "(none)"
+    slice_columns = ", ".join(f"`{column}`" for column in schema["slice_columns"]) or "(none)"
+    class_labels = ", ".join(str(label) for label in schema["class_labels"]) or "(not applicable)"
     lines = [
         "# PrivateLabBench Prediction Evaluation Report",
         "",
-        "## Dataset",
+        "## Run summary",
         f"- Source: `{result.dataset_path}`",
-        f"- Target column: `{result.target_column}`",
-        f"- Prediction column: `{result.prediction_column}`",
         f"- Samples: {result.n_samples}",
-        f"- Task type: {result.task_type}",
+        f"- Problem type: {result.task_type}",
+        "",
+        "## Prediction table schema",
+        f"- Schema: `{schema['schema_version']}`",
+        f"- Sample ID column: `{schema['sample_id_column']}`" if schema["sample_id_column"] else "- Sample ID column: (not configured)",
+        f"- Sample ID status: {schema['sample_id_status']}",
+        f"- Target column: `{schema['target_column']}`",
+        f"- Prediction column(s): {prediction_columns}",
+        f"- Class labels: {class_labels}",
+        f"- Metadata columns discovered: {metadata_columns}",
+        f"- Slice columns evaluated: {slice_columns}",
         "",
         "## Clean local metrics",
     ]
@@ -106,21 +125,25 @@ def write_prediction_markdown_report(
     if baseline_prediction_column and baseline_metrics:
         lines.extend(["", "## Baseline comparison", f"- Baseline prediction column: `{baseline_prediction_column}`", ""])
         lines.extend(_format_metric_lines(baseline_metrics))
-    lines.extend(["", "## Privacy-preserving reported metrics"])
+    lines.extend(["", "## Reported metrics"])
     lines.extend(_format_metric_lines(private_metrics))
     lines.extend(["", "## Prediction summary"])
     lines.extend(_format_metric_lines(result.prediction_summary))
+    _append_slice_metrics(lines, result.slice_metrics)
     lines.extend(["", "## Privacy mode", privacy_summary(privacy_config)])
     if result.privacy_risk:
         lines.extend(["", "## Privacy attack risk"])
         lines.extend(_format_value_lines(result.privacy_risk))
-    if json_report_path:
-        lines.extend(["", "## Machine-readable report", f"- JSON report: `{json_report_path}`"])
     lines.extend([
         "",
-        "## Notes",
-        "This workflow evaluates externally generated model predictions. It is designed for customer-owned models where PrivateLabBench only sees local targets and predictions during local execution.",
+        "## Sharing boundary",
+        "- Row-level sample IDs, targets, predictions, and metadata values are not written into this aggregate report.",
+        "- The report contains aggregate metrics, prediction summaries, slice counts/metrics, privacy-audit summaries, and schema column names.",
+        "- The local source path is included for local reproducibility; a shareable receipt with explicit public/private fields is tracked separately.",
     ])
+    if json_report_path:
+        lines.extend(["", "## Machine-readable report", f"- JSON report: `{json_report_path}`"])
+    lines.extend(["", "## Notes", "This workflow evaluates predictions generated by any model or tool. PrivateLabBench only reads the local prediction table during evaluation."])
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
 
@@ -133,7 +156,6 @@ def write_federated_markdown_report(
 ) -> Path:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-
     clients = list(result["clients"])
     lines = [
         "# PrivateLabBench Federated Evaluation Report",
@@ -160,7 +182,6 @@ def write_federated_markdown_report(
     if aggregate_release:
         lines.extend(["", "## Aggregate release gate"])
         lines.extend(_format_value_lines(aggregate_release))
-
     lines.extend(["", "## Per-client results"])
     for client in clients:
         lines.extend([
@@ -181,11 +202,6 @@ def write_federated_markdown_report(
         lines.append("")
         lines.append("Shift summary:")
         lines.extend(_format_metric_lines(client.shift))
-
-    lines.extend([
-        "",
-        "## Notes",
-        "This report simulates a multi-lab private evaluation workflow. Each client CSV is evaluated independently, then only aggregate metrics and summaries are combined. Raw scientific samples are not uploaded by this CLI.",
-    ])
+    lines.extend(["", "## Notes", "This report evaluates multiple local site/lab CSVs independently and combines aggregate metrics. Raw scientific samples are not uploaded by this CLI."])
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
