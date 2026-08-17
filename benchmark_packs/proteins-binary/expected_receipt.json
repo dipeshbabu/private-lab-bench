@@ -1,0 +1,20 @@
+{
+  "created_at": "2026-08-17T00:00:00+00:00",
+  "integrity": {"algorithm": "sha256", "payload_sha256": "bb2110f114c3702a87168d7648720c08c60e55ac2ec42e1ddc1736e63a0baa73", "signed": false},
+  "receipt_id": "known-good:proteins-binary@1.0.0",
+  "schema_version": "evaluation-receipt/v1",
+  "scope": "shareable",
+  "shareable": {
+    "artifacts": [],
+    "benchmark": {"domain": "proteins", "id": "community-proteins-binary", "protocol": "prediction-table/v1", "suite": "community-pack", "version": "1.0.0"},
+    "evaluation": {
+      "input_schema": {"class_labels": ["inactive", "active"], "metadata_columns": ["sequence", "family", "length_bin"], "prediction_columns": ["prediction"], "sample_id_column": "sample_id", "sample_id_status": "present", "schema_version": "prediction-table/v1", "slice_columns": ["family"], "split_column": null, "target_column": "target"},
+      "metric_source": "reported_metrics",
+      "metrics": {"accuracy": 1.0, "auroc": 1.0, "f1": 1.0},
+      "sample_counts": {"n_samples": 12}, "slices": {}, "task_type": "classification", "uncertainty": {}
+    },
+    "privacy": {"audits": {}, "mechanism": {"formal_dp": false, "guarantee_level": "none", "mode": "none"}, "release": {"status": "pass"}},
+    "provenance": {"attestation_id": "known-good", "package": {"name": "private-lab-bench", "version": "0.11.0"}},
+    "run": {"created_at": "2026-08-17T00:00:00+00:00", "project": "community-proteins-binary", "report_type": "prediction_evaluation", "run_id": "known-good", "task": "predictions"}
+  }
+}

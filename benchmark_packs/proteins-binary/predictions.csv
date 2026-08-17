@@ -1,0 +1,13 @@
+sample_id,sequence,target,prediction,family,length_bin
+prot001,MKTAYIAKQRQISFVKSHFSRQ,active,0.91,kinase,short
+prot002,GAVLILKKKGHHEAELKPLA,inactive,0.18,kinase,short
+prot003,MNVLSPADKTNVKAAWGKVG,active,0.82,binding,short
+prot004,TTPSIIAYTQDGETLVGIL,inactive,0.25,binding,short
+prot005,MVHLTPEEKSAVTALWGKVN,active,0.77,transport,short
+prot006,AGFNVVSTSTLQKKLEAAG,inactive,0.21,transport,short
+prot007,MSTNPKPQRKTKRNTNRRPQ,active,0.72,regulatory,short
+prot008,VVLGGPCVGIACRSQLAQQ,inactive,0.32,regulatory,short
+prot009,MALWMRLLPLLALLALWGPDP,active,0.88,secreted,short
+prot010,GGHVDHGKSTTTGHLIYKCG,inactive,0.29,secreted,short
+prot011,MPEPTIDESEQUENCEAAAKK,active,0.69,enzyme,short
+prot012,LIVTQSPATLSLSPGERATL,inactive,0.34,enzyme,short

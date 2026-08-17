@@ -1,0 +1,29 @@
+project: community-molecules-regression
+task: predictions
+
+benchmark:
+  id: community-molecules-regression
+  version: "1.0.0"
+  suite: community-pack
+  domain: molecules
+  protocol: prediction-table/v1
+
+input:
+  path: predictions.csv
+  sample_id_column: sample_id
+  require_sample_id: true
+  target_column: label
+  prediction_column: pred
+  task_type: regression
+  slice_columns:
+    - series
+  min_slice_size: 2
+
+privacy:
+  mode: none
+  seed: 13
+
+report:
+  markdown: reports/benchmark_packs/molecules_regression.md
+  json: reports/benchmark_packs/molecules_regression.json
+  manifest: reports/benchmark_packs/molecules_regression_manifest.json

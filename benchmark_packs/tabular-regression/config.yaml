@@ -1,0 +1,30 @@
+project: community-tabular-regression
+task: predictions
+
+benchmark:
+  id: community-tabular-regression
+  version: "1.0.0"
+  suite: community-pack
+  domain: tabular
+  protocol: prediction-table/v1
+
+input:
+  path: predictions.csv
+  sample_id_column: sample_id
+  require_sample_id: true
+  target_column: target
+  prediction_column: prediction
+  task_type: regression
+  slice_columns:
+    - site
+    - batch
+  min_slice_size: 2
+
+privacy:
+  mode: none
+  seed: 13
+
+report:
+  markdown: reports/benchmark_packs/tabular_regression.md
+  json: reports/benchmark_packs/tabular_regression.json
+  manifest: reports/benchmark_packs/tabular_regression_manifest.json

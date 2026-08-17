@@ -1,0 +1,32 @@
+project: community-proteins-binary
+task: predictions
+
+benchmark:
+  id: community-proteins-binary
+  version: "1.0.0"
+  suite: community-pack
+  domain: proteins
+  protocol: prediction-table/v1
+
+input:
+  path: predictions.csv
+  sample_id_column: sample_id
+  require_sample_id: true
+  target_column: target
+  prediction_column: prediction
+  task_type: classification
+  class_labels:
+    - inactive
+    - active
+  slice_columns:
+    - family
+  min_slice_size: 2
+
+privacy:
+  mode: none
+  seed: 13
+
+report:
+  markdown: reports/benchmark_packs/proteins_binary.md
+  json: reports/benchmark_packs/proteins_binary.json
+  manifest: reports/benchmark_packs/proteins_binary_manifest.json
