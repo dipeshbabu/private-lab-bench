@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from pathlib import Path
 
@@ -14,11 +15,8 @@ from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy
 from privatelabbench.reports.integrity import verify_report
 from privatelabbench.reports.manifest import verify_run_manifest
 from privatelabbench.reports.json import write_json_report
-from privatelabbench.reports.markdown import (
-    write_federated_markdown_report,
-    write_markdown_report,
-    write_prediction_markdown_report,
-)
+from privatelabbench.reports.markdown import write_federated_markdown_report, write_markdown_report, write_prediction_markdown_report
+from privatelabbench.reports.receipt import RECEIPT_SCHEMA_VERSION, verify_receipt
 from privatelabbench.runner import ensure_builtin_tasks_registered, print_run_summary, run_config
 from privatelabbench.tasks.molecules import load_molecule_csv
 from privatelabbench.validation import ConfigValidationResult, validate_config
@@ -40,10 +38,7 @@ def add_common_eval_args(parser: argparse.ArgumentParser) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="privatelabbench",
-        description="Local-first evaluation for scientific machine learning on private data.",
-    )
+    parser = argparse.ArgumentParser(prog="privatelabbench", description="Local-first evaluation for scientific machine learning on private data.")
     sub = parser.add_subparsers(dest="command", required=True)
 
     run = sub.add_parser("run", help="Run a local evaluation task from a YAML config file.")
@@ -59,9 +54,13 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("--report", default="reports/model_comparison.md")
     compare.add_argument("--json-report", default="reports/model_comparison.json")
 
-    verify = sub.add_parser("verify-report", help="Verify JSON report integrity and optional HMAC signature.")
-    verify.add_argument("json_report", help="Path to a PrivateLabBench JSON report.")
-    verify.add_argument("--signing-secret", default=None, help="Optional HMAC signing secret.")
+    verify_any = sub.add_parser("verify", help="Verify a receipt, run manifest, or JSON report.")
+    verify_any.add_argument("artifact", help="Path to a receipt, run manifest, or JSON report.")
+    verify_any.add_argument("--signing-secret", default=None, help="Optional HMAC signing secret.")
+
+    verify_report_parser = sub.add_parser("verify-report", help="Verify JSON report integrity and optional HMAC signature.")
+    verify_report_parser.add_argument("json_report", help="Path to a PrivateLabBench JSON report.")
+    verify_report_parser.add_argument("--signing-secret", default=None, help="Optional HMAC signing secret.")
 
     verify_manifest = sub.add_parser("verify-manifest", help="Verify a run manifest and its bound artifacts.")
     verify_manifest.add_argument("manifest", help="Path to a PrivateLabBench run manifest.")
@@ -83,12 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
     prediction_group = eval_pred.add_mutually_exclusive_group(required=True)
     prediction_group.add_argument("--prediction-column", help="Single prediction/probability column for regression or binary classification.")
     prediction_group.add_argument("--prediction-columns", nargs="+", help="Ordered probability columns for multiclass classification.")
-    eval_pred.add_argument(
-        "--task-type",
-        choices=["regression", "classification", "multiclass"],
-        default=None,
-        help="Problem type. Multiclass is inferred when --prediction-columns has multiple columns.",
-    )
+    eval_pred.add_argument("--task-type", choices=["regression", "classification", "multiclass"], default=None, help="Problem type. Multiclass is inferred when --prediction-columns has multiple columns.")
     eval_pred.add_argument("--class-labels", nargs="+", default=None, help="Ordered class labels matching --prediction-columns.")
     eval_pred.add_argument("--sample-id-column", default="sample_id", help="Stable sample identifier column.")
     eval_pred.add_argument("--require-sample-id", action="store_true", help="Fail if the sample ID column is missing.")
@@ -109,6 +103,15 @@ def make_privacy_config(args: argparse.Namespace) -> PrivacyConfig:
 def run_from_config(args: argparse.Namespace) -> int:
     summary = run_config(args.config_path)
     print_run_summary(summary)
+    manifest = Path(summary["manifest"])
+    base = manifest.stem[: -len("_manifest")] if manifest.stem.endswith("_manifest") else manifest.stem
+    receipt = manifest.with_name(f"{base}_receipt.json")
+    shareable = manifest.with_name(f"{base}_receipt.shareable.json")
+    markdown = manifest.with_name(f"{base}_receipt.md")
+    if receipt.exists():
+        print(f"Local receipt saved to: {receipt}")
+        print(f"Shareable receipt saved to: {shareable}")
+        print(f"Receipt Markdown saved to: {markdown}")
     return 0
 
 
@@ -151,9 +154,40 @@ def compare_from_configs(args: argparse.Namespace) -> int:
     return 0
 
 
+def _secret(args: argparse.Namespace) -> str | None:
+    return args.signing_secret or os.getenv("PRIVATELABBENCH_SIGNING_SECRET")
+
+
+def _print_basic_verification(result: dict[str, object]) -> int:
+    print(f"Artifact: {result.get('path')}")
+    print(f"Valid: {result.get('valid')}")
+    print(f"Reason: {result.get('reason')}")
+    if result.get("schema_version"):
+        print(f"Schema: {result.get('schema_version')}")
+    if result.get("scope"):
+        print(f"Scope: {result.get('scope')}")
+    if result.get("payload_sha256"):
+        print(f"Payload SHA256: {result.get('payload_sha256')}")
+    return 0 if result.get("valid") else 1
+
+
+def verify_any_command(args: argparse.Namespace) -> int:
+    path = Path(args.artifact)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    schema = payload.get("schema_version") if isinstance(payload, dict) else None
+    if schema == RECEIPT_SCHEMA_VERSION:
+        return _print_basic_verification(verify_receipt(path, signing_secret=_secret(args)))
+    if schema == "run-manifest/v0.1":
+        result = verify_run_manifest(path, signing_secret=_secret(args))
+        result["schema_version"] = schema
+        return _print_basic_verification(result)
+    result = verify_report(str(path), signing_secret=_secret(args))
+    result["schema_version"] = schema
+    return _print_basic_verification(result)
+
+
 def verify_report_command(args: argparse.Namespace) -> int:
-    secret = args.signing_secret or os.getenv("PRIVATELABBENCH_SIGNING_SECRET")
-    result = verify_report(args.json_report, signing_secret=secret)
+    result = verify_report(args.json_report, signing_secret=_secret(args))
     print("PrivateLabBench report verification")
     print(f"Report: {result['path']}")
     print(f"Valid: {result['valid']}")
@@ -166,8 +200,7 @@ def verify_report_command(args: argparse.Namespace) -> int:
 
 
 def verify_manifest_command(args: argparse.Namespace) -> int:
-    secret = args.signing_secret or os.getenv("PRIVATELABBENCH_SIGNING_SECRET")
-    result = verify_run_manifest(args.manifest, signing_secret=secret)
+    result = verify_run_manifest(args.manifest, signing_secret=_secret(args))
     print("PrivateLabBench manifest verification")
     print(f"Manifest: {result['path']}")
     print(f"Valid: {result['valid']}")
@@ -188,15 +221,7 @@ def eval_molecules(args: argparse.Namespace) -> int:
     clean_metrics = dict(result["metrics"])
     privacy_config = make_privacy_config(args)
     reported_metrics = privatize_metrics(clean_metrics, privacy_config)
-    report_path = write_markdown_report(
-        args.report,
-        dataset_path=args.csv_path,
-        target=args.target,
-        result=result,
-        clean_metrics=clean_metrics,
-        private_metrics=reported_metrics,
-        privacy_config=privacy_config,
-    )
+    report_path = write_markdown_report(args.report, dataset_path=args.csv_path, target=args.target, result=result, clean_metrics=clean_metrics, private_metrics=reported_metrics, privacy_config=privacy_config)
     print("PrivateLabBench molecule evaluation")
     print(f"Task: {dataset.task_type}")
     print(f"Samples: {dataset.n_samples}")
@@ -213,15 +238,7 @@ def eval_molecules(args: argparse.Namespace) -> int:
 
 def eval_federated(args: argparse.Namespace) -> int:
     privacy_config = make_privacy_config(args)
-    result = evaluate_federated_directory(
-        args.client_dir,
-        target=args.target,
-        smiles_column=args.smiles_column,
-        task_type=args.task_type,
-        test_size=args.test_size,
-        seed=args.seed,
-        privacy_config=privacy_config,
-    )
+    result = evaluate_federated_directory(args.client_dir, target=args.target, smiles_column=args.smiles_column, task_type=args.task_type, test_size=args.test_size, seed=args.seed, privacy_config=privacy_config)
     report_path = write_federated_markdown_report(args.report, result=result, privacy_config=privacy_config)
     print("PrivateLabBench multi-site evaluation")
     print(f"Sites: {result['n_clients']}")
@@ -239,55 +256,11 @@ def eval_federated(args: argparse.Namespace) -> int:
 
 def eval_predictions(args: argparse.Namespace) -> int:
     privacy_config = make_privacy_config(args)
-    result = evaluate_prediction_csv(
-        args.csv_path,
-        target=args.target,
-        prediction_column=args.prediction_column,
-        prediction_columns=args.prediction_columns,
-        task_type=args.task_type,
-        sample_id_column=args.sample_id_column,
-        require_sample_id=args.require_sample_id,
-        metadata_columns=args.metadata_columns,
-        slice_columns=args.slice_columns,
-        min_slice_size=args.min_slice_size,
-        class_labels=args.class_labels,
-        split_column=args.split_column,
-    )
+    result = evaluate_prediction_csv(args.csv_path, target=args.target, prediction_column=args.prediction_column, prediction_columns=args.prediction_columns, task_type=args.task_type, sample_id_column=args.sample_id_column, require_sample_id=args.require_sample_id, metadata_columns=args.metadata_columns, slice_columns=args.slice_columns, min_slice_size=args.min_slice_size, class_labels=args.class_labels, split_column=args.split_column)
     clean_metrics = result.metrics
     reported_metrics = privatize_metrics(clean_metrics, privacy_config)
-    json_path = write_json_report(
-        args.json_report,
-        report_type="prediction_evaluation",
-        result={
-            "dataset_path": result.dataset_path,
-            "prediction_table_schema": result.schema.as_dict(),
-            "target_column": result.target_column,
-            "prediction_column": result.prediction_column,
-            "prediction_columns": list(result.prediction_columns),
-            "class_labels": list(result.class_labels),
-            "task_type": result.task_type,
-            "n_samples": result.n_samples,
-            "clean_metrics": clean_metrics,
-            "reported_metrics": reported_metrics,
-            "prediction_summary": result.prediction_summary,
-            "slice_metrics": result.slice_metrics,
-            "split_column": result.split_column,
-            "privacy_risk": result.privacy_risk or {},
-            "sharing_boundary": {
-                "row_level_values_included": False,
-                "aggregate_fields": ["metrics", "prediction_summary", "slice_metrics", "privacy_risk", "schema column names"],
-            },
-        },
-        privacy_config=privacy_config,
-    )
-    report_path = write_prediction_markdown_report(
-        args.report,
-        result=result,
-        clean_metrics=clean_metrics,
-        private_metrics=reported_metrics,
-        privacy_config=privacy_config,
-        json_report_path=str(json_path),
-    )
+    json_path = write_json_report(args.json_report, report_type="prediction_evaluation", result={"dataset_path": result.dataset_path, "prediction_table_schema": result.schema.as_dict(), "target_column": result.target_column, "prediction_column": result.prediction_column, "prediction_columns": list(result.prediction_columns), "class_labels": list(result.class_labels), "task_type": result.task_type, "n_samples": result.n_samples, "clean_metrics": clean_metrics, "reported_metrics": reported_metrics, "prediction_summary": result.prediction_summary, "slice_metrics": result.slice_metrics, "split_column": result.split_column, "privacy_risk": result.privacy_risk or {}, "sharing_boundary": {"row_level_values_included": False, "aggregate_fields": ["metrics", "prediction_summary", "slice_metrics", "privacy_risk", "schema column names"]}}, privacy_config=privacy_config)
+    report_path = write_prediction_markdown_report(args.report, result=result, clean_metrics=clean_metrics, private_metrics=reported_metrics, privacy_config=privacy_config, json_report_path=str(json_path))
     print("PrivateLabBench prediction evaluation")
     print(f"Task: {result.task_type}")
     print(f"Samples: {result.n_samples}")
@@ -315,6 +288,8 @@ def main() -> int:
         return list_tasks_command()
     if args.command == "compare":
         return compare_from_configs(args)
+    if args.command == "verify":
+        return verify_any_command(args)
     if args.command == "verify-report":
         return verify_report_command(args)
     if args.command == "verify-manifest":

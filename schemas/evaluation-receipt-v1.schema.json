@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://privatelabbench.org/schemas/evaluation-receipt-v1.schema.json",
+  "title": "PrivateLabBench Evaluation Receipt v1",
+  "type": "object",
+  "required": ["schema_version", "receipt_id", "created_at", "scope", "shareable", "integrity"],
+  "properties": {
+    "schema_version": {"const": "evaluation-receipt/v1"},
+    "receipt_id": {"type": "string", "minLength": 1},
+    "created_at": {"type": ["string", "null"]},
+    "scope": {"enum": ["local", "shareable", "compatibility"]},
+    "shareable": {
+      "type": "object",
+      "required": ["run", "benchmark", "evaluation", "privacy", "provenance", "artifacts"],
+      "properties": {
+        "run": {
+          "type": "object",
+          "required": ["run_id", "project", "task", "report_type"],
+          "properties": {
+            "run_id": {"type": ["string", "null"]},
+            "created_at": {"type": ["string", "null"]},
+            "project": {"type": ["string", "null"]},
+            "task": {"type": ["string", "null"]},
+            "report_type": {"type": ["string", "null"]}
+          },
+          "additionalProperties": true
+        },
+        "benchmark": {"type": "object"},
+        "evaluation": {
+          "type": "object",
+          "required": ["sample_counts", "input_schema", "metrics", "metric_source", "uncertainty", "slices"],
+          "properties": {
+            "task_type": {"type": ["string", "null"]},
+            "sample_counts": {"type": "object"},
+            "input_schema": {"type": "object"},
+            "metrics": {"type": "object"},
+            "metric_source": {"type": "string"},
+            "uncertainty": {"type": "object"},
+            "slices": {"type": "object"}
+          },
+          "additionalProperties": true
+        },
+        "privacy": {
+          "type": "object",
+          "required": ["mechanism", "audits", "release"],
+          "properties": {
+            "mechanism": {"type": "object"},
+            "audits": {"type": "object"},
+            "release": {"type": "object"}
+          },
+          "additionalProperties": true
+        },
+        "provenance": {"type": "object"},
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["kind", "name", "sha256"],
+            "properties": {
+              "kind": {"type": ["string", "null"]},
+              "name": {"type": ["string", "null"]},
+              "sha256": {"type": ["string", "null"]}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "local": {
+      "type": "object",
+      "properties": {
+        "sharing": {"const": "local_only"},
+        "paths": {"type": "object"},
+        "config_snapshot": {"type": "object"},
+        "exact_metrics": {"type": "object"},
+        "runner": {"type": "object"},
+        "attestation": {"type": "object"},
+        "manifest_integrity": {"type": "object"}
+      },
+      "additionalProperties": true
+    },
+    "integrity": {
+      "type": "object",
+      "required": ["algorithm", "payload_sha256", "signed"],
+      "properties": {
+        "algorithm": {"const": "sha256"},
+        "payload_sha256": {"type": "string", "minLength": 64, "maxLength": 64},
+        "signed": {"type": "boolean"},
+        "signature_algorithm": {"type": "string"},
+        "signature": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"scope": {"const": "local"}}},
+      "then": {"required": ["local"]}
+    },
+    {
+      "if": {"properties": {"scope": {"const": "shareable"}}},
+      "then": {"not": {"required": ["local"]}}
+    }
+  ],
+  "additionalProperties": false
+}
