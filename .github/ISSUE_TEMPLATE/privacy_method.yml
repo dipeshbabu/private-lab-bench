@@ -1,0 +1,49 @@
+name: Privacy method proposal
+description: Propose a privacy audit, release mechanism, or privacy-policy change.
+title: "[Privacy]: "
+labels: []
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Method type
+      options:
+        - Empirical privacy attack/audit
+        - Formal privacy mechanism
+        - Release policy/gate
+        - Privacy documentation/terminology
+    validations:
+      required: true
+  - type: textarea
+    id: threat
+    attributes:
+      label: Threat model
+      description: Define the privacy unit, attacker knowledge/access, adjacency relation if relevant, and protected information.
+    validations:
+      required: true
+  - type: textarea
+    id: guarantee
+    attributes:
+      label: Guarantee or evidence level
+      description: State exactly what the method establishes and what it does not. Empirical audits must not be described as guarantees.
+    validations:
+      required: true
+  - type: textarea
+    id: math
+    attributes:
+      label: Bounds, sensitivity, accounting, or attack assumptions
+      description: For formal mechanisms include bounds/sensitivity/composition; for attacks include scoring/threshold assumptions.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation plan
+      description: Describe positive/negative controls, reproducibility tests, and failure cases.
+    validations:
+      required: true
+  - type: textarea
+    id: refs
+    attributes:
+      label: Primary references
+      description: Link papers/specifications/official documentation when applicable.
