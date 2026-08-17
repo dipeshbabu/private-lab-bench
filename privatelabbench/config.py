@@ -7,15 +7,18 @@ from typing import Any
 import yaml
 
 
-SUPPORTED_WORKFLOWS = {"molecules", "federated", "predictions"}
-
-
 @dataclass(frozen=True)
 class RunnerConfig:
     project: str
     workflow: str
     raw: dict[str, Any]
     config_path: str | None = None
+
+    @property
+    def task_id(self) -> str:
+        """Preferred community-facing name for the configured workflow."""
+
+        return self.workflow
 
 
 def load_config(path: str) -> RunnerConfig:
@@ -27,10 +30,19 @@ def load_config(path: str) -> RunnerConfig:
         raise ValueError("Config must be a YAML mapping.")
 
     project = str(payload.get("project", config_path.stem))
-    workflow = str(payload.get("workflow", "")).strip().lower()
-    if workflow not in SUPPORTED_WORKFLOWS:
-        raise ValueError(f"Unsupported workflow '{workflow}'. Supported workflows: {', '.join(sorted(SUPPORTED_WORKFLOWS))}")
-    return RunnerConfig(project=project, workflow=workflow, raw=payload, config_path=str(config_path.resolve()))
+    task_value = payload.get("task")
+    workflow_value = payload.get("workflow")
+    if task_value and workflow_value and str(task_value).strip().lower() != str(workflow_value).strip().lower():
+        raise ValueError("Config cannot set different values for 'task' and legacy 'workflow'.")
+    task_id = str(task_value or workflow_value or "").strip().lower()
+    if not task_id:
+        raise ValueError("Config must define 'task' (preferred) or legacy 'workflow'.")
+    return RunnerConfig(
+        project=project,
+        workflow=task_id,
+        raw=payload,
+        config_path=str(config_path.resolve()),
+    )
 
 
 def section(config: RunnerConfig, name: str) -> dict[str, Any]:

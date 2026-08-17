@@ -17,7 +17,7 @@ def _safe_slug(value: str) -> str:
 
 
 def benchmark_metadata(config: RunnerConfig) -> dict[str, Any]:
-    """Return dashboard-safe benchmark identity metadata from a run config."""
+    """Return shareable benchmark/task identity metadata from a run config."""
 
     benchmark = section(config, "benchmark")
     benchmark_id = str(benchmark.get("id") or f"{config.workflow}-{_safe_slug(config.project)}")
@@ -34,6 +34,8 @@ def benchmark_metadata(config: RunnerConfig) -> dict[str, Any]:
 
 
 def runner_metadata(config: RunnerConfig) -> dict[str, Any]:
+    """Return minimal local runner identity without host/user/path details."""
+
     runner_id = os.getenv(RUNNER_ID_ENV)
     if not runner_id:
         base = Path(config.config_path).stem if config.config_path else config.project

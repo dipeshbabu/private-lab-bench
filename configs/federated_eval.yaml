@@ -1,5 +1,5 @@
 project: multi-lab-demo
-workflow: federated
+task: multi-site
 
 benchmark:
   id: multi-lab-molecule-private
@@ -19,16 +19,12 @@ privacy:
   epsilon: 8
   sensitivity: 1
   seed: 13
-  risk_policy:
-    max_level: moderate
-    max_member_advantage: 0.35
-    max_attack_auc: 0.85
   aggregate_policy:
     min_clients: 3
     min_total_samples: 12
     min_client_samples: 4
 
 report:
-  markdown: reports/multi_lab_federated_eval.md
-  json: reports/multi_lab_federated_eval.json
-  manifest: reports/multi_lab_federated_manifest.json
+  markdown: reports/multi_lab_eval.md
+  json: reports/multi_lab_eval.json
+  manifest: reports/multi_lab_manifest.json

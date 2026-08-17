@@ -1,37 +1,63 @@
 # Contributing to PrivateLabBench
 
-PrivateLabBench is an early local-first framework for private scientific model evaluation. Contributions should keep the project simple, reproducible, and focused on secure evaluation workflows.
+PrivateLabBench is a community-first, local evaluation framework for scientific machine learning on private data.
+
+Contributions should keep the project reproducible, domain-extensible, and useful without hosted infrastructure.
 
 ## Development setup
 
 ```bash
 git clone https://github.com/dipeshbabu/private-lab-bench.git
 cd private-lab-bench
-pip install -e .
-pip install pytest
+pip install -e '.[dev]'
 pytest -q
 ```
 
-## Contribution priorities
+Optional molecule/RDKit work:
 
-Good first contributions include:
+```bash
+pip install -e '.[rdkit,dev]'
+```
 
-- new scientific dataset loaders,
-- stronger molecule featurizers,
-- additional evaluation metrics,
-- privacy-risk scoring utilities,
-- report templates,
+## Architecture
+
+The main extension points live under `privatelabbench.core`: `Task`, `DatasetAdapter`, `ModelAdapter`, `Metric`, `Slice`, `PrivacyAudit`, and `ArtifactWriter`.
+
+Task execution is registry-based. Third-party packages can use the `privatelabbench.tasks` Python entry-point group.
+
+The preferred low-friction interface is a local prediction table; contributors should avoid forcing model-framework dependencies into core.
+
+## Good first contributions
+
+- new evaluation metrics;
+- calibration/uncertainty metrics;
+- slice and subgroup diagnostics;
+- privacy-audit methods;
+- small task/demo packs;
+- report/manifest improvements;
+- clearer validation errors;
 - tests and documentation.
 
-Please avoid adding heavyweight dependencies unless they are optional. The v0.1 package should remain installable with minimal scientific Python dependencies.
+## Adding a task plugin
+
+For an external package, expose a `TaskSpec` through:
+
+```toml
+[project.entry-points."privatelabbench.tasks"]
+my-task = "my_package.plugin:task_spec"
+```
+
+Keep domain-specific dependencies in the plugin package when possible.
 
 ## Code style
 
-- Keep modules small and explicit.
-- Add tests for new commands or metrics.
-- Prefer local-first behavior: raw data should stay on the user's machine.
-- Avoid adding network calls to evaluation code unless they are clearly documented and optional.
+- keep modules small and explicit;
+- add tests for new behavior;
+- prefer local-first behavior;
+- avoid network calls in evaluation code;
+- keep heavyweight scientific dependencies optional;
+- do not introduce service/account/workspace assumptions into core.
 
 ## Privacy principle
 
-The central design principle is simple: private scientific samples should not leave the local environment. Shared outputs should be aggregate metrics, privacy-preserving summaries, or explicit user-approved reports.
+Private scientific samples should not leave the local environment as a side effect of evaluation. Privacy claims must be precise; do not describe heuristic perturbation or attack auditing as a formal privacy guarantee.

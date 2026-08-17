@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "private-lab-bench"
-version = "0.10.0"
-description = "Private scientific AI evaluation and trust infrastructure."
+version = "0.11.0"
+description = "Local-first evaluation for scientific machine learning on private data."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Dipesh Tharu Mahato" }]
@@ -18,28 +18,13 @@ dependencies = [
 
 [project.optional-dependencies]
 rdkit = ["rdkit>=2023.9.1"]
-postgres = ["psycopg[binary]>=3.1"]
-api = [
-  "fastapi>=0.103",
-  "uvicorn[standard]>=0.23",
-  "pydantic>=2.0",
-  "cryptography>=41.0",
-]
 dev = [
   "pytest>=7.0",
-  "httpx>=0.24",
-]
-all = [
-  "fastapi>=0.103",
-  "uvicorn[standard]>=0.23",
-  "pydantic>=2.0",
-  "cryptography>=41.0",
-  "psycopg[binary]>=3.1",
-  "httpx>=0.24",
 ]
 
 [project.scripts]
 privatelabbench = "privatelabbench.cli:main"
+plb = "privatelabbench.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["privatelabbench*"]
@@ -48,6 +33,3 @@ include = ["privatelabbench*"]
 testpaths = ["tests"]
 addopts = "--basetemp=.pytest-tmp"
 pythonpath = ["."]
-markers = [
-  "postgres: requires a live PostgreSQL database via PRIVATELABBENCH_TEST_POSTGRES_URL",
-]

@@ -1,20 +1,18 @@
-# PrivateLabBench adapters
+# PrivateLabBench Adapters
 
-PrivateLabBench has an adapter layer so the product can produce trusted private evidence for customer-owned, vendor-owned, and internally trained scientific models.
+Adapters connect domain-specific data or models to the common local evaluation workflow.
 
-## Why this matters
+The simplest integration remains a local prediction table. Model adapters are useful when a reproducible built-in baseline or direct local model integration adds value.
 
-The commercial workflow is not "upload your private lab data to us." The workflow is:
+## Extension model
 
-1. A lab runs a local adapter against its own model or prediction CSV.
-2. PrivateLabBench computes metrics, shift summaries, error slices, audit metadata, and optional DP-noised reported metrics.
-3. The customer can share only the evidence artifact with collaborators, vendors, leadership, legal, or auditors.
+The generic `ModelAdapter` protocol no longer assumes a molecule dataset. Core extension interfaces live under `privatelabbench.core`.
 
-## Built-in adapters
+Domain packages should depend on these interfaces rather than adding special cases to the central runner.
+
+## Built-in molecule adapters
 
 ### Hashed Random Forest
-
-No chemistry dependency required. This remains the default smoke-test adapter.
 
 ```yaml
 model:
@@ -26,8 +24,6 @@ model:
 
 ### RDKit Morgan Random Forest
 
-For chemistry teams that already have RDKit installed.
-
 ```yaml
 model:
   adapter: rdkit_random_forest
@@ -37,45 +33,16 @@ model:
   n_estimators: 200
 ```
 
-Install optional dependency:
+Install with `pip install -e '.[rdkit]'`.
+
+## External predictions
 
 ```bash
-pip install -e '.[rdkit]'
+plb eval-predictions predictions.csv --target target --prediction-column prediction
 ```
 
-Then run:
+## Third-party tasks
 
-```bash
-privatelabbench run configs/molecule_eval_rdkit.yaml
-```
+Packages can register tasks through the Python entry-point group `privatelabbench.tasks`.
 
-### External predictions
-
-Use this when a customer already has a model and only wants private local evaluation.
-
-```bash
-privatelabbench eval-predictions examples/predictions_demo.csv \
-  --target label \
-  --prediction-column pred \
-  --privacy dp \
-  --epsilon 8
-```
-
-## Model comparison
-
-Run multiple configs and generate one comparison report:
-
-```bash
-privatelabbench compare configs/molecule_eval.yaml configs/prediction_eval.yaml \
-  --report reports/model_comparison.md \
-  --json-report reports/model_comparison.json
-```
-
-## Next adapter targets
-
-The next high-value customer adapters are:
-
-- Molecular foundation model embeddings: ChemBERTa, MolFormer, Uni-Mol, MoLFormer-style embeddings.
-- Protein and antibody models: ESM-style protein embeddings and sequence-to-property predictors.
-- Robotics/VLA evaluation: trajectory-level prediction CSVs, failure probability traces, and intervention metrics.
-- Scientific vision models: microscopy or materials image predictions evaluated through local prediction CSVs first, then image-folder adapters later.
+Useful contributions include scientific foundation-model adapters, proteins, materials, microscopy, robotics/trajectory evaluation, and better molecular featurizers. Heavy dependencies should remain optional.

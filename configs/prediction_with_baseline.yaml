@@ -1,0 +1,18 @@
+project: prediction-baseline-comparison
+task: predictions
+
+input:
+  path: examples/predictions_with_baseline_demo.csv
+  target_column: target
+  prediction_column: candidate_prediction
+  baseline_prediction_column: baseline_prediction
+  task_type: regression
+
+privacy:
+  mode: none
+  seed: 13
+
+report:
+  markdown: reports/prediction_baseline_comparison.md
+  json: reports/prediction_baseline_comparison.json
+  manifest: reports/prediction_baseline_comparison_manifest.json

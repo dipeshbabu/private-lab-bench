@@ -1,5 +1,5 @@
 project: molecule-baseline-demo
-workflow: molecules
+task: molecules
 
 benchmark:
   id: molecule-baseline-private
