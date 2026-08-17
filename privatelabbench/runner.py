@@ -8,6 +8,12 @@ from typing import Any
 from privatelabbench.adapters.sklearn_adapter import build_molecule_adapter
 from privatelabbench.audit import write_audit_event
 from privatelabbench.config import RunnerConfig, load_config, required, section
+from privatelabbench.core.registry import (
+    discover_entrypoint_tasks,
+    get_task,
+    has_task,
+    register_task,
+)
 from privatelabbench.eval.metrics import summarize_metrics
 from privatelabbench.eval.predictions import evaluate_prediction_csv
 from privatelabbench.federated.evaluator import evaluate_federated_directory
@@ -74,7 +80,7 @@ def _write_audit(config: RunnerConfig, summary: dict[str, Any]) -> str:
         event_type="evaluation_completed",
         payload={
             "project": config.project,
-            "workflow": config.workflow,
+            "task": config.task_id,
             "markdown_report": summary.get("markdown_report"),
             "json_report": summary.get("json_report"),
             "privacy": summary.get("privacy"),
@@ -200,6 +206,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     summary = {
         "project": config.project,
         "workflow": config.workflow,
+        "task": config.task_id,
         "task_type": result.task_type,
         "n_samples": result.n_samples,
         "clean_metrics": clean_metrics,
@@ -277,6 +284,7 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
     summary = {
         "project": config.project,
         "workflow": config.workflow,
+        "task": config.task_id,
         "task_type": result["task_type"],
         "n_samples": result["n_samples"],
         "clean_metrics": clean_metrics,
@@ -352,6 +360,7 @@ def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
     summary = {
         "project": config.project,
         "workflow": config.workflow,
+        "task": config.task_id,
         "n_clients": result["n_clients"],
         "total_samples": result["total_samples"],
         "aggregate_clean_metrics": result["aggregate_clean_metrics"],
@@ -365,16 +374,49 @@ def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
     return _attach_report_identity(summary, json_path, identity)
 
 
+def ensure_builtin_tasks_registered() -> None:
+    """Register the tasks shipped with PrivateLabBench once per process."""
+
+    builtins = (
+        (
+            "predictions",
+            run_prediction_workflow,
+            "Evaluate a local table of targets and externally generated predictions.",
+        ),
+        (
+            "tabular",
+            run_prediction_workflow,
+            "Domain-neutral tabular prediction evaluation using the prediction-table interface.",
+        ),
+        (
+            "molecules",
+            run_molecule_workflow,
+            "Evaluate the built-in molecular property baseline and diagnostics.",
+        ),
+        (
+            "multi-site",
+            run_federated_workflow,
+            "Evaluate multiple local lab/site CSVs and aggregate metrics.",
+        ),
+        (
+            "federated",
+            run_federated_workflow,
+            "Legacy alias for the multi-site evaluation task.",
+        ),
+    )
+    for task_id, runner, description in builtins:
+        if not has_task(task_id):
+            register_task(task_id, runner, description=description)
+
+
 def run_config(config_path: str) -> dict[str, Any]:
     config = load_config(config_path)
-    if config.workflow == "predictions":
-        summary = run_prediction_workflow(config)
-    elif config.workflow == "molecules":
-        summary = run_molecule_workflow(config)
-    elif config.workflow == "federated":
-        summary = run_federated_workflow(config)
-    else:
-        raise ValueError(f"Unsupported workflow: {config.workflow}")
+    ensure_builtin_tasks_registered()
+    discover_entrypoint_tasks()
+    task = get_task(config.task_id)
+    summary = task.runner(config)
+    summary["task"] = config.task_id
+    summary["workflow"] = config.workflow
     summary["audit_log"] = _write_audit(config, summary)
     manifest_path = write_run_manifest(
         _manifest_path(config),
@@ -391,15 +433,15 @@ def run_config(config_path: str) -> dict[str, Any]:
 
 
 def print_run_summary(summary: dict[str, Any]) -> None:
-    print("PrivateLabBench config runner")
+    print("PrivateLabBench local evaluation")
     print(f"Project: {summary['project']}")
-    print(f"Workflow: {summary['workflow']}")
+    print(f"Task: {summary.get('task', summary.get('workflow'))}")
     if "benchmark_id" in summary:
         print(f"Benchmark: {summary['benchmark_id']}@{summary.get('benchmark_version', 'local')}")
     if "run_id" in summary:
         print(f"Run ID: {summary['run_id']}")
     if "task_type" in summary:
-        print(f"Task: {summary['task_type']}")
+        print(f"Problem type: {summary['task_type']}")
     if "n_samples" in summary:
         print(f"Samples: {summary['n_samples']}")
     if "n_clients" in summary:
@@ -423,13 +465,13 @@ def print_run_summary(summary: dict[str, Any]) -> None:
         print(
             "Privacy gate: "
             f"{summary['privacy_gate_status']} "
-            f"(publishable: {str(summary.get('privacy_gate_publishable')).lower()})"
+            f"(shareable: {str(summary.get('privacy_gate_publishable')).lower()})"
         )
     if "aggregate_release_status" in summary:
         print(
             "Aggregate release: "
             f"{summary['aggregate_release_status']} "
-            f"(publishable: {str(summary.get('aggregate_release_publishable')).lower()})"
+            f"(shareable: {str(summary.get('aggregate_release_publishable')).lower()})"
         )
     print(f"Privacy: {summary['privacy']}")
     print(f"Markdown report saved to: {Path(summary['markdown_report'])}")

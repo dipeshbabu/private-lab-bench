@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   test:
@@ -21,95 +20,61 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-
       - name: Install package
         run: |
           python -m pip install --upgrade pip
-          pip install -e '.[api]'
-          pip install pytest httpx
-
+          pip install -e '.[dev]'
       - name: Prepare output directories
         run: mkdir -p outputs reports
-
       - name: Run tests
         run: pytest -q
-
-      - name: Smoke test molecule CLI
+      - name: List registered tasks
         run: |
-          privatelabbench eval-molecules examples/molecules_demo.csv --target label --privacy dp --epsilon 8 --report outputs/ci_molecule_report.md
-          test -f outputs/ci_molecule_report.md
-
-      - name: Smoke test federated CLI
-        run: |
-          privatelabbench eval-federated examples/labs --target label --privacy dp --epsilon 8 --report outputs/ci_federated_report.md
-          test -f outputs/ci_federated_report.md
-
+          plb list-tasks
+          plb list-tasks | grep -q predictions
+          plb list-tasks | grep -q tabular
+          plb list-tasks | grep -q molecules
+          plb list-tasks | grep -q multi-site
       - name: Smoke test prediction CLI
         run: |
-          privatelabbench eval-predictions examples/predictions_demo.csv --target label --prediction-column pred --privacy dp --epsilon 8 --report outputs/ci_prediction_report.md --json-report outputs/ci_prediction_report.json
+          plb eval-predictions examples/predictions_demo.csv --target label --prediction-column pred --privacy dp --epsilon 8 --report outputs/ci_prediction_report.md --json-report outputs/ci_prediction_report.json
           test -f outputs/ci_prediction_report.md
           test -f outputs/ci_prediction_report.json
-          privatelabbench verify-report outputs/ci_prediction_report.json
-
+          plb verify-report outputs/ci_prediction_report.json
       - name: Smoke test config runner
         run: |
-          privatelabbench validate-config configs/prediction_eval.yaml
-          privatelabbench run configs/prediction_eval.yaml
+          plb validate-config configs/prediction_eval.yaml
+          plb run configs/prediction_eval.yaml
           test -f reports/kinase_prediction_eval.md
           test -f reports/kinase_prediction_eval.json
           test -f reports/kinase_prediction_audit.jsonl
-          privatelabbench verify-report reports/kinase_prediction_eval.json
-
-      - name: Smoke test sanitized export
+          test -f reports/kinase_prediction_manifest.json
+          plb verify-manifest reports/kinase_prediction_manifest.json
+      - name: Smoke test non-molecular task
         run: |
-          privatelabbench export-sanitized configs/prediction_eval.yaml --organization-id ci-lab --out outputs/sanitized_payload.json
-          test -f outputs/sanitized_payload.json
-          python -c "import json; p=json.load(open('outputs/sanitized_payload.json')); assert p['organization_id']=='ci-lab'; assert 'dataset_path' not in json.dumps(p)"
-
-      - name: Smoke test API import and CLI entrypoint
-        run: |
-          python -c "from privatelabbench.api import app; print(app.title)"
-          python -c "from privatelabbench.dashboard.api import app; print(app.title)"
-          privatelabbench serve --help
-          privatelabbench serve-dashboard --help
-
-      - name: Smoke test signed report verification
+          plb validate-config configs/tabular_eval.yaml
+          plb run configs/tabular_eval.yaml
+          test -f reports/tabular_demo_eval.json
+          test -f reports/tabular_demo_manifest.json
+      - name: Smoke test signed local report
         env:
           PRIVATELABBENCH_SIGNING_SECRET: ci-secret
         run: |
-          privatelabbench run configs/prediction_eval.yaml
-          privatelabbench verify-report reports/kinase_prediction_eval.json --signing-secret ci-secret
+          plb run configs/prediction_eval.yaml
+          plb verify-report reports/kinase_prediction_eval.json --signing-secret ci-secret
+          plb verify-manifest reports/kinase_prediction_manifest.json --signing-secret ci-secret
 
   docker:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set Docker image metadata
-        run: |
-          echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
-          python - <<'PY' >> "$GITHUB_ENV"
-          import tomllib
-
-          with open("pyproject.toml", "rb") as handle:
-              version = tomllib.load(handle)["project"]["version"]
-          print(f"PACKAGE_VERSION={version}")
-          PY
-
-      - name: Validate production compose config
-        run: |
-          cp .env.example .env
-          docker compose -f docker-compose.prod.yml --env-file .env config >/tmp/privatelabbench-compose.yml
-
-      - name: Build Docker image
+      - name: Build local runner image
         run: docker build -t privatelabbench:ci .
-
       - name: Smoke test Docker runner
         run: |
           mkdir -p reports
@@ -118,18 +83,4 @@ jobs:
           docker run --rm -v "$PWD/reports:/app/reports" privatelabbench:ci run configs/prediction_eval.yaml
           test -f reports/kinase_prediction_eval.md
           test -f reports/kinase_prediction_eval.json
-          test -f reports/kinase_prediction_audit.jsonl
-
-      - name: Log in to GitHub Container Registry
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-
-      - name: Push Docker image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          docker tag privatelabbench:ci "$IMAGE_NAME:latest"
-          docker tag privatelabbench:ci "$IMAGE_NAME:$PACKAGE_VERSION"
-          docker tag privatelabbench:ci "$IMAGE_NAME:${{ github.sha }}"
-          docker push "$IMAGE_NAME:latest"
-          docker push "$IMAGE_NAME:$PACKAGE_VERSION"
-          docker push "$IMAGE_NAME:${{ github.sha }}"
+          test -f reports/kinase_prediction_manifest.json

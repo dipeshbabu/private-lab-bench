@@ -1,0 +1,23 @@
+project: tabular-demo
+task: tabular
+
+benchmark:
+  id: tabular-private-regression
+  version: "0.1"
+  suite: generic-tabular
+  domain: tabular
+
+input:
+  path: examples/tabular_predictions_demo.csv
+  target_column: target
+  prediction_column: prediction
+  task_type: regression
+
+privacy:
+  mode: none
+  seed: 13
+
+report:
+  markdown: reports/tabular_demo_eval.md
+  json: reports/tabular_demo_eval.json
+  manifest: reports/tabular_demo_manifest.json
