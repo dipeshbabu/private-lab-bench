@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import json
 import hashlib
 import hmac
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
@@ -30,12 +30,7 @@ def _artifact(kind: str, path: str | Path | None, *, required: bool = True) -> d
         if required:
             raise FileNotFoundError(f"Manifest artifact does not exist: {artifact_path}")
         return None
-    return {
-        "kind": kind,
-        "path": str(artifact_path),
-        "name": artifact_path.name,
-        "sha256": sha256_file(artifact_path),
-    }
+    return {"kind": kind, "path": str(artifact_path), "name": artifact_path.name, "sha256": sha256_file(artifact_path)}
 
 
 def build_run_manifest(
@@ -50,7 +45,6 @@ def build_run_manifest(
     report_path = Path(json_report_path)
     report = json.loads(report_path.read_text(encoding="utf-8"))
     report_integrity = report.get("integrity", {}) if isinstance(report, dict) else {}
-
     artifacts = [
         artifact
         for artifact in (
@@ -61,7 +55,6 @@ def build_run_manifest(
         )
         if artifact is not None
     ]
-
     payload: dict[str, Any] = {
         "schema_version": "run-manifest/v0.1",
         "manifest_id": str(uuid4()),
@@ -70,6 +63,7 @@ def build_run_manifest(
         "run": {
             "run_id": summary.get("run_id") or report.get("run_id"),
             "project": summary.get("project"),
+            "task": summary.get("task"),
             "workflow": summary.get("workflow"),
             "report_type": report.get("report_type"),
             "report_payload_sha256": report_integrity.get("payload_sha256"),
@@ -82,15 +76,22 @@ def build_run_manifest(
             "domain": summary.get("domain"),
             "protocol": summary.get("benchmark_protocol"),
         },
-        "runner": {
-            "id": summary.get("runner_id"),
-            "label": summary.get("runner_label"),
-        },
+        "runner": {"id": summary.get("runner_id"), "label": summary.get("runner_label")},
         "attestation": collect_runner_attestation(),
         "privacy": report.get("privacy", {}),
         "artifacts": artifacts,
     }
     return attach_integrity_metadata(payload, signing_secret=signing_secret)
+
+
+def _receipt_output_paths(manifest_path: Path) -> tuple[Path, Path, Path]:
+    stem = manifest_path.stem
+    base = stem[: -len("_manifest")] if stem.endswith("_manifest") else stem
+    return (
+        manifest_path.with_name(f"{base}_receipt.json"),
+        manifest_path.with_name(f"{base}_receipt.shareable.json"),
+        manifest_path.with_name(f"{base}_receipt.md"),
+    )
 
 
 def write_run_manifest(
@@ -114,6 +115,22 @@ def write_run_manifest(
         signing_secret=signing_secret,
     )
     path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    # Receipts are presentation/share artifacts layered on top of the local manifest.
+    # Import locally to keep manifest verification independent and avoid a module cycle.
+    from privatelabbench.reports.receipt import write_evaluation_receipts
+
+    receipt_path, shareable_path, receipt_markdown_path = _receipt_output_paths(path)
+    write_evaluation_receipts(
+        full_path=receipt_path,
+        shareable_path=shareable_path,
+        markdown_path=receipt_markdown_path,
+        summary=summary,
+        report_path=json_report_path,
+        manifest_path=path,
+        config_path=config_path,
+        signing_secret=signing_secret,
+    )
     return path
 
 
@@ -123,19 +140,15 @@ def verify_run_manifest(path: str | Path, *, signing_secret: str | None = None) 
     integrity = manifest.get("integrity")
     if not isinstance(integrity, dict):
         return {"valid": False, "reason": "missing_integrity_metadata", "path": str(manifest_path)}
-
     from privatelabbench.reports.integrity import compute_payload_sha256, sign_payload
-
     expected_hash = str(integrity.get("payload_sha256", ""))
     actual_hash = compute_payload_sha256(manifest)
     hash_valid = bool(expected_hash) and hmac.compare_digest(expected_hash, actual_hash)
-
     signature_valid = None
     if signing_secret:
         expected_signature = str(integrity.get("signature", ""))
         actual_signature = sign_payload(manifest, signing_secret)
         signature_valid = bool(expected_signature) and hmac.compare_digest(expected_signature, actual_signature)
-
     artifact_results: list[dict[str, Any]] = []
     artifacts_valid = True
     report_valid = True
@@ -145,22 +158,12 @@ def verify_run_manifest(path: str | Path, *, signing_secret: str | None = None) 
         actual_artifact_hash = sha256_file(artifact_path) if exists else None
         expected_artifact_hash = artifact.get("sha256")
         valid_hash = exists and actual_artifact_hash == expected_artifact_hash
-        artifact_results.append(
-            {
-                "kind": artifact.get("kind"),
-                "path": str(artifact_path),
-                "exists": exists,
-                "hash_valid": valid_hash,
-                "sha256": actual_artifact_hash,
-                "expected_sha256": expected_artifact_hash,
-            }
-        )
+        artifact_results.append({"kind": artifact.get("kind"), "path": str(artifact_path), "exists": exists, "hash_valid": valid_hash, "sha256": actual_artifact_hash, "expected_sha256": expected_artifact_hash})
         artifacts_valid = artifacts_valid and bool(valid_hash)
         if artifact.get("kind") == "json_report" and exists:
             report_check = verify_report(str(artifact_path), signing_secret=signing_secret)
             report_valid = bool(report_check["valid"])
             artifact_results[-1]["report_integrity_valid"] = report_valid
-
     valid = hash_valid and artifacts_valid and report_valid and (signature_valid is not False)
     reason = "ok"
     if not hash_valid:
@@ -171,7 +174,6 @@ def verify_run_manifest(path: str | Path, *, signing_secret: str | None = None) 
         reason = "report_integrity_check_failed"
     elif not artifacts_valid:
         reason = "artifact_hash_check_failed"
-
     return {
         "valid": valid,
         "reason": reason,

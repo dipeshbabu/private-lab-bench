@@ -1,0 +1,99 @@
+{
+  "created_at": "2026-08-17T00:00:00+00:00",
+  "integrity": {
+    "algorithm": "sha256",
+    "payload_sha256": "1e2766161def71342c95adc8c2e9f08baf478fc10b6b4550f0b9e9c203072d27",
+    "signed": false
+  },
+  "receipt_id": "example-receipt-v1",
+  "schema_version": "evaluation-receipt/v1",
+  "scope": "shareable",
+  "shareable": {
+    "artifacts": [
+      {
+        "kind": "json_report",
+        "name": "example_eval.json",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+        "kind": "config",
+        "name": "example.yaml",
+        "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+      }
+    ],
+    "benchmark": {
+      "domain": "tabular",
+      "id": "example-private-regression",
+      "protocol": "prediction-table/v1",
+      "suite": "generic-tabular",
+      "version": "1.0"
+    },
+    "evaluation": {
+      "input_schema": {
+        "class_labels": [],
+        "metadata_columns": ["site"],
+        "prediction_columns": ["prediction"],
+        "sample_id_column": "sample_id",
+        "sample_id_status": "present",
+        "schema_version": "prediction-table/v1",
+        "slice_columns": ["site"],
+        "split_column": null,
+        "target_column": "target"
+      },
+      "metric_source": "reported_metrics",
+      "metrics": {
+        "mae": 0.025,
+        "rmse": 0.027
+      },
+      "sample_counts": {
+        "n_samples": 8
+      },
+      "slices": {
+        "site": {
+          "north": {
+            "metrics": {
+              "mae": 0.02
+            },
+            "n": 4,
+            "status": "evaluated"
+          },
+          "south": {
+            "metrics": {
+              "mae": 0.03
+            },
+            "n": 4,
+            "status": "evaluated"
+          }
+        }
+      },
+      "task_type": "regression",
+      "uncertainty": {}
+    },
+    "privacy": {
+      "audits": {},
+      "mechanism": {
+        "epsilon": 8.0,
+        "mode": "none",
+        "seed": 13,
+        "sensitivity": 1.0
+      },
+      "release": {
+        "status": "not_evaluated"
+      }
+    },
+    "provenance": {
+      "attestation_id": "example-attestation",
+      "package": {
+        "name": "private-lab-bench",
+        "version": "0.11.0"
+      }
+    },
+    "run": {
+      "created_at": "2026-08-17T00:00:00+00:00",
+      "project": "example-tabular",
+      "report_type": "prediction_evaluation",
+      "run_id": "example-run",
+      "task": "tabular"
+    }
+  }
+}
