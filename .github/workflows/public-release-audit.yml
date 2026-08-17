@@ -1,0 +1,66 @@
+name: Public Release Audit
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repository-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install audit dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyYAML
+      - name: Run deterministic public-release audit
+        run: python scripts/public_release_audit.py --json-out public-release-audit.json
+      - name: Upload audit result
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-release-audit
+          path: public-release-audit.json
+
+  gitleaks-history:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan full history with Gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  trufflehog-history:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Resolve root commit
+        id: history
+        shell: bash
+        run: echo "root=$(git rev-list --max-parents=0 HEAD | head -n 1)" >> "$GITHUB_OUTPUT"
+      - name: Scan history with TruffleHog
+        uses: trufflesecurity/trufflehog@v3.93.4
+        with:
+          path: ./
+          base: ${{ steps.history.outputs.root }}
+          head: HEAD
+          extra_args: --results=verified,unknown --no-update
