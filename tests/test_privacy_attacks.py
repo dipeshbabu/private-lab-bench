@@ -1,7 +1,27 @@
 import numpy as np
+import pytest
 
-from privatelabbench.privacy.attacks import membership_inference_risk
+from privatelabbench.privacy.attack_registry import (
+    clear_privacy_attacks_for_testing,
+    get_privacy_attack,
+    list_privacy_attacks,
+    register_privacy_attack,
+)
+from privatelabbench.privacy.attacks import (
+    LOSS_THRESHOLD_ATTACK_ID,
+    ensure_builtin_privacy_attacks_registered,
+    membership_inference_risk,
+)
 from privatelabbench.privacy.policy import PrivacyRiskPolicy, evaluate_privacy_gate
+
+
+def setup_function():
+    clear_privacy_attacks_for_testing()
+
+
+def teardown_function():
+    clear_privacy_attacks_for_testing()
+    ensure_builtin_privacy_attacks_registered()
 
 
 def test_membership_inference_risk_detects_train_test_loss_gap():
@@ -14,9 +34,32 @@ def test_membership_inference_risk_detects_train_test_loss_gap():
     )
 
     assert risk["attack"] == "loss_threshold_membership_inference"
+    assert risk["registry_id"] == LOSS_THRESHOLD_ATTACK_ID
+    assert risk["baseline"] is True
+    assert risk["evidence_level"] == "empirical_audit"
+    assert risk["guarantee"] == "none"
     assert risk["member_advantage"] > 0
     assert risk["attack_auc"] > 0.5
     assert risk["risk_level"] in {"moderate", "high"}
+
+
+def test_builtin_membership_attack_is_registered_as_baseline():
+    ensure_builtin_privacy_attacks_registered()
+    spec = get_privacy_attack(LOSS_THRESHOLD_ATTACK_ID)
+    assert spec.runner is membership_inference_risk
+    assert spec.baseline is True
+    assert spec.evidence_level == "empirical_audit"
+    assert len(list_privacy_attacks()) == 1
+
+
+def test_privacy_attack_registry_supports_community_attacks_and_rejects_duplicates():
+    def dummy_attack(**kwargs):
+        return {"status": "ok"}
+
+    register_privacy_attack("dummy", dummy_attack, description="community test")
+    assert get_privacy_attack("dummy").description == "community test"
+    with pytest.raises(ValueError, match="already registered"):
+        register_privacy_attack("dummy", dummy_attack)
 
 
 def test_privacy_risk_gate_blocks_excessive_attack_signal():

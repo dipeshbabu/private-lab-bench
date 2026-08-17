@@ -11,6 +11,8 @@ from privatelabbench.eval.metrics import summarize_metrics
 from privatelabbench.eval.predictions import evaluate_prediction_csv
 from privatelabbench.federated.evaluator import evaluate_federated_directory
 from privatelabbench.models.sklearn_baseline import evaluate_random_forest
+from privatelabbench.privacy.attacks import ensure_builtin_privacy_attacks_registered
+from privatelabbench.privacy.attack_registry import list_privacy_attacks
 from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
 from privatelabbench.reports.integrity import verify_report
 from privatelabbench.reports.manifest import verify_run_manifest
@@ -24,9 +26,22 @@ from privatelabbench.validation import ConfigValidationResult, validate_config
 
 def add_privacy_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--seed", type=int, default=13)
-    parser.add_argument("--privacy", choices=["none", "dp"], default="none")
-    parser.add_argument("--epsilon", type=float, default=8.0)
-    parser.add_argument("--sensitivity", type=float, default=1.0)
+    parser.add_argument(
+        "--privacy",
+        choices=["none", "metric_perturbation", "dp"],
+        default="none",
+        help=(
+            "Aggregate metric release mode. 'metric_perturbation' is heuristic Laplace noise with no formal DP guarantee; "
+            "'dp' is a deprecated compatibility alias for the same heuristic mode."
+        ),
+    )
+    parser.add_argument("--epsilon", type=float, default=8.0, help="Epsilon-like noise parameter for metric_perturbation.")
+    parser.add_argument(
+        "--sensitivity",
+        type=float,
+        default=1.0,
+        help="User-supplied noise-scale sensitivity for metric_perturbation; not framework-verified global sensitivity.",
+    )
 
 
 def add_common_eval_args(parser: argparse.ArgumentParser) -> None:
@@ -48,6 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
     validate.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
 
     sub.add_parser("list-tasks", help="List built-in and installed third-party evaluation tasks.")
+    sub.add_parser("list-privacy-attacks", help="List registered empirical privacy-audit attacks.")
 
     compare = sub.add_parser("compare", help="Run multiple configs and generate a comparison report.")
     compare.add_argument("config_paths", nargs="+", help="Two or more config files to compare.")
@@ -142,6 +158,16 @@ def list_tasks_command() -> int:
     for spec in list_tasks():
         description = f" — {spec.description}" if spec.description else ""
         print(f"{spec.id}{description}")
+    return 0
+
+
+def list_privacy_attacks_command() -> int:
+    ensure_builtin_privacy_attacks_registered()
+    print("PrivateLabBench privacy attacks")
+    for spec in list_privacy_attacks():
+        baseline = " [baseline]" if spec.baseline else ""
+        description = f" — {spec.description}" if spec.description else ""
+        print(f"{spec.id}{baseline} — {spec.evidence_level}{description}")
     return 0
 
 
@@ -286,6 +312,8 @@ def main() -> int:
         return validate_config_command(args)
     if args.command == "list-tasks":
         return list_tasks_command()
+    if args.command == "list-privacy-attacks":
+        return list_privacy_attacks_command()
     if args.command == "compare":
         return compare_from_configs(args)
     if args.command == "verify":

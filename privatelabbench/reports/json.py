@@ -43,7 +43,7 @@ def build_report_payload(
         "run_id": str(uuid4()),
         "created_at": datetime.now(timezone.utc).isoformat(),
         "report_type": report_type,
-        "privacy": asdict(privacy_config),
+        "privacy": privacy_config.report_metadata(),
         "result": _json_safe(result),
     }
     if config_snapshot:
