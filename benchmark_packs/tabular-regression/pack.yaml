@@ -1,0 +1,15 @@
+schema_version: benchmark-pack/v1
+id: community-tabular-regression
+version: "1.0.0"
+task: predictions
+domain: tabular
+description: Synthetic generic regression predictions with site and batch slices.
+license: CC0-1.0
+provenance:
+  type: synthetic
+  derived_from: none
+  note: Targets, predictions, sites, and batches are synthetic/demo values.
+files:
+  config: config.yaml
+  predictions: predictions.csv
+  expected_receipt: expected_receipt.json

@@ -1,0 +1,15 @@
+schema_version: benchmark-pack/v1
+id: community-molecules-regression
+version: "1.0.0"
+task: predictions
+domain: molecules
+description: Synthetic molecular-property regression predictions with chemical-series slices.
+license: CC0-1.0
+provenance:
+  type: synthetic
+  derived_from: none
+  note: Molecules, labels, and predictions are synthetic/demo values for evaluation-framework testing.
+files:
+  config: config.yaml
+  predictions: predictions.csv
+  expected_receipt: expected_receipt.json
