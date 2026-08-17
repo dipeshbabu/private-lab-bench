@@ -1,155 +1,279 @@
 # PrivateLabBench Roadmap
 
-PrivateLabBench is being built as private scientific AI evaluation and trust infrastructure. The product wedge is private model-claim evaluation before federated training, data sharing, or model licensing.
+PrivateLabBench is transitioning into a community-first, local evaluation framework for scientific machine learning on private data.
 
-The north-star artifact is an evidence bundle: signed reports, privacy-risk metadata, reproducible config snapshots, sanitized dashboard records, and optional private leaderboard entries that let a scientific team trust or reject a model claim.
+The roadmap is organized around one principle:
 
-## v0.1: Local private molecule evaluation
+> **Benchmark locally. Share reproducible evaluation artifacts, not raw data.**
 
-Status: implemented.
+The current repository already contains local evaluation, molecular baselines, multi-lab aggregation, privacy-risk tooling, signed manifests, an API, and a dashboard. The next phase is not to add more product infrastructure. It is to make the core smaller, domain-independent, easier to extend, and easier for researchers to use.
 
-- Single local CSV runner
-- Molecular property prediction baseline
-- Local metrics
-- DP-style reported metrics
-- Markdown report
-- CLI and tests
+The live implementation tracker is GitHub issue #11.
 
-## v0.2: Multi-client private evaluation
+## What is already implemented
 
-Status: implemented.
+### Local evaluation
 
-- `eval-federated` command over a directory of lab CSVs
-- per-client metrics
-- aggregate metric report
-- client distribution-shift summary
-- weighted aggregation by sample count
-- privacy-preserving aggregate report
-- example multi-lab datasets and report
+- prediction CSV evaluation;
+- molecular regression/classification baselines;
+- config-driven local runs;
+- Markdown and JSON reports;
+- model comparison;
+- error-slice summaries;
+- multi-lab directory evaluation and aggregate reports.
 
-## v0.3: Customer prediction evaluation and JSON reports
+### Reproducibility and integrity
 
-Status: implemented.
+- config snapshots;
+- audit logs;
+- report hashing;
+- optional HMAC signatures;
+- run manifests binding configs/reports/audit artifacts;
+- runner identity/attestation metadata.
 
-- `eval-predictions` command for externally generated model outputs
-- Markdown prediction reports
-- JSON report schema with run metadata
-- prediction summary statistics
-- CI smoke test for prediction evaluation
-- customer-friendly path for evaluating private model outputs
+### Privacy-related tooling
 
-## v0.4: Config-based local runner
+- simple loss-threshold membership-inference risk scoring;
+- experimental DP-style metric perturbation;
+- privacy-risk release gates;
+- aggregate release guards.
 
-Status: implemented.
+### Optional service infrastructure
 
-- `privatelabbench run <config.yaml>`
-- YAML config schema
-- support for molecule, federated, and prediction workflows
-- stable report output paths
-- JSON reports for config-driven molecule, prediction, and federated runs
-- example customer configs under `configs/`
-- CI smoke test for the config runner
+- local FastAPI service;
+- dashboard API/UI;
+- sanitized sync/export;
+- SQLite/PostgreSQL storage;
+- signed runner sync;
+- organization-scoped keys;
+- deployment/audit/backup utilities.
 
-## v0.5: Dockerized local runner and onboarding
+These service features remain useful, but they are no longer the center of the open-source roadmap.
 
-Status: implemented.
+---
 
-- Dockerfile for local-only execution
-- `.dockerignore`
-- Docker CI smoke test
-- `docker run` examples for configs
-- customer onboarding guide
-- pilot checklist
-- local data privacy checklist
-- pilot success criteria template
+## Phase 0 — Public-release safety
 
-## v0.6: Signed reports and audit metadata
+Tracked by #9.
 
-Status: implemented.
+Before repository visibility changes:
 
-- deterministic report hashing
-- SHA256 digest in JSON report metadata
-- optional HMAC report signature
-- `privatelabbench verify-report` command
-- config snapshot embedded in JSON reports
-- basic audit event log for local runs
+- scan the full Git history for secrets/sensitive material;
+- verify examples are safe to publish;
+- review licenses and dependencies;
+- rotate any credential that may ever have been committed;
+- verify history after any cleanup/rewrite.
 
-## v0.7: Scientific model adapters
+**The repository should remain private until this phase is complete.**
 
-Goal: move beyond toy baselines.
+---
 
-Status: partially implemented.
+## Phase 1 — Domain-independent evaluation core
 
-Implemented:
+Tracked primarily by #1, #2, #4, and #6.
 
-- optional RDKit Morgan fingerprints
-- adapter interface for built-in and external evaluation paths
-- model comparison reports across configs
+### 1. Task/plugin registry
 
-Next adapter targets:
+Replace hard-coded workflow dispatch and molecule-specific generic interfaces with extensible contracts for:
 
-- ChemBERTa adapter
-- simple graph neural network adapter
-- support for external model endpoints
+- tasks;
+- dataset adapters;
+- prediction adapters;
+- model adapters;
+- metrics;
+- slices;
+- privacy audits;
+- artifact writers.
 
-## v0.8: Privacy and attack evaluation
+A scientific domain should be addable without editing central runner logic.
 
-Goal: quantify what is leaked by evaluation artifacts.
+### 2. Universal prediction-table path
 
-Status: first local membership-risk scoring implemented for molecule baselines and split-labeled prediction exports.
+Make bring-your-own-predictions the first-class interface.
 
-Implemented:
+Target base schema:
 
-- aggregate loss-threshold membership-inference risk scoring
-- train/holdout attack AUC, attack accuracy, member advantage, and risk level
-- report-safe privacy-risk metadata in molecule and prediction Markdown/JSON reports
-- optional `input.split_column` and `--split-column` support for external prediction workflows
-- config-driven privacy-risk gates for publishable/private leaderboard decisions
-- aggregate release guards for cross-lab benchmark publication thresholds
+```text
+sample_id,target,prediction
+```
 
-Planned features:
+with optional metadata columns for domain-specific slicing.
 
-- richer membership inference attacks beyond the first loss-threshold baseline
-- property inference risk scoring
-- DP budget reporting
-- privacy/utility tradeoff plots
+The initial implementation should support:
 
-## v0.9: Local runner + evidence dashboard
+- regression;
+- binary classification;
+- multiclass classification;
+- stable sample IDs;
+- arbitrary metadata/group columns;
+- good schema-validation errors.
 
-Goal: make the workflow product-like while keeping raw data local.
+### 3. Evaluation receipt
 
-Status: implemented for sanitized dashboard sync pilots.
+Define a stable, versioned JSON artifact containing:
 
-- local runner agent
-- hosted evidence dashboard
-- signed reports
-- team/project organization
-- sanitized export and sync commands
-- private benchmark network prototype remains future work
+- task/benchmark identity;
+- run identity;
+- metric results;
+- slices;
+- privacy audits;
+- provenance/config hashes;
+- environment/runner version;
+- artifact hashes;
+- optional signatures/attestations;
+- explicit local/private vs shareable fields.
 
-## v0.10: Trust-layer pivot
+This receipt must remain useful without a dashboard.
 
-Status: in progress.
+### 4. Privacy rigor
 
-- Reposition product as private scientific AI evaluation and trust infrastructure
-- Introduce model-claim evidence language across docs and user-facing surfaces
-- Add customer-facing trust-report templates for vendor diligence and internal go/no-go reviews
-- Package signed manifests, privacy risk, sanitized metrics, and artifact hashes as an evaluation evidence bundle
-- Prioritize prediction-file workflows as the lowest-friction paid pilot path
+Clearly separate:
 
-## Next commercial milestones
+- privacy attacks/audits;
+- heuristic/experimental release perturbation;
+- formal privacy mechanisms.
 
-- One paid pilot for vendor model diligence on private assay or ADMET-style data
-- One paid pilot for internal model comparison across private batches/sites
-- One sanitized evidence dashboard deployed per customer environment
-- One repeatable report format that a buyer can forward to scientific leadership, legal, and external partners
+The current Laplace metric-noise path should remain explicitly experimental until metric-specific sensitivity/bounds and composition/accounting are implemented.
 
-## Long-term domains
+---
 
-After molecules, possible scientific domains include:
+## Phase 2 — Researcher-first usability
 
-- protein binding and protein engineering
-- microscopy image analysis
-- materials property prediction
-- reaction yield prediction
-- lab automation and robotic experiment logs
+Tracked by #3, #5, and #10.
+
+### Community positioning
+
+Replace customer/buyer/pilot terminology with research/community language across public-facing docs and examples.
+
+### Smaller CLI
+
+Move toward a compact conceptual surface such as:
+
+```bash
+plb list
+plb run benchmark.yaml
+plb compare run-a.json run-b.json
+plb verify receipt.json
+```
+
+Dashboard/server operations should become an optional command group or package rather than top-level first-use commands.
+
+### Package installation and docs
+
+Target:
+
+```bash
+pip install private-lab-bench
+```
+
+Add:
+
+- PyPI releases;
+- documentation site;
+- 5-minute quickstart;
+- one notebook/Colab example;
+- release automation;
+- troubleshooting for common scientific Python/RDKit issues.
+
+---
+
+## Phase 3 — Seed community evaluation packs
+
+Tracked by #7.
+
+Start with a small number of strong packs rather than many shallow integrations.
+
+Recommended initial set:
+
+1. **Molecules** — preserve/improve the current molecular evaluation path.
+2. **Generic tabular science** — regression/classification with metadata slicing.
+3. **One second scientific domain** — proteins or materials, selected for a clean public-data demonstration.
+
+Each pack should include:
+
+- versioned task IDs;
+- a public/synthetic demo dataset or documented fetch path;
+- baseline prediction files;
+- expected evaluation receipts for regression testing;
+- extension/contribution documentation.
+
+PrivateLabBench should use public datasets to demonstrate workflows, not attempt to become a comprehensive scientific dataset hub.
+
+---
+
+## Phase 4 — Community contribution surface
+
+Tracked by #8.
+
+Add:
+
+- expanded contributor guide;
+- architecture/plugin authoring docs;
+- `CODE_OF_CONDUCT.md`;
+- `SECURITY.md`;
+- `CITATION.cff`;
+- issue/PR templates;
+- curated labels and `good first issue` tasks;
+- governance/maintainer expectations;
+- optional GitHub Discussions.
+
+Target contributor journey:
+
+```text
+find task
+  ↓
+install dev environment
+  ↓
+run tests
+  ↓
+add task / metric / slice / privacy audit
+  ↓
+open PR
+```
+
+A contributor should not need dashboard, PostgreSQL, SSO, or deployment knowledge to extend the evaluation core.
+
+---
+
+## Research directions after the community core stabilizes
+
+Once the core abstraction and artifact schema are stable, useful directions include:
+
+- calibration and uncertainty evaluation;
+- stronger membership-inference attacks;
+- property-inference/privacy attacks;
+- formal DP mechanisms/accounting;
+- distribution-shift and subgroup diagnostics;
+- cross-site reproducibility analysis;
+- benchmark/result artifact interoperability;
+- proteins and protein engineering;
+- microscopy/scientific vision;
+- materials property prediction;
+- reaction/yield models;
+- lab automation and robotic experiment logs.
+
+The order matters: these should be implemented as extensions of the same stable task/evaluation protocol rather than as new special-case workflows.
+
+---
+
+## Community-release bar
+
+Before broadly announcing the project, aim for:
+
+- [ ] public-release history/security audit complete;
+- [ ] community-first README and scope;
+- [ ] domain-independent task/plugin API;
+- [ ] bring-your-own-predictions quickstart;
+- [ ] stable evaluation receipt schema;
+- [ ] privacy claims accurately scoped;
+- [ ] normal package installation;
+- [ ] documentation site + notebook;
+- [ ] at least two meaningful benchmark packs;
+- [ ] contribution templates and good-first-issue surface;
+- [ ] CI green across supported Python versions.
+
+## Long-term identity
+
+PrivateLabBench should become a reusable evaluation protocol and extensible harness for scientific models evaluated on private/local distributions.
+
+It should remain useful whether the user is an academic lab, open-source researcher, biotech team, or another organization with restricted evaluation data—and it should not require any of them to adopt a hosted service to use the core framework.
