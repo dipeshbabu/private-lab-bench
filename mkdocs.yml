@@ -29,6 +29,7 @@ nav:
   - Benchmark packs: benchmark_packs.md
   - Privacy: privacy.md
   - Report integrity: report_integrity.md
+  - Public release audit: public_release_audit.md
   - Adapters: ADAPTERS.md
   - Troubleshooting: troubleshooting.md
   - Releases: releases.md
