@@ -1,0 +1,42 @@
+name: Feature request
+description: Propose a cross-domain capability or usability improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What workflow is difficult or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed direction
+      description: Describe the smallest useful change and its user-facing behavior.
+    validations:
+      required: true
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Best layer
+      options:
+        - Core framework
+        - External task/plugin
+        - Benchmark pack
+        - Documentation/tooling
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility/artifact impact
+      description: Does this affect prediction-table, receipt, benchmark-pack, report, manifest, or plugin semantics?
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy/data-sharing impact
+      description: Could the change expose new fields, add network behavior, or change a privacy/release claim?

@@ -1,0 +1,55 @@
+name: Task or benchmark-pack proposal
+description: Propose a scientific task plugin or versioned benchmark pack.
+title: "[Task/Pack]: "
+labels: []
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Contribution type
+      options:
+        - New benchmark pack using an existing task
+        - New external task/plugin
+        - New built-in task (requires justification)
+    validations:
+      required: true
+  - type: input
+    id: domain
+    attributes:
+      label: Scientific domain
+      placeholder: proteins, materials, microscopy, generic tabular, ...
+    validations:
+      required: true
+  - type: textarea
+    id: usecase
+    attributes:
+      label: Evaluation use case
+      description: What private/local evaluation problem does this enable?
+    validations:
+      required: true
+  - type: textarea
+    id: existing
+    attributes:
+      label: Why existing prediction-table/task support is insufficient
+      description: For packs, explain how the existing task will be reused instead.
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: Data provenance and license
+      description: Identify source/license or state clearly that fixtures will be synthetic. Do not upload restricted/private samples.
+    validations:
+      required: true
+  - type: textarea
+    id: metrics
+    attributes:
+      label: Metrics, slices, and expected receipt
+      description: Which outputs define a useful/known-good evaluation?
+    validations:
+      required: true
+  - type: textarea
+    id: deps
+    attributes:
+      label: Dependencies
+      description: List new dependencies and explain why they belong in core versus an external plugin.

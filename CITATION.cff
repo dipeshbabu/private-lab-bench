@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use PrivateLabBench in research, please cite the software and the exact release/commit used."
+title: "PrivateLabBench"
+type: software
+authors:
+  - family-names: "Mahato"
+    given-names: "Dipesh Tharu"
+repository-code: "https://github.com/dipeshbabu/private-lab-bench"
+url: "https://github.com/dipeshbabu/private-lab-bench"
+license: MIT
+version: "0.11.0"
+keywords:
+  - scientific machine learning
+  - evaluation
+  - private data
+  - reproducibility
+  - privacy auditing
+  - benchmarking
+abstract: >-
+  PrivateLabBench is a local-first evaluation framework for scientific machine
+  learning on private or restricted data. It supports prediction-table evaluation,
+  task plugins, privacy audits, versioned evaluation receipts, and community
+  benchmark packs without requiring private-data upload.
