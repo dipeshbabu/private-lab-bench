@@ -3,6 +3,8 @@ task: predictions
 
 input:
   path: examples/predictions_with_baseline_demo.csv
+  sample_id_column: sample_id
+  require_sample_id: true
   target_column: target
   prediction_column: candidate_prediction
   baseline_prediction_column: baseline_prediction
