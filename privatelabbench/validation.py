@@ -8,9 +8,11 @@ from typing import Any
 import pandas as pd
 
 from privatelabbench.config import RunnerConfig, load_config, required, section
+from privatelabbench.core.registry import discover_entrypoint_tasks, get_task
 from privatelabbench.privacy.dp import PrivacyConfig
 from privatelabbench.privacy.policy import PrivacyRiskPolicy
 from privatelabbench.privacy.release import AggregateReleasePolicy
+from privatelabbench.runner import ensure_builtin_tasks_registered
 
 
 @dataclass(frozen=True)
@@ -46,7 +48,7 @@ def _resolve_output_path(path: str | os.PathLike[str]) -> Path:
 def _csv_columns(path: Path) -> set[str]:
     try:
         return set(pd.read_csv(path, nrows=0).columns)
-    except Exception as exc:  # noqa: BLE001 - validation should return actionable user-facing errors
+    except Exception as exc:
         raise ValueError(f"Could not read CSV header from {path}: {exc}") from exc
 
 
@@ -80,7 +82,6 @@ def _validate_output_path(path_value: Any, *, label: str, errors: list[str], war
         elif not os.access(parent, os.W_OK):
             errors.append(f"{label} parent is not writable: {parent}")
         return
-
     existing = parent
     while not existing.exists() and existing != existing.parent:
         existing = existing.parent
@@ -116,7 +117,7 @@ def _validate_privacy(config: RunnerConfig, errors: list[str]) -> None:
         aggregate = AggregateReleasePolicy.from_config(aggregate_policy)
         if aggregate.min_clients < 1:
             raise ValueError("privacy.aggregate_policy.min_clients must be at least 1.")
-    except Exception as exc:  # noqa: BLE001 - validation should collect user-facing errors
+    except Exception as exc:
         errors.append(f"Invalid privacy config: {exc}")
 
 
@@ -128,24 +129,7 @@ def _validate_reports(config: RunnerConfig, *, errors: list[str], warnings: list
         "manifest": f"reports/{config.project}_{config.workflow}_manifest.json",
     }
     for key, default in defaults.items():
-        _validate_output_path(
-            report.get(key, default),
-            label=f"report.{key}",
-            errors=errors,
-            warnings=warnings,
-        )
-    optional_outputs = {
-        "evidence_markdown": f"reports/{config.project}_evidence_report.md",
-        "evidence_json": f"reports/{config.project}_evidence_report.json",
-    }
-    for key, default in optional_outputs.items():
-        if key in report:
-            _validate_output_path(
-                report.get(key, default),
-                label=f"report.{key}",
-                errors=errors,
-                warnings=warnings,
-            )
+        _validate_output_path(report.get(key, default), label=f"report.{key}", errors=errors, warnings=warnings)
     audit = section(config, "audit")
     _validate_output_path(
         audit.get("path", f"reports/{config.project}_audit.jsonl"),
@@ -215,17 +199,25 @@ def validate_config(config_path: str) -> ConfigValidationResult:
         config = load_config(config_path)
         project = config.project
         workflow = config.workflow
-        if workflow == "predictions":
-            _validate_predictions(config, config_path=path, errors=errors)
-        elif workflow == "molecules":
-            _validate_molecules(config, config_path=path, errors=errors)
-        elif workflow == "federated":
-            _validate_federated(config, config_path=path, errors=errors)
+        ensure_builtin_tasks_registered()
+        discover_entrypoint_tasks()
+        get_task(config.task_id)
+        validators = {
+            "predictions": _validate_predictions,
+            "tabular": _validate_predictions,
+            "molecules": _validate_molecules,
+            "multi-site": _validate_federated,
+            "federated": _validate_federated,
+        }
+        validator = validators.get(config.task_id)
+        if validator is not None:
+            validator(config, config_path=path, errors=errors)
+        else:
+            warnings.append(f"Task '{config.task_id}' is provided by a plugin; only common config validation was run.")
         _validate_privacy(config, errors)
         _validate_reports(config, errors=errors, warnings=warnings)
-    except Exception as exc:  # noqa: BLE001 - validation command should report failures, not traceback
+    except Exception as exc:
         return ConfigValidationResult(config_path=config_path, errors=[str(exc)])
-
     return ConfigValidationResult(
         config_path=config_path,
         project=project,

@@ -5,7 +5,7 @@ from typing import Protocol
 
 import numpy as np
 
-from privatelabbench.tasks.molecules import MoleculeDataset
+from privatelabbench.core.interfaces import ModelAdapter
 
 
 class FingerprintAdapter(Protocol):
@@ -15,15 +15,6 @@ class FingerprintAdapter(Protocol):
 
     def transform(self, smiles: list[str]) -> np.ndarray:
         """Return a 2D feature matrix for a list of SMILES strings."""
-
-
-class ModelAdapter(Protocol):
-    """Common interface for local scientific model evaluation adapters."""
-
-    name: str
-
-    def evaluate(self, dataset: MoleculeDataset, *, test_size: float = 0.25, seed: int = 13) -> dict[str, object]:
-        """Train/evaluate or evaluate a model and return a normalized result payload."""
 
 
 @dataclass(frozen=True)
@@ -45,3 +36,6 @@ class AdapterSpec:
             radius=int(data.get("radius", 2)),
             n_estimators=int(data.get("n_estimators", 200)),
         )
+
+
+__all__ = ["FingerprintAdapter", "ModelAdapter", "AdapterSpec"]
