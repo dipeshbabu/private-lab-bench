@@ -1,0 +1,36 @@
+site_name: PrivateLabBench
+site_description: Local-first evaluation for scientific machine learning on private data.
+site_url: https://dipeshbabu.github.io/private-lab-bench/
+repo_url: https://github.com/dipeshbabu/private-lab-bench
+repo_name: dipeshbabu/private-lab-bench
+edit_uri: edit/main/docs/
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+nav:
+  - Home: index.md
+  - Install: install.md
+  - Quickstart: quickstart.md
+  - Concepts: concepts.md
+  - Prediction tables: prediction_tables.md
+  - Tasks and plugins: tasks.md
+  - Evaluation receipts: evaluation_receipts.md
+  - Benchmark packs: benchmark_packs.md
+  - Privacy: privacy.md
+  - Report integrity: report_integrity.md
+  - Adapters: ADAPTERS.md
+  - Troubleshooting: troubleshooting.md
+  - Releases: releases.md
+  - Roadmap: roadmap.md
+  - Project scope: project_scope.md

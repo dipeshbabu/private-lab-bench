@@ -32,16 +32,18 @@ jobs:
         run: mkdir -p outputs reports
       - name: Run tests
         run: pytest -q
-      - name: List registered tasks
+      - name: List registered tasks and packs
         run: |
           plb list-tasks
           plb list-tasks | grep -q predictions
           plb list-tasks | grep -q tabular
           plb list-tasks | grep -q molecules
           plb list-tasks | grep -q multi-site
+          plb list-packs | grep -q community-tabular-regression
+          plb list-packs | grep -q community-proteins-binary
       - name: Smoke test prediction CLI
         run: |
-          plb eval-predictions examples/predictions_demo.csv --target label --prediction-column pred --privacy dp --epsilon 8 --report outputs/ci_prediction_report.md --json-report outputs/ci_prediction_report.json
+          plb eval-predictions examples/predictions_demo.csv --target label --prediction-column pred --privacy metric_perturbation --epsilon 8 --report outputs/ci_prediction_report.md --json-report outputs/ci_prediction_report.json
           test -f outputs/ci_prediction_report.md
           test -f outputs/ci_prediction_report.json
           plb verify-report outputs/ci_prediction_report.json
@@ -53,7 +55,8 @@ jobs:
           test -f reports/kinase_prediction_eval.json
           test -f reports/kinase_prediction_audit.jsonl
           test -f reports/kinase_prediction_manifest.json
-          plb verify-manifest reports/kinase_prediction_manifest.json
+          test -f reports/kinase_prediction_receipt.shareable.json
+          plb verify reports/kinase_prediction_receipt.shareable.json
       - name: Smoke test non-molecular task
         run: |
           plb validate-config configs/tabular_eval.yaml
@@ -65,8 +68,53 @@ jobs:
           PRIVATELABBENCH_SIGNING_SECRET: ci-secret
         run: |
           plb run configs/prediction_eval.yaml
-          plb verify-report reports/kinase_prediction_eval.json --signing-secret ci-secret
+          plb verify reports/kinase_prediction_receipt.shareable.json --signing-secret ci-secret
           plb verify-manifest reports/kinase_prediction_manifest.json --signing-secret ci-secret
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build distributions
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+          python -m build
+          python -m twine check dist/*
+      - name: Install wheel in clean environment
+        run: |
+          python -m venv /tmp/plb-wheel
+          /tmp/plb-wheel/bin/python -m pip install --upgrade pip
+          /tmp/plb-wheel/bin/pip install dist/*.whl
+      - name: Smoke test installed wheel outside checkout
+        working-directory: /tmp
+        run: |
+          /tmp/plb-wheel/bin/plb --help
+          /tmp/plb-wheel/bin/plb list-tasks | grep -q predictions
+          /tmp/plb-wheel/bin/plb list-packs | grep -q community-molecules-regression
+          /tmp/plb-wheel/bin/plb list-packs | grep -q community-proteins-binary
+          /tmp/plb-wheel/bin/plb run-pack community-tabular-regression@1.0.0
+          /tmp/plb-wheel/bin/plb verify reports/benchmark_packs/tabular_regression_receipt.shareable.json
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build docs site
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[docs]'
+          mkdocs build
 
   docker:
     runs-on: ubuntu-latest

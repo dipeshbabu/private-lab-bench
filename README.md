@@ -1,78 +1,20 @@
 # PrivateLabBench
 
+[![CI](https://github.com/dipeshbabu/private-lab-bench/actions/workflows/ci.yml/badge.svg)](https://github.com/dipeshbabu/private-lab-bench/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 **Local-first evaluation for scientific machine learning on private data.**
 
-PrivateLabBench evaluates model predictions on data that cannot be uploaded to a public benchmark service. Runs stay local and produce reproducible metrics, slice diagnostics, privacy-audit summaries, reports, and verifiable manifests.
+PrivateLabBench evaluates model predictions on data that cannot be uploaded to a public benchmark service. Runs stay local and produce reproducible metrics, slice diagnostics, privacy-audit summaries, reports, manifests, and shareable evaluation receipts.
 
 > **Benchmark locally. Share evaluation artifacts, not raw data.**
 
 PrivateLabBench is an open-source research tool. It does not require a hosted service, account, organization workspace, or remote data upload.
 
-## Why
+## Install
 
-Scientific models are often tested on restricted distributions: unpublished experiments, internal assays, site-specific measurements, partner datasets, sensitive biomedical data, or validation sets that simply cannot be redistributed.
-
-Public benchmarks cannot answer whether a model works on those local distributions. PrivateLabBench provides a common evaluation path that starts from a prediction table rather than requiring access to the model implementation.
-
-## Prediction tables are the primary interface
-
-The stable prediction-table schema is **`prediction-table/v1`**. See [`docs/prediction_tables.md`](docs/prediction_tables.md) for the protocol specification.
-
-For regression and binary classification:
-
-```csv
-sample_id,target,prediction,site,batch
-s01,0.12,0.14,lab-a,b1
-s02,0.20,0.23,lab-a,b1
-s03,0.33,0.31,lab-b,b2
-```
-
-`sample_id` is strongly recommended and can be required by config. IDs must be non-empty and unique when present.
-
-Everything other than the sample ID, target, prediction columns, and optional split column is treated as metadata. Metadata values remain row-local. You can explicitly choose metadata columns for aggregate slice evaluation:
-
-```yaml
-input:
-  slice_columns:
-    - site
-    - batch
-  min_slice_size: 2
-```
-
-Slice outputs contain only group counts and aggregate metrics. Groups smaller than `min_slice_size` are suppressed.
-
-### Multiclass tables
-
-Multiclass evaluation uses one probability column per class:
-
-```csv
-sample_id,target,p_alpha,p_beta,p_gamma,site
-m01,alpha,0.82,0.10,0.08,north
-m02,beta,0.08,0.84,0.08,north
-m03,gamma,0.10,0.12,0.78,south
-```
-
-Config:
-
-```yaml
-input:
-  target_column: target
-  prediction_columns:
-    - p_alpha
-    - p_beta
-    - p_gamma
-  class_labels:
-    - alpha
-    - beta
-    - gamma
-  task_type: multiclass
-```
-
-Probability rows must be finite, bounded between 0 and 1, and sum to 1.
-
-## 5-minute quickstart
-
-Install from source:
+**Current state:** the project is release-ready but the first PyPI release has not been confirmed yet. Until a real PyPI release exists, install from source:
 
 ```bash
 git clone https://github.com/dipeshbabu/private-lab-bench.git
@@ -80,28 +22,28 @@ cd private-lab-bench
 pip install -e .
 ```
 
-Then:
+After the first successful PyPI Trusted Publishing release, the intended install command is:
 
 ```bash
-plb list-tasks
-plb validate-config configs/tabular_eval.yaml
-plb run configs/tabular_eval.yaml
+pip install private-lab-bench
 ```
 
-Try multiclass evaluation:
+Do not rely on that PyPI command until a release is actually present on PyPI.
+
+## 5-minute quickstart
 
 ```bash
-plb validate-config configs/multiclass_eval.yaml
-plb run configs/multiclass_eval.yaml
+plb list-packs
+plb run-pack community-tabular-regression@1.0.0
+plb verify reports/benchmark_packs/tabular_regression_receipt.shareable.json
 ```
 
-Or evaluate a prediction table directly:
+Then evaluate your own prediction table:
 
 ```bash
-plb eval-predictions my_predictions.csv \
+plb eval-predictions predictions.csv \
   --target target \
   --prediction-column prediction \
-  --task-type regression \
   --sample-id-column sample_id \
   --require-sample-id \
   --slice-columns site batch
@@ -110,137 +52,134 @@ plb eval-predictions my_predictions.csv \
 Both CLI names are available:
 
 ```bash
-privatelabbench --help
 plb --help
+privatelabbench --help
 ```
 
-## Config format
+## Prediction tables are the primary interface
 
-`task:` is preferred. Existing configs using `workflow:` remain supported for compatibility.
+`prediction-table/v1` lets researchers evaluate outputs from any model without integrating model code.
 
-```yaml
-project: local-assay-evaluation
-task: predictions
+Regression/binary example:
 
-input:
-  path: data/predictions.csv
-  sample_id_column: sample_id
-  require_sample_id: true
-  target_column: target
-  prediction_column: prediction
-  task_type: regression
-  slice_columns:
-    - site
-  min_slice_size: 5
-
-privacy:
-  mode: none
-
-report:
-  markdown: reports/local-assay.md
-  json: reports/local-assay.json
-  manifest: reports/local-assay-manifest.json
+```csv
+sample_id,target,prediction,site,batch
+s01,0.12,0.14,lab-a,b1
+s02,0.20,0.23,lab-a,b1
+s03,0.33,0.31,lab-b,b2
 ```
 
-## What evaluation returns
+PrivateLabBench supports:
 
-Prediction-table runs can include:
-
-- regression metrics: MAE, RMSE, R²;
-- binary classification: accuracy, F1, AUROC;
-- multiclass classification: accuracy, macro F1, weighted F1, log loss, macro one-vs-rest AUROC when defined;
-- aggregate metrics by configured slice columns;
-- prediction summaries;
-- optional baseline comparison for regression/binary prediction columns;
-- local membership-inference auditing for regression/binary runs with a split column;
-- report integrity metadata and manifests.
-
-Reports include a schema summary and an explicit sharing boundary. They do **not** include row-level sample IDs, targets, predictions, or metadata values.
-
-## Current capabilities
-
-- `prediction-table/v1` bring-your-own-predictions interface;
-- regression, binary classification, and multiclass classification;
-- arbitrary metadata discovery and configurable slice metrics;
+- regression;
+- binary classification, including string labels;
+- multiclass probability tables;
+- arbitrary metadata columns;
+- configurable aggregate slices;
 - stable sample-ID validation;
-- molecular property baselines with dependency-light fingerprints;
-- optional RDKit Morgan fingerprints;
-- multi-site/local-lab aggregate evaluation;
-- model/config comparison reports;
-- loss-threshold membership-inference auditing;
-- experimental metric perturbation for reported metrics;
-- privacy/release-policy checks;
-- Markdown and JSON reports;
-- config snapshots, audit logs, hashes, optional HMAC signatures, and run manifests;
-- task registry with third-party Python entry-point discovery.
+- local membership-inference auditing for supported tasks.
 
-The current metric-perturbation mode is **not presented as a general formal differential-privacy guarantee**. Privacy hardening is tracked separately.
+See [`docs/prediction_tables.md`](docs/prediction_tables.md).
 
-## Built-in tasks
+## Evaluation receipts
+
+Config-driven runs create:
 
 ```text
-predictions   evaluate a local prediction table
-tabular       domain-neutral prediction-table evaluation
-molecules     evaluate the built-in molecular baseline
-multi-site    evaluate multiple local lab/site CSVs and aggregate metrics
-federated     legacy alias for multi-site
+<run>_receipt.json
+<run>_receipt.shareable.json
+<run>_receipt.md
 ```
 
-The `predictions` and `tabular` tasks use the same domain-independent prediction-table protocol.
-
-## Molecular prediction example
-
-`examples/predictions_demo.csv` demonstrates the same prediction-table interface with molecule metadata. The SMILES column is metadata; PrivateLabBench does not require molecule-specific logic to evaluate those predictions.
+`evaluation-receipt/v1` separates local-only information such as paths/config snapshots/exact metrics from the independently verifiable shareable section.
 
 ```bash
-plb run configs/prediction_eval.yaml
+plb verify reports/kinase_prediction_receipt.shareable.json
 ```
 
-For a built-in molecular baseline instead:
+See [`docs/evaluation_receipts.md`](docs/evaluation_receipts.md).
+
+## Community benchmark packs
+
+Bundled versioned packs demonstrate the same evaluation protocol without model training/downloads:
+
+```text
+community-molecules-regression@1.0.0
+community-tabular-regression@1.0.0
+community-proteins-binary@1.0.0
+```
+
+They are packaged with installed wheels, not dependent on the repository working directory.
 
 ```bash
-plb run configs/molecule_eval.yaml
+plb list-packs
+plb run-pack community-proteins-binary@1.0.0
 ```
 
-## Baseline comparison
+See [`docs/benchmark_packs.md`](docs/benchmark_packs.md).
 
-A candidate prediction column can be compared with a baseline column in the same local table:
+## Privacy semantics
+
+PrivateLabBench deliberately separates:
+
+- exact aggregate reporting;
+- heuristic `metric_perturbation` (no formal DP guarantee);
+- empirical privacy attacks/audits;
+- bounded-query DP reference primitives with explicit sensitivity/accounting;
+- release-policy gates.
+
+The historical `mode: dp` spelling is deprecated and means heuristic metric perturbation, **not** formal differential privacy.
+
+See [`docs/privacy.md`](docs/privacy.md).
+
+## Extensible core
+
+The task registry supports built-ins and third-party Python entry points. Extension protocols cover:
+
+- tasks;
+- dataset/model adapters;
+- metrics/slices;
+- privacy audits;
+- artifact writers.
 
 ```bash
-plb run configs/prediction_with_baseline.yaml
+plb list-tasks
+plb list-privacy-attacks
 ```
 
-## Reproducible artifacts
+## Documentation
 
-Config-driven runs produce a Markdown report, JSON report, audit log, and run manifest with hashes and optional HMAC signatures.
+A MkDocs Material site lives in `docs/` and is validated in CI:
 
 ```bash
-plb verify-manifest reports/kinase_prediction_manifest.json
+pip install -e '.[docs]'
+mkdocs serve
 ```
 
-See [`docs/report_integrity.md`](docs/report_integrity.md).
+Start with:
 
-## Task plugins
+- [`docs/install.md`](docs/install.md)
+- [`docs/quickstart.md`](docs/quickstart.md)
+- [`docs/concepts.md`](docs/concepts.md)
+- [`docs/troubleshooting.md`](docs/troubleshooting.md)
 
-PrivateLabBench discovers third-party task plugins through the Python entry-point group `privatelabbench.tasks`. Core extension protocols under `privatelabbench.core` cover tasks, dataset adapters, model adapters, metrics, slices, privacy audits, and artifact writers.
+## Package/release verification
 
-## Project scope
+CI builds the sdist/wheel, runs Twine metadata checks, installs the wheel into a clean virtual environment outside the source checkout, and verifies bundled packs still run.
 
-PrivateLabBench is focused on local evaluation of scientific models, restricted/private evaluation datasets, reproducible artifacts, privacy-oriented auditing, and extension across scientific domains.
-
-It is not intended to be a hosted benchmark leaderboard, experiment tracker, ELN/LIMS, federated-training framework, or dataset hub.
-
-See [`docs/project_scope.md`](docs/project_scope.md).
+A tag-triggered release workflow is prepared for PyPI Trusted Publishing. Actual publication requires the external PyPI Trusted Publisher to be configured first; see [`docs/releases.md`](docs/releases.md).
 
 ## Contributing
 
-Contributions are welcome, especially new scientific tasks, metrics, slice diagnostics, privacy audits, benchmark/demo packs, adapters, tests, and documentation.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md), [`GOVERNANCE.md`](GOVERNANCE.md), and [`SECURITY.md`](SECURITY.md).
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+## Project scope
 
-## Roadmap
+PrivateLabBench is focused on standardized local evaluation of scientific models, private/restricted evaluation distributions, reproducible artifacts, privacy-oriented auditing, and scientific-domain extensions.
 
-See [`docs/roadmap.md`](docs/roadmap.md).
+It is not a hosted leaderboard, experiment tracker, ELN/LIMS, federated-training framework, or dataset hub.
+
+See [`docs/project_scope.md`](docs/project_scope.md).
 
 ## License
 

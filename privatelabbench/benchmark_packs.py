@@ -12,7 +12,7 @@ from privatelabbench.runner import ensure_builtin_tasks_registered
 
 
 PACK_SCHEMA_VERSION = "benchmark-pack/v1"
-DEFAULT_PACK_ROOT = Path(__file__).resolve().parents[1] / "benchmark_packs"
+DEFAULT_PACK_ROOT = Path(__file__).resolve().parent / "data" / "benchmark_packs"
 
 
 @dataclass(frozen=True)
@@ -74,9 +74,7 @@ def load_benchmark_pack(path: str | Path) -> BenchmarkPack:
     if not isinstance(payload, dict):
         raise ValueError(f"benchmark pack manifest must be a YAML mapping: {manifest_path}")
     if payload.get("schema_version") != PACK_SCHEMA_VERSION:
-        raise ValueError(
-            f"unsupported benchmark pack schema {payload.get('schema_version')!r}; expected {PACK_SCHEMA_VERSION}"
-        )
+        raise ValueError(f"unsupported benchmark pack schema {payload.get('schema_version')!r}; expected {PACK_SCHEMA_VERSION}")
 
     pack_root = manifest_path.parent
     files = payload.get("files")
