@@ -1,16 +1,89 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 from privatelabbench.config import load_config
 from privatelabbench.eval.metrics import summarize_metrics
+from privatelabbench.eval.paired_comparison import PairedComparisonConfig, compare_prediction_tables
 from privatelabbench.privacy.dp import PrivacyConfig
 from privatelabbench.reports.json import write_json_report
+from privatelabbench.reports.paired_comparison import write_paired_comparison_artifacts
 from privatelabbench.runner import run_config
 
 
+def compare_prediction_files(
+    path_a: str,
+    path_b: str,
+    *,
+    target: str,
+    prediction_column: str | None,
+    prediction_columns: Sequence[str] | None,
+    sample_id_column: str,
+    task_type: str | None,
+    class_labels: Sequence[str] | None,
+    slice_columns: Sequence[str] | None,
+    model_a_name: str | None,
+    model_b_name: str | None,
+    metric: str | None,
+    confidence_level: float,
+    resamples: int,
+    permutations: int,
+    seed: int,
+    min_samples: int,
+    practical_threshold: float,
+    noninferiority_margin: float | None,
+    include_slice_uncertainty: bool,
+    min_slice_size: int,
+    markdown_path: str,
+    json_path: str,
+    signing_secret: str | None = None,
+) -> dict[str, Any]:
+    config = PairedComparisonConfig(
+        metric=metric,
+        confidence_level=confidence_level,
+        resamples=resamples,
+        permutations=permutations,
+        seed=seed,
+        min_samples=min_samples,
+        practical_threshold=practical_threshold,
+        noninferiority_margin=noninferiority_margin,
+        include_slice_uncertainty=include_slice_uncertainty,
+        min_slice_size=min_slice_size,
+    )
+    result = compare_prediction_tables(
+        path_a,
+        path_b,
+        target=target,
+        prediction_column=prediction_column,
+        prediction_columns=prediction_columns,
+        sample_id_column=sample_id_column,
+        task_type=task_type,
+        class_labels=class_labels,
+        slice_columns=slice_columns,
+        model_a_name=model_a_name,
+        model_b_name=model_b_name,
+        config=config,
+    )
+    artifacts = write_paired_comparison_artifacts(
+        json_path=json_path,
+        markdown_path=markdown_path,
+        result=result,
+        path_a=path_a,
+        path_b=path_b,
+        signing_secret=signing_secret,
+    )
+    return {
+        **result,
+        "markdown_report": str(artifacts["markdown_report"]),
+        "json_report": str(artifacts["json_report"]),
+        "shareable_json_report": str(artifacts["shareable_json_report"]),
+    }
+
+
 def compare_configs(config_paths: list[str], *, markdown_path: str, json_path: str) -> dict[str, Any]:
+    """Legacy config-level comparison retained for backwards compatibility."""
+
     if len(config_paths) < 2:
         raise ValueError("Comparison requires at least two config files.")
 
@@ -94,10 +167,12 @@ def write_comparison_markdown(output_path: str, payload: dict[str, Any], *, json
     lines.extend(["", "## Best run by metric"])
     for metric, best in payload["best_by_metric"].items():
         lines.append(f"- {metric}: `{best['project']}` = {float(best['value']):.6f} ({best['direction']})")
-    lines.extend([
-        "",
-        "## Notes",
-        "This comparison is designed for local/customer-side benchmarking. Raw scientific rows remain in the execution environment; the comparison report only aggregates run-level metrics and report references.",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Notes",
+            "This legacy config-level comparison reports run-level metrics. Use paired prediction-table comparison for statistically meaningful candidate-versus-baseline decisions on the same samples.",
+        ]
+    )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
