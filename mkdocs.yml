@@ -24,6 +24,7 @@ nav:
   - Quickstart: quickstart.md
   - Concepts: concepts.md
   - Prediction tables: prediction_tables.md
+  - Statistical uncertainty: uncertainty.md
   - Tasks and plugins: tasks.md
   - Evaluation receipts: evaluation_receipts.md
   - Benchmark packs: benchmark_packs.md

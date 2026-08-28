@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from privatelabbench.eval.metrics import classification_metrics, multiclass_metrics, regression_metrics
+from privatelabbench.eval.uncertainty import BootstrapConfig, bootstrap_metric_intervals
 from privatelabbench.privacy.attacks import membership_inference_risk
 from privatelabbench.tasks.molecules import infer_task_type
 
@@ -56,6 +57,7 @@ class PredictionEvaluation:
     split_column: str | None = None
     class_labels: tuple[str, ...] = ()
     privacy_risk: dict[str, float | str] | None = None
+    uncertainty: dict[str, object] | None = None
 
 
 def _summary(values: np.ndarray, prefix: str) -> dict[str, float]:
@@ -243,10 +245,12 @@ def _slice_metrics(
     task_type: str,
     target_values: np.ndarray,
     prediction_values: np.ndarray,
+    uncertainty_config: BootstrapConfig | None = None,
 ) -> dict[str, dict[str, dict[str, object]]]:
     if min_slice_size < 1:
         raise ValueError("min_slice_size must be at least 1")
     out: dict[str, dict[str, dict[str, object]]] = {}
+    slice_counter = 0
     for column in slice_columns:
         column_results: dict[str, dict[str, object]] = {}
         for value, indices in df.groupby(column, dropna=False, sort=True).indices.items():
@@ -262,6 +266,14 @@ def _slice_metrics(
                     y_true=target_values[index_array],
                     prediction_values=prediction_values[index_array],
                 )
+                if uncertainty_config and uncertainty_config.enabled and uncertainty_config.include_slices:
+                    slice_counter += 1
+                    entry["uncertainty"] = bootstrap_metric_intervals(
+                        task_type=task_type,
+                        y_true=target_values[index_array],
+                        predictions=prediction_values[index_array],
+                        config=uncertainty_config.for_slice(seed_offset=slice_counter),
+                    )
             column_results[key] = entry
         out[column] = column_results
     return out
@@ -281,6 +293,7 @@ def evaluate_prediction_csv(
     min_slice_size: int = 2,
     class_labels: Sequence[str] | None = None,
     split_column: str | None = None,
+    uncertainty_config: BootstrapConfig | None = None,
 ) -> PredictionEvaluation:
     df = pd.read_csv(path)
     prediction_cols = _resolve_prediction_columns(
@@ -373,6 +386,14 @@ def evaluate_prediction_csv(
             "mean_entropy": float(np.mean(entropy)),
         }
 
+    resolved_uncertainty = uncertainty_config or BootstrapConfig(enabled=False)
+    uncertainty = bootstrap_metric_intervals(
+        task_type=resolved_task_type,
+        y_true=y_true,
+        predictions=prediction_values,
+        config=resolved_uncertainty,
+    ) if resolved_uncertainty.enabled else {}
+
     inferred_metadata = tuple(
         str(column)
         for column in df.columns
@@ -389,6 +410,7 @@ def evaluate_prediction_csv(
         task_type=resolved_task_type,
         target_values=y_true,
         prediction_values=prediction_values,
+        uncertainty_config=resolved_uncertainty,
     )
 
     privacy_risk = None
@@ -436,4 +458,5 @@ def evaluate_prediction_csv(
         split_column=split_column,
         class_labels=labels,
         privacy_risk=privacy_risk,
+        uncertainty=uncertainty,
     )

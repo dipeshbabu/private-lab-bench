@@ -73,6 +73,28 @@ def _privacy_summary(report: Mapping[str, Any], result: Mapping[str, Any]) -> di
     return {"mechanism": privacy, "audits": audits, "release": release}
 
 
+def _shareable_uncertainty(report: Mapping[str, Any], result: Mapping[str, Any]) -> dict[str, Any]:
+    uncertainty = result.get("uncertainty")
+    if not isinstance(uncertainty, Mapping) or not uncertainty:
+        return {}
+    payload = dict(uncertainty)
+    privacy = report.get("privacy", {}) if isinstance(report.get("privacy"), Mapping) else {}
+    release_mode = str(privacy.get("mode", "none"))
+    if payload.get("metric_basis") == "clean_metrics" and release_mode != "none":
+        return {
+            "schema_version": payload.get("schema_version"),
+            "status": "withheld_metric_basis_mismatch",
+            "method": payload.get("method"),
+            "confidence_level": payload.get("confidence_level"),
+            "resamples": payload.get("resamples"),
+            "seed": payload.get("seed"),
+            "metric_basis": payload.get("metric_basis"),
+            "released_metric_basis": "reported_metrics",
+            "reason": "Intervals were computed for clean local metrics and are not attached to perturbed released metrics.",
+        }
+    return payload
+
+
 def _public_artifacts(manifest: Mapping[str, Any]) -> list[dict[str, Any]]:
     artifacts = []
     for artifact in manifest.get("artifacts", []):
@@ -135,7 +157,7 @@ def build_evaluation_receipt(
             "input_schema": _input_schema(result),
             "metrics": metrics,
             "metric_source": metric_source,
-            "uncertainty": dict(result.get("uncertainty", {})) if isinstance(result.get("uncertainty"), Mapping) else {},
+            "uncertainty": _shareable_uncertainty(report, result),
             "slices": dict(result.get("slice_metrics", {})) if isinstance(result.get("slice_metrics"), Mapping) else {},
         },
         "privacy": _privacy_summary(report, result),
@@ -148,6 +170,7 @@ def build_evaluation_receipt(
         "paths": {**_local_paths(manifest), "manifest": str(manifest_path), "receipt_source_report": str(report_path), "config": str(config_path)},
         "config_snapshot": report.get("config_snapshot", {}),
         "exact_metrics": clean_metrics,
+        "uncertainty": dict(result.get("uncertainty", {})) if isinstance(result.get("uncertainty"), Mapping) else {},
         "runner": manifest.get("runner", {}),
         "attestation": manifest.get("attestation", {}),
         "manifest_integrity": manifest.get("integrity", {}),
@@ -280,6 +303,23 @@ def render_receipt_markdown(receipt: Mapping[str, Any]) -> str:
         lines.append(f"- {key}: {value}")
     lines.extend(["", "### Metrics"])
     lines.extend(_format_metrics(evaluation.get("metrics", {})) or ["- (none)"])
+    uncertainty = evaluation.get("uncertainty", {})
+    if isinstance(uncertainty, Mapping) and uncertainty:
+        lines.extend(["", "### Uncertainty"])
+        lines.append(f"- Status: {uncertainty.get('status')}")
+        lines.append(f"- Method: {uncertainty.get('method')}")
+        if uncertainty.get("confidence_level") is not None:
+            lines.append(f"- Confidence level: {float(uncertainty['confidence_level']):.1%}")
+        metric_intervals = uncertainty.get("metrics", {})
+        if isinstance(metric_intervals, Mapping):
+            for name, interval_value in metric_intervals.items():
+                interval = dict(interval_value) if isinstance(interval_value, Mapping) else {}
+                if interval.get("lower") is not None and interval.get("upper") is not None:
+                    lines.append(
+                        f"- {name}: [{float(interval['lower']):.6f}, {float(interval['upper']):.6f}]"
+                    )
+        if uncertainty.get("reason"):
+            lines.append(f"- Note: {uncertainty.get('reason')}")
     slices = evaluation.get("slices", {})
     if slices:
         lines.extend(["", "### Slices"])

@@ -20,6 +20,37 @@ def _format_value_lines(values: Mapping[str, object]) -> list[str]:
     return [f"- {key}: {_format_report_value(value)}" for key, value in values.items()]
 
 
+def _append_uncertainty(lines: list[str], uncertainty: object, *, heading: str = "Statistical uncertainty") -> None:
+    if not isinstance(uncertainty, Mapping) or not uncertainty:
+        return
+    lines.extend(["", f"## {heading}"])
+    lines.append(f"- Status: {uncertainty.get('status', 'unknown')}")
+    lines.append(f"- Method: {uncertainty.get('method', 'unknown')}")
+    if uncertainty.get("confidence_level") is not None:
+        lines.append(f"- Confidence level: {float(uncertainty['confidence_level']):.1%}")
+    if uncertainty.get("resamples") is not None:
+        lines.append(f"- Bootstrap resamples: {uncertainty['resamples']}")
+    if uncertainty.get("seed") is not None:
+        lines.append(f"- Seed: {uncertainty['seed']}")
+    if uncertainty.get("sampling"):
+        lines.append(f"- Sampling: {uncertainty['sampling']}")
+    intervals = uncertainty.get("metrics", {})
+    if isinstance(intervals, Mapping):
+        for metric_name, interval_value in intervals.items():
+            interval = dict(interval_value) if isinstance(interval_value, Mapping) else {}
+            if interval.get("lower") is not None and interval.get("upper") is not None:
+                lines.append(
+                    f"- {metric_name}: {float(interval.get('estimate')):.6f} "
+                    f"[{float(interval['lower']):.6f}, {float(interval['upper']):.6f}] "
+                    f"({interval.get('status', 'evaluated')})"
+                )
+            else:
+                lines.append(
+                    f"- {metric_name}: {_format_report_value(interval.get('estimate'))} "
+                    f"({interval.get('status', 'unavailable')})"
+                )
+
+
 def write_markdown_report(
     output_path: str,
     *,
@@ -81,6 +112,16 @@ def _append_slice_metrics(lines: list[str], slice_metrics: Mapping[str, object])
             if isinstance(metrics, Mapping):
                 for key, value in metrics.items():
                     lines.append(f"  - {key}: {float(value):.6f}")
+            uncertainty = entry.get("uncertainty")
+            if isinstance(uncertainty, Mapping) and uncertainty:
+                intervals = uncertainty.get("metrics", {})
+                if isinstance(intervals, Mapping):
+                    for key, interval_value in intervals.items():
+                        interval = dict(interval_value) if isinstance(interval_value, Mapping) else {}
+                        if interval.get("lower") is not None and interval.get("upper") is not None:
+                            lines.append(
+                                f"  - {key} CI: [{float(interval['lower']):.6f}, {float(interval['upper']):.6f}]"
+                            )
 
 
 def write_prediction_markdown_report(
@@ -122,6 +163,7 @@ def write_prediction_markdown_report(
         "## Clean local metrics",
     ]
     lines.extend(_format_metric_lines(clean_metrics))
+    _append_uncertainty(lines, result.uncertainty)
     if baseline_prediction_column and baseline_metrics:
         lines.extend(["", "## Baseline comparison", f"- Baseline prediction column: `{baseline_prediction_column}`", ""])
         lines.extend(_format_metric_lines(baseline_metrics))
@@ -138,8 +180,9 @@ def write_prediction_markdown_report(
         "",
         "## Sharing boundary",
         "- Row-level sample IDs, targets, predictions, and metadata values are not written into this aggregate report.",
+        "- Confidence intervals are computed locally from row-level data; only aggregate interval bounds and method metadata are reported.",
         "- The report contains aggregate metrics, prediction summaries, slice counts/metrics, privacy-audit summaries, and schema column names.",
-        "- The local source path is included for local reproducibility; a shareable receipt with explicit public/private fields is tracked separately.",
+        "- The local source path is included for local reproducibility; the shareable receipt removes local-only fields.",
     ])
     if json_report_path:
         lines.extend(["", "## Machine-readable report", f"- JSON report: `{json_report_path}`"])

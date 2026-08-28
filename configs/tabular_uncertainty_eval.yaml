@@ -1,0 +1,38 @@
+project: tabular-uncertainty-demo
+task: tabular
+
+benchmark:
+  id: tabular-private-regression
+  version: "0.1"
+  suite: generic-tabular
+  domain: tabular
+
+input:
+  path: examples/tabular_predictions_demo.csv
+  sample_id_column: sample_id
+  require_sample_id: true
+  target_column: target
+  prediction_column: prediction
+  task_type: regression
+  slice_columns:
+    - site
+    - batch
+  min_slice_size: 2
+
+uncertainty:
+  enabled: true
+  method: percentile_bootstrap
+  confidence_level: 0.95
+  resamples: 1000
+  seed: 13
+  min_samples: 5
+  include_slices: false
+
+privacy:
+  mode: none
+  seed: 13
+
+report:
+  markdown: reports/tabular_uncertainty_demo_eval.md
+  json: reports/tabular_uncertainty_demo_eval.json
+  manifest: reports/tabular_uncertainty_demo_manifest.json
