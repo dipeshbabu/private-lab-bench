@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dipeshbabu/private-lab-bench/schemas/paired-comparison-artifact-v1.schema.json",
+  "title": "PrivateLabBench paired comparison artifact v1",
+  "type": "object",
+  "required": ["schema_version", "comparison_id", "created_at", "scope", "shareable", "integrity"],
+  "properties": {
+    "schema_version": {"const": "paired-comparison-artifact/v1"},
+    "comparison_id": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "minLength": 1},
+    "scope": {"enum": ["local", "shareable"]},
+    "shareable": {
+      "type": "object",
+      "required": [
+        "comparison_schema",
+        "task_type",
+        "sample_id_column",
+        "target_column",
+        "n_samples",
+        "alignment",
+        "model_a",
+        "model_b",
+        "metric",
+        "direction",
+        "raw_delta_a_minus_b",
+        "improvement_a_over_b",
+        "paired_interval",
+        "randomization_test",
+        "decision",
+        "slices"
+      ],
+      "properties": {
+        "comparison_schema": {"const": "paired-comparison/v1"},
+        "task_type": {"enum": ["regression", "classification", "multiclass"]},
+        "class_labels": {"type": "array", "items": {"type": "string"}},
+        "sample_id_column": {"type": "string", "minLength": 1},
+        "target_column": {"type": "string", "minLength": 1},
+        "n_samples": {"type": "integer", "minimum": 1},
+        "alignment": {
+          "type": "object",
+          "required": ["status", "n_model_a", "n_model_b", "dropped_samples"],
+          "properties": {
+            "status": {"const": "exact_sample_id_match"},
+            "n_model_a": {"type": "integer", "minimum": 1},
+            "n_model_b": {"type": "integer", "minimum": 1},
+            "dropped_samples": {"const": 0}
+          },
+          "additionalProperties": true
+        },
+        "model_a": {"$ref": "#/$defs/model_result"},
+        "model_b": {"$ref": "#/$defs/model_result"},
+        "metric": {"type": "string", "minLength": 1},
+        "direction": {"enum": ["lower_is_better", "higher_is_better"]},
+        "raw_delta_a_minus_b": {"type": "number"},
+        "improvement_a_over_b": {"type": "number"},
+        "paired_interval": {"type": "object"},
+        "randomization_test": {"type": "object"},
+        "decision": {"type": "object"},
+        "slices": {"type": "object"}
+      },
+      "additionalProperties": true
+    },
+    "local": {
+      "type": "object",
+      "properties": {
+        "sharing": {"const": "local_only"},
+        "inputs": {"type": "object"}
+      },
+      "additionalProperties": true
+    },
+    "integrity": {
+      "type": "object",
+      "required": ["algorithm", "payload_sha256", "signed"],
+      "properties": {
+        "algorithm": {"const": "sha256"},
+        "payload_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "signed": {"type": "boolean"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"scope": {"const": "shareable"}}},
+      "then": {"not": {"required": ["local"]}}
+    },
+    {
+      "if": {"properties": {"scope": {"const": "local"}}},
+      "then": {"required": ["local"]}
+    }
+  ],
+  "$defs": {
+    "model_result": {
+      "type": "object",
+      "required": ["name", "metrics", "selected_metric"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "metrics": {
+          "type": "object",
+          "additionalProperties": {"type": "number"}
+        },
+        "selected_metric": {"type": "number"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

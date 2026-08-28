@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 from privatelabbench.benchmark_packs import discover_benchmark_packs, run_benchmark_pack
-from privatelabbench.compare import compare_configs
+from privatelabbench.compare import compare_configs, compare_prediction_files
 from privatelabbench.core.registry import discover_entrypoint_tasks, list_tasks
 from privatelabbench.eval.metrics import summarize_metrics
 from privatelabbench.eval.predictions import evaluate_prediction_csv
@@ -65,8 +65,36 @@ def build_parser() -> argparse.ArgumentParser:
     run_pack = sub.add_parser("run-pack", help="Run a versioned community benchmark pack.")
     run_pack.add_argument("pack", help="Pack ID or explicit id@version reference.")
 
-    compare = sub.add_parser("compare", help="Run multiple configs and generate a comparison report.")
-    compare.add_argument("config_paths", nargs="+", help="Two or more config files to compare.")
+    compare = sub.add_parser(
+        "compare",
+        help="Compare configs (legacy mode) or two prediction tables on exactly matched samples.",
+    )
+    compare.add_argument(
+        "inputs",
+        nargs="+",
+        help="Config files for legacy comparison, or exactly two prediction CSVs when --target is supplied.",
+    )
+    compare.add_argument("--target", default=None, help="Enable paired prediction-table mode and specify the target column.")
+    prediction_group = compare.add_mutually_exclusive_group()
+    prediction_group.add_argument("--prediction-column", default=None, help="Shared prediction/probability column in both tables. Default in paired mode: prediction")
+    prediction_group.add_argument("--prediction-columns", nargs="+", default=None, help="Shared ordered multiclass probability columns in both tables.")
+    compare.add_argument("--task-type", choices=["regression", "classification", "multiclass"], default=None)
+    compare.add_argument("--class-labels", nargs="+", default=None, help="Ordered labels for binary/multiclass comparison.")
+    compare.add_argument("--sample-id-column", default="sample_id", help="Stable ID used for exact paired alignment.")
+    compare.add_argument("--metric", default=None, help="Metric to compare. Defaults: rmse, auroc, macro_auroc_ovr by task type.")
+    compare.add_argument("--model-a-name", default=None)
+    compare.add_argument("--model-b-name", default=None)
+    compare.add_argument("--confidence-level", type=float, default=0.95)
+    compare.add_argument("--resamples", type=int, default=1000, help="Paired bootstrap resamples.")
+    compare.add_argument("--permutations", type=int, default=1000, help="Paired prediction-swap randomization permutations; use 0 to disable.")
+    compare.add_argument("--seed", type=int, default=13)
+    compare.add_argument("--min-samples", type=int, default=20)
+    compare.add_argument("--practical-threshold", type=float, default=0.0, help="Minimum direction-adjusted improvement required for practical superiority.")
+    compare.add_argument("--noninferiority-margin", type=float, default=None, help="Optional noninferiority margin for Model A, expressed in selected-metric units after direction adjustment.")
+    compare.add_argument("--slice-columns", nargs="*", default=None, help="Metadata columns for paired slice comparison.")
+    compare.add_argument("--min-slice-size", type=int, default=5)
+    compare.add_argument("--include-slice-uncertainty", action="store_true", help="Also run paired bootstrap intervals inside eligible slices.")
+    compare.add_argument("--signing-secret", default=None, help="Optional HMAC secret for local/shareable paired-comparison artifacts.")
     compare.add_argument("--report", default="reports/model_comparison.md")
     compare.add_argument("--json-report", default="reports/model_comparison.json")
 
@@ -190,12 +218,65 @@ def run_pack_command(args: argparse.Namespace) -> int:
     return 0
 
 
-def compare_from_configs(args: argparse.Namespace) -> int:
-    result = compare_configs(args.config_paths, markdown_path=args.report, json_path=args.json_report)
-    print("PrivateLabBench comparison")
-    print(f"Runs: {result['n_runs']}")
+def compare_command(args: argparse.Namespace) -> int:
+    if args.target is None:
+        result = compare_configs(args.inputs, markdown_path=args.report, json_path=args.json_report)
+        print("PrivateLabBench config comparison")
+        print(f"Runs: {result['n_runs']}")
+        print(f"Markdown report saved to: {Path(result['markdown_report'])}")
+        print(f"JSON report saved to: {Path(result['json_report'])}")
+        return 0
+
+    if len(args.inputs) != 2:
+        raise ValueError("Paired prediction-table comparison requires exactly two CSV inputs")
+    prediction_column = args.prediction_column
+    if prediction_column is None and not args.prediction_columns:
+        prediction_column = "prediction"
+    result = compare_prediction_files(
+        args.inputs[0],
+        args.inputs[1],
+        target=args.target,
+        prediction_column=prediction_column,
+        prediction_columns=args.prediction_columns,
+        sample_id_column=args.sample_id_column,
+        task_type=args.task_type,
+        class_labels=args.class_labels,
+        slice_columns=args.slice_columns,
+        model_a_name=args.model_a_name,
+        model_b_name=args.model_b_name,
+        metric=args.metric,
+        confidence_level=args.confidence_level,
+        resamples=args.resamples,
+        permutations=args.permutations,
+        seed=args.seed,
+        min_samples=args.min_samples,
+        practical_threshold=args.practical_threshold,
+        noninferiority_margin=args.noninferiority_margin,
+        include_slice_uncertainty=args.include_slice_uncertainty,
+        min_slice_size=args.min_slice_size,
+        markdown_path=args.report,
+        json_path=args.json_report,
+        signing_secret=args.signing_secret or os.getenv("PRIVATELABBENCH_SIGNING_SECRET"),
+    )
+    interval = result["paired_interval"]
+    print("PrivateLabBench paired prediction comparison")
+    print(f"Samples: {result['n_samples']}")
+    print(f"Metric: {result['metric']} ({result['direction']})")
+    print(f"Model A: {result['model_a']['name']} = {float(result['model_a']['selected_metric']):.6f}")
+    print(f"Model B: {result['model_b']['name']} = {float(result['model_b']['selected_metric']):.6f}")
+    print(f"Improvement A over B: {float(result['improvement_a_over_b']):.6f}")
+    if interval.get("lower") is not None and interval.get("upper") is not None:
+        print(
+            f"{float(interval['confidence_level']):.0%} paired CI: "
+            f"[{float(interval['lower']):.6f}, {float(interval['upper']):.6f}]"
+        )
+    randomization = result["randomization_test"]
+    if randomization.get("p_value") is not None:
+        print(f"Paired randomization p-value: {float(randomization['p_value']):.6g}")
+    print(f"Decision: {result['decision']['confidence_interval']}")
     print(f"Markdown report saved to: {Path(result['markdown_report'])}")
-    print(f"JSON report saved to: {Path(result['json_report'])}")
+    print(f"Local JSON artifact saved to: {Path(result['json_report'])}")
+    print(f"Shareable JSON artifact saved to: {Path(result['shareable_json_report'])}")
     return 0
 
 
@@ -228,6 +309,7 @@ def verify_any_command(args: argparse.Namespace) -> int:
         return _print_basic_verification(result)
     result = verify_report(str(path), signing_secret=_secret(args))
     result["schema_version"] = schema
+    result["scope"] = payload.get("scope") if isinstance(payload, dict) else None
     return _print_basic_verification(result)
 
 
@@ -338,7 +420,7 @@ def main() -> int:
     if args.command == "run-pack":
         return run_pack_command(args)
     if args.command == "compare":
-        return compare_from_configs(args)
+        return compare_command(args)
     if args.command == "verify":
         return verify_any_command(args)
     if args.command == "verify-report":
