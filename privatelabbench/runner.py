@@ -11,6 +11,7 @@ from privatelabbench.config import RunnerConfig, load_config, required, section
 from privatelabbench.core.registry import discover_entrypoint_tasks, get_task, has_task, register_task
 from privatelabbench.eval.metrics import summarize_metrics
 from privatelabbench.eval.predictions import evaluate_prediction_csv
+from privatelabbench.eval.uncertainty import BootstrapConfig
 from privatelabbench.federated.evaluator import evaluate_federated_directory
 from privatelabbench.identity import benchmark_metadata, runner_metadata
 from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
@@ -33,6 +34,19 @@ def _privacy_config(config: RunnerConfig) -> PrivacyConfig:
         epsilon=float(privacy.get("epsilon", 8.0)),
         sensitivity=float(privacy.get("sensitivity", 1.0)),
         seed=int(privacy.get("seed", 13)),
+    )
+
+
+def _uncertainty_config(config: RunnerConfig) -> BootstrapConfig:
+    uncertainty = section(config, "uncertainty")
+    return BootstrapConfig(
+        enabled=bool(uncertainty.get("enabled", False)),
+        method=str(uncertainty.get("method", "percentile_bootstrap")),
+        confidence_level=float(uncertainty.get("confidence_level", 0.95)),
+        resamples=int(uncertainty.get("resamples", 1000)),
+        seed=int(uncertainty.get("seed", 13)),
+        min_samples=int(uncertainty.get("min_samples", 20)),
+        include_slices=bool(uncertainty.get("include_slices", False)),
     )
 
 
@@ -176,6 +190,8 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
         sample_id_column=sample_id_column,
     )
     privacy_config = _privacy_config(config)
+    uncertainty_config = _uncertainty_config(config)
+    uncertainty_config.validate()
     identity = _identity_metadata(config)
 
     result = evaluate_prediction_csv(
@@ -191,6 +207,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
         min_slice_size=min_slice_size,
         class_labels=class_labels or None,
         split_column=str(split_column) if split_column else None,
+        uncertainty_config=uncertainty_config,
     )
     clean_metrics = result.metrics
     reported_metrics = privatize_metrics(clean_metrics, privacy_config)
@@ -211,6 +228,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
             "n_samples": result.n_samples,
             "clean_metrics": clean_metrics,
             "reported_metrics": reported_metrics,
+            "uncertainty": result.uncertainty or {},
             "prediction_summary": result.prediction_summary,
             "slice_metrics": result.slice_metrics,
             "baseline_prediction_column": baseline_prediction_column,
@@ -222,6 +240,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
                 "row_level_values_included": False,
                 "aggregate_fields": [
                     "metrics",
+                    "uncertainty",
                     "prediction_summary",
                     "slice_metrics",
                     "privacy_risk",
@@ -252,6 +271,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
         "n_samples": result.n_samples,
         "clean_metrics": clean_metrics,
         "reported_metrics": reported_metrics,
+        "uncertainty": result.uncertainty or {},
         "sample_id_status": result.sample_id_status,
         "slice_columns": list(result.schema.slice_columns),
         "baseline_prediction_column": baseline_prediction_column,
@@ -476,6 +496,13 @@ def print_run_summary(summary: dict[str, Any]) -> None:
         print(f"Clean metrics: {summarize_metrics(summary['clean_metrics'])}")
     if "reported_metrics" in summary:
         print(f"Reported metrics: {summarize_metrics(summary['reported_metrics'])}")
+    uncertainty = summary.get("uncertainty")
+    if isinstance(uncertainty, dict) and uncertainty.get("status"):
+        print(
+            "Uncertainty: "
+            f"{uncertainty.get('method')} at {float(uncertainty.get('confidence_level', 0.0)):.0%} confidence "
+            f"({uncertainty.get('status')})"
+        )
     if "aggregate_clean_metrics" in summary:
         print(f"Aggregate clean metrics: {summarize_metrics(summary['aggregate_clean_metrics'])}")
     if "aggregate_reported_metrics" in summary:

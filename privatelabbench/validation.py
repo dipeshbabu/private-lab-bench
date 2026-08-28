@@ -10,6 +10,7 @@ import pandas as pd
 from privatelabbench.config import RunnerConfig, load_config, required, section
 from privatelabbench.core.registry import discover_entrypoint_tasks, get_task
 from privatelabbench.eval.predictions import evaluate_prediction_csv
+from privatelabbench.eval.uncertainty import BootstrapConfig
 from privatelabbench.privacy.dp import PrivacyConfig
 from privatelabbench.privacy.policy import PrivacyRiskPolicy
 from privatelabbench.privacy.release import AggregateReleasePolicy
@@ -134,6 +135,22 @@ def _validate_privacy(config: RunnerConfig, errors: list[str]) -> None:
             raise ValueError("privacy.aggregate_policy.min_clients must be at least 1.")
     except Exception as exc:
         errors.append(f"Invalid privacy config: {exc}")
+
+
+def _validate_uncertainty(config: RunnerConfig, errors: list[str]) -> None:
+    uncertainty = section(config, "uncertainty")
+    try:
+        BootstrapConfig(
+            enabled=bool(uncertainty.get("enabled", False)),
+            method=str(uncertainty.get("method", "percentile_bootstrap")),
+            confidence_level=float(uncertainty.get("confidence_level", 0.95)),
+            resamples=int(uncertainty.get("resamples", 1000)),
+            seed=int(uncertainty.get("seed", 13)),
+            min_samples=int(uncertainty.get("min_samples", 20)),
+            include_slices=bool(uncertainty.get("include_slices", False)),
+        ).validate()
+    except Exception as exc:
+        errors.append(f"Invalid uncertainty config: {exc}")
 
 
 def _validate_reports(config: RunnerConfig, *, errors: list[str], warnings: list[str]) -> None:
@@ -296,6 +313,7 @@ def validate_config(config_path: str) -> ConfigValidationResult:
             warnings.append(f"Task '{config.task_id}' is provided by a plugin; only common config validation was run.")
 
         _validate_privacy(config, errors)
+        _validate_uncertainty(config, errors)
         _validate_reports(config, errors=errors, warnings=warnings)
     except Exception as exc:
         return ConfigValidationResult(config_path=config_path, errors=[str(exc)])
