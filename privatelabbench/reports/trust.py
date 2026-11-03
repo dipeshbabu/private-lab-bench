@@ -29,7 +29,7 @@ def _identifier(value: Any) -> str:
 def _receipt_protocol(payload: Mapping[str, Any]) -> Mapping[str, Any] | None:
     shared = payload.get("shareable")
     evaluation = shared.get("evaluation") if isinstance(shared, Mapping) else None
-    protocol = evaluation.get("protocol") if isinstance(evaluation, Mapping) else None
+    protocol = evaluation.get("protocol") if isinstance(evaluation, Mapping) else shared.get("protocol") if isinstance(shared, Mapping) else None
     return protocol if isinstance(protocol, Mapping) else None
 
 

@@ -24,6 +24,7 @@ ENTRYPOINT_GROUP = "privatelabbench.protocols"
 PROTOCOL_ROOT = Path(__file__).parent / "data" / "protocols"
 ID_PATTERN = r"plb://[a-z0-9][a-z0-9-]*(?:/[a-z0-9][a-z0-9-]*)+"
 VERSION_PATTERN = r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+WITHDRAWN_PROTOCOLS = {"plb://generic/binary@1.0.0": "Binary label order was unspecified. Re-evaluate with plb://generic/binary@1.0.1 or an explicit versioned definition with ordered class labels."}
 TASK_METRICS = {
     "regression": {"mae", "rmse", "r2"},
     "classification": {"accuracy", "f1", "auroc"},
@@ -78,6 +79,9 @@ class EvaluationProtocol:
         for key, pattern in (("id", ID_PATTERN), ("version", VERSION_PATTERN)):
             if not isinstance(payload[key], str) or not re.fullmatch(pattern, payload[key]):
                 raise ValueError(f"Invalid protocol {key}")
+        reference = f"{payload['id']}@{payload['version']}"
+        if reference in WITHDRAWN_PROTOCOLS:
+            raise ValueError(WITHDRAWN_PROTOCOLS[reference])
         if not isinstance(payload["task"], str) or not isinstance(payload["task_type"], str) or payload["task"] not in {"predictions", "tabular"} or payload["task_type"] not in TASK_METRICS:
             raise ValueError("Protocol v1 supports prediction-table tasks: predictions/tabular and regression/classification/multiclass")
         metrics = _strings(payload["metrics"], "metrics")
@@ -87,8 +91,8 @@ class EvaluationProtocol:
         labels = _strings(schema["class_labels"], "input_schema.class_labels")
         if schema["schema_version"] != "prediction-table/v1" or not isinstance(schema["require_sample_id"], bool):
             raise ValueError("Protocol requires prediction-table/v1 and boolean require_sample_id")
-        if (payload["task_type"] == "multiclass" and len(labels) < 3) or (payload["task_type"] != "multiclass" and labels):
-            raise ValueError("Declare ordered class_labels for multiclass only (at least three)")
+        if (payload["task_type"] == "multiclass" and len(labels) < 3) or (payload["task_type"] == "classification" and len(labels) != 2) or (payload["task_type"] == "regression" and labels):
+            raise ValueError("Declare ordered class_labels: two for binary, at least three for multiclass, empty for regression")
         uncertainty = _typed_settings(payload["uncertainty"], asdict(BootstrapConfig()), "uncertainty")
         BootstrapConfig(**uncertainty).validate()
         slices = _object(payload["slices"], {"required", "optional", "min_size"}, "slices")
@@ -168,6 +172,8 @@ def discover_protocols() -> tuple[EvaluationProtocol, ...]:
 
 
 def resolve_protocol(reference: str, *, base: Path | None = None) -> EvaluationProtocol:
+    if reference in WITHDRAWN_PROTOCOLS:
+        raise ValueError(WITHDRAWN_PROTOCOLS[reference])
     if reference.startswith("plb://"):
         if "@" not in reference:
             raise ValueError("Protocol references require an explicit semantic version: plb://namespace/name@1.0.0")

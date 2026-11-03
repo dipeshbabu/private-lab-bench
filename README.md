@@ -103,6 +103,8 @@ plb compare model-a.csv model-b.csv --target target --task-type regression --met
 
 Paired comparisons report metric differences, bootstrap intervals, and a decision relative to your practical threshold. Optional slice comparisons help locate differences across groups. See the [paired-comparison guide](docs/paired_comparison.md).
 
+Combine compatible shared receipts with `plb aggregate lab-a.shareable.json lab-b.shareable.json --model model@revision`. The [aggregation guide](docs/aggregation.md) covers site identities, signer verification, and the metrics that support pooled point estimates.
+
 ## Inspect Evaluation Receipts
 
 `evaluation-receipt/v1` separates local context from aggregate information intended for exchange:

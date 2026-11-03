@@ -8,7 +8,9 @@ plb show-protocol plb://generic/regression@1.0.0
 plb run local.yaml --protocol plb://generic/regression@1.0.0
 ```
 
-The bundled regression protocol declares MAE as primary, with RMSE and R² as diagnostics. The binary protocol declares AUROC as primary, with accuracy and F1 at the runner's fixed 0.5 threshold. Both use deterministic percentile bootstrap intervals (1,000 resamples, seed 13, 95% confidence, at least 20 samples). Regression resamples rows; classification resamples within target classes. These assumptions need review for clustered or dependent scientific data. Neither protocol invents a universal quality threshold.
+The bundled regression protocol declares MAE as primary, with RMSE and R² as diagnostics. The binary protocol `plb://generic/binary@1.0.1` declares ordered labels `["0", "1"]`, probability of class `1`, AUROC as primary, and accuracy/F1 at the runner's fixed 0.5 threshold. Both use deterministic percentile bootstrap intervals (1,000 resamples, seed 13, 95% confidence, at least 20 samples). Regression resamples rows; classification resamples within target classes. These assumptions need review for clustered or dependent scientific data. Neither protocol invents a universal quality threshold.
+
+Binary protocol `1.0.0` was withdrawn before a package release because it omitted label order. Its definition was not silently changed. Resolving or aggregating that version is rejected: re-evaluate with `1.0.1` or a new definition that explicitly declares negative and positive labels. Outside a protocol, legacy binary evaluation now uses deterministic sorted labels when no order is supplied; explicit `class_labels` is recommended whenever the positive label matters.
 
 Your local config supplies column bindings and output paths:
 

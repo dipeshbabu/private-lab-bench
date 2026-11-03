@@ -1,16 +1,13 @@
 schema_version: evaluation-protocol/v1
 id: plb://generic/binary
-version: 1.0.0
+version: 1.0.1
 task: predictions
 task_type: classification
 input_schema:
   schema_version: prediction-table/v1
   require_sample_id: true
-  class_labels: []
-metrics:
-- auroc
-- accuracy
-- f1
+  class_labels: ['0', '1']
+metrics: [auroc, accuracy, f1]
 primary_metric: auroc
 uncertainty:
   enabled: true
@@ -22,9 +19,7 @@ uncertainty:
   method: percentile_bootstrap
 slices:
   required: []
-  optional:
-  - site
-  - batch
+  optional: [site, batch]
   min_size: 5
 comparison:
   metric: auroc

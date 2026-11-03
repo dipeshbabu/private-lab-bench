@@ -64,6 +64,19 @@ def build_parser() -> argparse.ArgumentParser:
     show_protocol = sub.add_parser("show-protocol", help="Show frozen protocol rules and their SHA-256 digest.")
     show_protocol.add_argument("protocol", help="Exact plb:// reference or local YAML path.")
 
+    aggregate = sub.add_parser("aggregate", help="Verify and summarize compatible shareable receipts across sites.")
+    aggregate.add_argument("inputs", nargs="+")
+    aggregate.add_argument("--site", action="append", default=None, help="One public-safe label per input, in input order; defaults to site-1, site-2, ...")
+    aggregate.add_argument("--model", action="append", default=None, help="model-id@revision: once for all evaluation receipts, once per receipt, or A then B for paired receipts.")
+    aggregate.add_argument("--metric", default=None, help="Defaults to the protocol primary metric.")
+    aggregate.add_argument("--assume-disjoint-sites", action="store_true", help="Declare disjoint observations with identical scoring/weighting semantics; required for point pooling.")
+    aggregate.add_argument("--range-threshold", type=float, default=None, help="Practical threshold for the descriptive best-to-worst site gap.")
+    aggregate.add_argument("--signing-secret", default=None)
+    aggregate.add_argument("--trust-store", default=None)
+    aggregate.add_argument("--require-trusted-signer", action="store_true")
+    aggregate.add_argument("--release-policy", default=None, help="Reviewed export policy approving public site/model labels.")
+    aggregate.add_argument("--out", default="reports/cross_site_aggregate.json", help="Local aggregate artifact; optional public sibling uses .shareable.json.")
+
     validate = sub.add_parser("validate-config", help="Validate a YAML config before running it.")
     validate.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
 
@@ -101,16 +114,17 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("--metric", default=None, help="Metric to compare. Defaults: rmse, auroc, macro_auroc_ovr by task type.")
     compare.add_argument("--model-a-name", default=None)
     compare.add_argument("--model-b-name", default=None)
-    compare.add_argument("--confidence-level", type=float, default=0.95)
-    compare.add_argument("--resamples", type=int, default=1000, help="Paired bootstrap resamples.")
-    compare.add_argument("--permutations", type=int, default=1000, help="Paired prediction-swap randomization permutations; use 0 to disable.")
-    compare.add_argument("--seed", type=int, default=13)
-    compare.add_argument("--min-samples", type=int, default=20)
-    compare.add_argument("--practical-threshold", type=float, default=0.0, help="Minimum direction-adjusted improvement required for practical superiority.")
+    compare.add_argument("--protocol", default=None, help="Bind an exact versioned protocol and its comparison rules.")
+    compare.add_argument("--confidence-level", type=float, default=None, help="Default: 0.95, or protocol setting.")
+    compare.add_argument("--resamples", type=int, default=None, help="Paired bootstrap resamples. Default: 1000, or protocol setting.")
+    compare.add_argument("--permutations", type=int, default=None, help="Prediction-swap permutations; 0 disables. Default: 1000, or protocol setting.")
+    compare.add_argument("--seed", type=int, default=None, help="Default: 13, or protocol setting.")
+    compare.add_argument("--min-samples", type=int, default=None, help="Default: 20, or protocol setting.")
+    compare.add_argument("--practical-threshold", type=float, default=None, help="Required direction-adjusted improvement. Default: 0, or protocol setting.")
     compare.add_argument("--noninferiority-margin", type=float, default=None, help="Optional noninferiority margin for Model A, expressed in selected-metric units after direction adjustment.")
     compare.add_argument("--slice-columns", nargs="*", default=None, help="Metadata columns for paired slice comparison.")
-    compare.add_argument("--min-slice-size", type=int, default=5)
-    compare.add_argument("--include-slice-uncertainty", action="store_true", help="Also run paired bootstrap intervals inside eligible slices.")
+    compare.add_argument("--min-slice-size", type=int, default=None, help="Default: 5, or protocol setting.")
+    compare.add_argument("--include-slice-uncertainty", action="store_true", default=None, help="Also run paired bootstrap intervals inside eligible slices.")
     compare.add_argument("--signing-secret", default=None, help="Optional HMAC secret for local/shareable paired-comparison artifacts.")
     compare.add_argument("--release-policy", default=None, help="Explicit release-policy/v1 YAML; without it the comparison stays local.")
     compare.add_argument("--report", default="reports/model_comparison.md")
@@ -232,6 +246,48 @@ def gate_command(args: argparse.Namespace) -> int:
         return 2
 
 
+def aggregate_command(args: argparse.Namespace) -> int:
+    from privatelabbench.aggregate import aggregate_receipts, render_aggregate
+    from privatelabbench.privacy.export import atomic_write_json
+    output = Path(args.out)
+    public = output.with_name(f"{output.stem}.shareable{output.suffix}")
+    markdown = output.with_suffix(".md")
+    protected = {Path(path).resolve() for path in args.inputs}
+    related = (output, public, markdown, public.with_suffix(".release-audit.json"), output.parent / ".plb-release-ledger.json", output.parent / ".plb-release.lock")
+    if any(path.resolve() in protected for path in related):
+        raise ValueError("Choose aggregate output paths separate from every input receipt")
+    public.unlink(missing_ok=True)
+    markdown.unlink(missing_ok=True)
+    try:
+        models = []
+        for reference in args.model or ():
+            if "@" not in reference:
+                raise ValueError("--model requires an explicit model-id@revision")
+            model_id, revision = reference.rsplit("@", 1)
+            models.append({"id": model_id, "revision": revision})
+        artifact = aggregate_receipts(args.inputs, sites=args.site, models=models, metric=args.metric, assume_disjoint_sites=args.assume_disjoint_sites, range_threshold=args.range_threshold, signing_secret=_secret(args), trust_store=_read_release_policy(args.trust_store) if args.trust_store else None, require_trusted_signer=args.require_trusted_signer)
+        atomic_write_json(output, artifact)
+        decision = publish_shareable_artifact(artifact, _read_release_policy(args.release_policy) if args.release_policy else None, public, signing_secret=_secret(args))
+        if decision.decision == "allow":
+            approved = json.loads(public.read_text(encoding="utf-8"))
+            markdown.write_text(render_aggregate(approved), encoding="utf-8")
+        shared = artifact["shareable"]
+        print(f"PrivateLabBench cross-site evaluation: {shared['metric']}")
+        for model in shared["models"]:
+            print(f"Model {model['model']['id']}@{model['model']['revision']}")
+            for row in model["sites"]:
+                print(f"  {row['site']}: N={row['n_samples']}, estimate={row['estimate']:.6g}")
+            print(f"  Site range: {model['summary']['range']['absolute']:.6g}; pooling: {model['summary']['pooled']['status']}")
+        print(f"Local aggregate: {output}")
+        print(f"Release: {decision.decision}; {public if decision.decision == 'allow' else public.with_suffix('.release-audit.json')}")
+        return 0
+    except (ValueError, TypeError, KeyError, OSError) as exc:
+        public.unlink(missing_ok=True)
+        markdown.unlink(missing_ok=True)
+        print(f"Aggregation rejected: {exc}")
+        return 2
+
+
 def print_validation_result(result: ConfigValidationResult) -> None:
     print("PrivateLabBench config validation")
     print(f"Config: {result.config_path}")
@@ -289,6 +345,8 @@ def run_pack_command(args: argparse.Namespace) -> int:
 
 def compare_command(args: argparse.Namespace) -> int:
     if args.target is None:
+        if args.protocol:
+            raise ValueError("--protocol requires paired CSV mode with --target")
         result = compare_configs(args.inputs, markdown_path=args.report, json_path=args.json_report)
         print("PrivateLabBench config comparison")
         print(f"Runs: {result['n_runs']}")
@@ -327,6 +385,7 @@ def compare_command(args: argparse.Namespace) -> int:
         json_path=args.json_report,
         signing_secret=args.signing_secret or os.getenv("PRIVATELABBENCH_SIGNING_SECRET"),
         release_policy=_read_release_policy(args.release_policy) if args.release_policy else None,
+        protocol=args.protocol,
     )
     interval = result["paired_interval"]
     print("PrivateLabBench paired prediction comparison")
@@ -569,6 +628,8 @@ def main() -> int:
         return 0
     if args.command == "gate":
         return gate_command(args)
+    if args.command == "aggregate":
+        return aggregate_command(args)
     if args.command == "validate-config":
         return validate_config_command(args)
     if args.command == "list-tasks":

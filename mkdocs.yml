@@ -30,6 +30,7 @@ nav:
   - Evaluation receipts: evaluation_receipts.md
   - Benchmark packs: benchmark_packs.md
   - Evaluation protocols: protocols.md
+  - Cross-site aggregation: aggregation.md
   - Privacy: privacy.md
   - Report integrity: report_integrity.md
   - Receipt trust: receipt_trust.md
