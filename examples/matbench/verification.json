@@ -391,6 +391,262 @@
         "min": 127.05347477080035,
         "std": 4.128485789487236
       }
+    },
+    {
+      "data_sha256": "36beb654e2a463ee2a6572105bea0ca2961eee7c7b26a25377bff2c3b338e53a",
+      "dataset": "matbench_glass",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 0.0,
+          "fold": 0,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.5,
+          "upstream_score": 0.5
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 1,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.5,
+          "upstream_score": 0.5
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 2,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.5,
+          "upstream_score": 0.5
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.5,
+          "upstream_score": 0.5
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 4,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.5,
+          "upstream_score": 0.5
+        }
+      ],
+      "metric": "auroc",
+      "plb_statistics": {
+        "max": 0.5,
+        "mean": 0.5,
+        "min": 0.5,
+        "std": 0.0
+      },
+      "protocol": "plb://matbench/glass@1.0.0",
+      "strategy": "mean",
+      "target_unit": null,
+      "upstream_metric": "rocauc",
+      "upstream_statistics": {
+        "max": 0.5,
+        "mean": 0.5,
+        "min": 0.5,
+        "std": 0.0
+      }
+    },
+    {
+      "data_sha256": "36beb654e2a463ee2a6572105bea0ca2961eee7c7b26a25377bff2c3b338e53a",
+      "dataset": "matbench_glass",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 0.0,
+          "fold": 0,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.47677804017280406,
+          "upstream_score": 0.47677804017280406
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 1,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.4809964482510556,
+          "upstream_score": 0.4809964482510556
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 2,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.5152860796299854,
+          "upstream_score": 0.5152860796299854
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.4788533462898725,
+          "upstream_score": 0.4788533462898725
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 4,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.5220807297845975,
+          "upstream_score": 0.5220807297845975
+        }
+      ],
+      "metric": "auroc",
+      "plb_statistics": {
+        "max": 0.5220807297845975,
+        "mean": 0.49479892882566306,
+        "min": 0.47677804017280406,
+        "std": 0.019664905348863653
+      },
+      "protocol": "plb://matbench/glass@1.0.0",
+      "strategy": "fixed-random",
+      "target_unit": null,
+      "upstream_metric": "rocauc",
+      "upstream_statistics": {
+        "max": 0.5220807297845975,
+        "mean": 0.49479892882566306,
+        "min": 0.47677804017280406,
+        "std": 0.019664905348863653
+      }
+    },
+    {
+      "data_sha256": "783e7d1461eb83b00b2f2942da4b95fda5e58a0d1ae26b581c24cf8a82ca75b2",
+      "dataset": "matbench_expt_gap",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 0.0,
+          "fold": 0,
+          "n_test": 921,
+          "n_train": 3683,
+          "score": 1.096468004680365,
+          "upstream_score": 1.096468004680365
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 1,
+          "n_test": 921,
+          "n_train": 3683,
+          "score": 1.1922119265587139,
+          "upstream_score": 1.1922119265587139
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 2,
+          "n_test": 921,
+          "n_train": 3683,
+          "score": 1.1526881705214234,
+          "upstream_score": 1.1526881705214234
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 921,
+          "n_train": 3683,
+          "score": 1.1445202551972367,
+          "upstream_score": 1.1445202551972367
+        },
+        {
+          "absolute_error": 2.220446049250313e-16,
+          "fold": 4,
+          "n_test": 920,
+          "n_train": 3684,
+          "score": 1.1317464476230938,
+          "upstream_score": 1.131746447623094
+        }
+      ],
+      "metric": "mae",
+      "plb_statistics": {
+        "max": 1.1922119265587139,
+        "mean": 1.1435269609161665,
+        "min": 1.096468004680365,
+        "std": 0.031011179048941753
+      },
+      "protocol": "plb://matbench/expt-gap@1.0.0",
+      "strategy": "mean",
+      "target_unit": "eV",
+      "upstream_metric": "mae",
+      "upstream_statistics": {
+        "max": 1.1922119265587139,
+        "mean": 1.1435269609161665,
+        "min": 1.096468004680365,
+        "std": 0.031011179048941736
+      }
+    },
+    {
+      "data_sha256": "783e7d1461eb83b00b2f2942da4b95fda5e58a0d1ae26b581c24cf8a82ca75b2",
+      "dataset": "matbench_expt_gap",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 0.0,
+          "fold": 0,
+          "n_test": 921,
+          "n_train": 3683,
+          "score": 1.5484879156732878,
+          "upstream_score": 1.5484879156732878
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 1,
+          "n_test": 921,
+          "n_train": 3683,
+          "score": 1.53575735858591,
+          "upstream_score": 1.53575735858591
+        },
+        {
+          "absolute_error": 2.220446049250313e-16,
+          "fold": 2,
+          "n_test": 921,
+          "n_train": 3683,
+          "score": 1.5535676901022117,
+          "upstream_score": 1.553567690102212
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 921,
+          "n_train": 3683,
+          "score": 1.5263221806535374,
+          "upstream_score": 1.5263221806535374
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 4,
+          "n_test": 920,
+          "n_train": 3684,
+          "score": 1.5479242857681015,
+          "upstream_score": 1.5479242857681015
+        }
+      ],
+      "metric": "mae",
+      "plb_statistics": {
+        "max": 1.5535676901022117,
+        "mean": 1.5424118861566098,
+        "min": 1.5263221806535374,
+        "std": 0.009949050268260049
+      },
+      "protocol": "plb://matbench/expt-gap@1.0.0",
+      "strategy": "fixed-random",
+      "target_unit": "eV",
+      "upstream_metric": "mae",
+      "upstream_statistics": {
+        "max": 1.553567690102212,
+        "mean": 1.5424118861566098,
+        "min": 1.5263221806535374,
+        "std": 0.009949050268260099
+      }
     }
   ],
   "reference_commit": "35f88110a51adf817a53515780d99fc34f614bf8",

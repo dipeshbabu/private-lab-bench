@@ -107,6 +107,26 @@ TASKS = {
         "26057dc4524e193e32abffb296ce819b58b6e11d1278cae329a2f97817a4eddf",
         (128, 127, 127, 127, 127),
     ),
+    "matbench_expt_gap": MatbenchTask(
+        "matbench_expt_gap",
+        "regression",
+        "composition",
+        "gap expt",
+        "eV",
+        4604,
+        "783e7d1461eb83b00b2f2942da4b95fda5e58a0d1ae26b581c24cf8a82ca75b2",
+        (921, 921, 921, 921, 920),
+    ),
+    "matbench_glass": MatbenchTask(
+        "matbench_glass",
+        "classification",
+        "composition",
+        "gfa",
+        None,
+        5680,
+        "36beb654e2a463ee2a6572105bea0ca2961eee7c7b26a25377bff2c3b338e53a",
+        (1136, 1136, 1136, 1136, 1136),
+    ),
 }
 
 
@@ -115,7 +135,7 @@ def get_task(name):
         return TASKS[name.strip().lower()]
     except (KeyError, AttributeError) as exc:
         raise ValueError(
-            "Supported Matbench subset: matbench_steels, matbench_expt_is_metal, matbench_jdft2d; unsupported metrics/tasks are not substituted"
+            f"Supported Matbench subset: {', '.join(TASKS)}; unsupported metrics/tasks are not substituted"
         ) from exc
 
 
@@ -164,7 +184,7 @@ def load_snapshot(root, dataset):
         raise ValueError("Official targets must be finite; no rows are dropped")
     if task.task_type == "classification":
         if set(np.unique(targets)) != {0.0, 1.0}:
-            raise ValueError("Official metallicity labels must be false/true")
+            raise ValueError("Official classification labels must be false/true")
         targets = targets.astype(int)
     prefix = task.name.replace("matbench", "mb").replace("_", "-")
     ids = [

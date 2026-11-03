@@ -7,7 +7,7 @@
     "shareable": {
       "type": "object", "required": ["dataset", "benchmark", "protocol", "task_type", "input_type", "target_unit", "metric", "upstream_metric", "folds", "metrics", "fold_score_statistics", "aggregation", "uncertainty_scope", "reference_commit", "classification_semantics"],
       "properties": {
-        "dataset": {"enum": ["matbench_steels", "matbench_expt_is_metal", "matbench_jdft2d"]},
+        "dataset": {"enum": ["matbench_steels", "matbench_expt_is_metal", "matbench_jdft2d", "matbench_expt_gap", "matbench_glass"]},
         "benchmark": {"type": "object", "required": ["id", "version", "suite", "domain", "protocol"], "properties": {"id": {"type": "string"}, "version": {"type": "string"}, "suite": {"const": "matbench"}, "domain": {"const": "materials"}, "protocol": {"const": "prediction-table/v1"}}, "additionalProperties": false},
         "protocol": {"type": "object", "required": ["id", "version", "sha256", "metrics", "primary_metric"], "properties": {"id": {"type": "string"}, "version": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "metrics": {"type": "array", "items": {"type": "string"}}, "primary_metric": {"type": "string"}}, "additionalProperties": false},
         "task_type": {"enum": ["regression", "classification"]}, "input_type": {"enum": ["composition", "structure"]}, "target_unit": {"type": ["string", "null"]}, "metric": {"enum": ["mae", "auroc"]}, "upstream_metric": {"enum": ["mae", "rocauc"]},

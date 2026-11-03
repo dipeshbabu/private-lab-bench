@@ -4,6 +4,7 @@
 
 ### Added
 
+- Expand pinned coverage to six TDC ADMET tasks, five Matbench tasks, and ten ProteinGym substitution assays, with new versioned protocols and actual upstream parity records.
 - Optional OpenDP bounded-mean backend with upstream clipping, floating-point sensitivity bounds, Laplace sampling, and an explicit shared budget. Its release object excludes exact means and private inputs.
 
 ### Fixed

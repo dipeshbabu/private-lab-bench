@@ -13,7 +13,7 @@ from privatelabbench.integrations import tdc
 from privatelabbench.reports.receipt import verify_receipt
 
 
-@pytest.fixture(params=["caco2_wang", "pgp_broccatelli"])
+@pytest.fixture(params=list(tdc.TASKS))
 def snapshot(tmp_path, monkeypatch, request):
     """Checksums are patched only for explicitly synthetic, data-free CI cases."""
     name = request.param
