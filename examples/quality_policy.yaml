@@ -1,0 +1,14 @@
+schema_version: quality-policy/v1
+metric_basis: clean
+min_samples: 5
+metric:
+  rmse:
+    max: 0.10
+slices:
+  worst_rmse_max: 0.15
+  critical:
+    external_site:
+      column: site
+      value: c
+      metric: rmse
+      max: 0.12

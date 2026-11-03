@@ -314,6 +314,9 @@ def validate_config(config_path: str) -> ConfigValidationResult:
 
         _validate_privacy(config, errors)
         _validate_uncertainty(config, errors)
+        if "quality_gate" in config.raw:
+            from privatelabbench.quality import validate_quality_policy
+            validate_quality_policy(config.raw["quality_gate"])
         _validate_reports(config, errors=errors, warnings=warnings)
     except Exception as exc:
         return ConfigValidationResult(config_path=config_path, errors=[str(exc)])

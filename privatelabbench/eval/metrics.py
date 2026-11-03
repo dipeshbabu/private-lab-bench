@@ -14,6 +14,13 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
+METRIC_DIRECTIONS = {
+    "mae": "lower_is_better", "rmse": "lower_is_better", "log_loss": "lower_is_better",
+    "r2": "higher_is_better", "accuracy": "higher_is_better", "f1": "higher_is_better",
+    "auroc": "higher_is_better", "macro_f1": "higher_is_better", "weighted_f1": "higher_is_better",
+    "macro_auroc_ovr": "higher_is_better",
+}
+
 
 def regression_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
     return {

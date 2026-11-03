@@ -461,6 +461,23 @@ def run_config(config_path: str) -> dict[str, Any]:
     discover_entrypoint_tasks()
     task = get_task(config.task_id)
     summary = task.runner(config)
+    if "quality_gate" in config.raw:
+        from privatelabbench.quality import evaluate_quality_gate
+        from privatelabbench.reports.integrity import attach_integrity_metadata
+        report_path = Path(summary["json_report"])
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        gate = evaluate_quality_gate(report, config.raw["quality_gate"])
+        report["result"]["quality_gate"] = gate
+        report = attach_integrity_metadata(report, signing_secret=_signing_secret(config))
+        report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        summary["quality_gate"] = gate
+        _attach_report_identity(summary, report_path, {})
+        if summary.get("markdown_report"):
+            markdown = Path(summary["markdown_report"])
+            counts = {status: sum(rule["status"] == status for rule in gate["rules"]) for status in ("pass", "fail", "investigate")}
+            with markdown.open("a", encoding="utf-8") as handle:
+                handle.write(f"\n## Model-quality gate\n\nStatus: `{gate['status']}`; metric basis: `{gate['metric_basis']}`.\n\n")
+                handle.write("; ".join(f"{status}: {count}" for status, count in counts.items()) + ".\n")
     summary["task"] = config.task_id
     summary["workflow"] = config.workflow
     summary["audit_log"] = _write_audit(config, summary)
@@ -480,6 +497,8 @@ def run_config(config_path: str) -> dict[str, Any]:
 
 def print_run_summary(summary: dict[str, Any]) -> None:
     print("PrivateLabBench local evaluation")
+    if "quality_gate" in summary:
+        print(f"Quality gate: {summary['quality_gate']['status']}")
     print(f"Project: {summary['project']}")
     print(f"Task: {summary.get('task', summary.get('workflow'))}")
     if "benchmark_id" in summary:
