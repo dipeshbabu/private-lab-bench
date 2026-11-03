@@ -162,6 +162,8 @@ def check_git_history(payload: dict[str, Any], failures: list[str], info: dict[s
     raw_emails = _git("log", "--all", "--format=%ae%n%ce").splitlines()
     unique_emails = sorted({email.strip() for email in raw_emails if email.strip()})
     exposed = [email for email in unique_emails if not _email_allowed(email, exact=exact, suffixes=suffixes)]
+    if payload.get("require_reviewed_author_emails", False) and exposed:
+        failures.append("unreviewed author/committer email exposure in Git history")
 
     all_paths = sorted({line.strip() for line in _git("log", "--all", "--name-only", "--pretty=format:").splitlines() if line.strip()})
     sensitive_matches: dict[str, list[str]] = {}

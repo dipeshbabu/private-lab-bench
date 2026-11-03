@@ -6,6 +6,13 @@ The main design constraint is simple: **the core should remain useful without ho
 
 ## Before you start
 
+Use a GitHub no-reply author/committer email before pushing commits. The history
+audit rejects unreviewed email metadata. An author who deliberately wants a public
+email may request a consented exception in `audit/public_release_manifest.yaml`.
+After the 2026-11-03 email rewrite, re-clone or carefully rebase unpublished work;
+merging an old local branch can restore the retired metadata. Maintainership
+squash merges should select the approved no-reply author email explicitly.
+
 For a bug fix or small documentation improvement, a pull request is usually enough.
 
 For a new task, benchmark pack, privacy method, public API, or behavior that changes an artifact schema, please open the matching issue template first. That gives maintainers and other contributors a chance to agree on scope before a larger implementation is written.
