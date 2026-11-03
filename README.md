@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/private-lab-bench/"><img alt="PyPI" src="https://img.shields.io/pypi/v/private-lab-bench?style=flat-square"></a>
+  <a href="https://pypi.org/project/private-lab-bench/"><img alt="PyPI version" src="https://img.shields.io/pypi/v/private-lab-bench?style=flat-square&amp;cacheSeconds=300"></a>
   <a href="https://github.com/dipeshbabu/private-lab-bench/actions/workflows/ci.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/dipeshbabu/private-lab-bench/ci.yml?branch=main&label=build&style=flat-square"></a>
   <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/pyproject.toml"><img alt="Python 3.10, 3.11, and 3.12" src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue?style=flat-square"></a>
   <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-green?style=flat-square"></a>
