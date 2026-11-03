@@ -114,6 +114,8 @@ For repeated or nested observations, declare a [sampling design](docs/sampling_d
 
 Check declared split integrity before scoring with `plb audit-design` or `plb evaluate --evaluation-design design.yaml`. [Evaluation-design audits](docs/evaluation_design.md) detect supported overlap/group/time violations and keep unavailable training evidence explicit.
 
+Evaluate real Caco2 and PGP benchmark predictions with the optional [TDC ADMET integration](docs/tdc_admet.md). It preserves the pinned official test sets and metrics, checks upstream score agreement, and supports the same evaluation protocols on private ADMET tables.
+
 ## Inspect Evaluation Receipts
 
 `evaluation-receipt/v1` separates local context from aggregate information intended for exchange:
