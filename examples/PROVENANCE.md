@@ -1,6 +1,6 @@
 # Example Data Provenance
 
-The CSV fixtures under `examples/` are small synthetic/demo tables created for PrivateLabBench software and evaluation-workflow testing. They are not proprietary customer data and are not copied from a restricted scientific dataset. Separately, `tdc_admet/verification.json` records aggregate parity results from fetched public upstream benchmarks; it contains no benchmark rows or prediction tables and declares its real-data provenance explicitly.
+The CSV fixtures under `examples/` are small synthetic/demo tables created for PrivateLabBench software and evaluation-workflow testing. They are not proprietary customer data and are not copied from a restricted scientific dataset. Separately, `tdc_admet/verification.json` and `matbench/verification.json` record aggregate parity results from fetched public upstream benchmarks; they contain no benchmark rows or prediction tables and declare their real-data provenance explicitly.
 
 ## License
 

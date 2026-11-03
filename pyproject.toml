@@ -44,6 +44,7 @@ Changelog = "https://github.com/dipeshbabu/private-lab-bench/blob/main/CHANGELOG
 Documentation = "https://github.com/dipeshbabu/private-lab-bench/tree/main/docs"
 
 [project.optional-dependencies]
+matbench = ["matminer>=0.9.3,<0.11"]
 signing = ["cryptography>=41.0"]
 rdkit = ["rdkit>=2023.9.1"]
 tdc = [
@@ -79,6 +80,7 @@ privatelabbench = [
   "data/benchmark_packs/*/*.json",
   "data/schemas/*.json",
   "data/protocols/*.yaml",
+  "data/integrations/*.json",
 ]
 
 [tool.pytest.ini_options]

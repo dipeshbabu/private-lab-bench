@@ -28,6 +28,7 @@ nav:
   - Sampling units and slice inference: sampling_design.md
   - Evaluation-design audits: evaluation_design.md
   - TDC ADMET integration: tdc_admet.md
+  - Matbench materials integration: matbench.md
   - External model validation: external_validation.md
   - Trusted local model scoring: trusted_scoring.md
   - Hidden benchmark ownership: hidden_benchmarks.md

@@ -153,6 +153,19 @@ def build_parser() -> argparse.ArgumentParser:
     tdc_evaluate.add_argument("--release-policy", default=None)
     tdc_evaluate.add_argument("--output-dir", default="reports/tdc")
 
+    matbench_prepare = sub.add_parser("matbench-prepare", help="Verify official Matbench folds and create a prediction template.")
+    matbench_prepare.add_argument("--dataset", required=True)
+    matbench_prepare.add_argument("--cache-dir", default="outputs/matbench")
+    matbench_prepare.add_argument("--download", action="store_true")
+    matbench_prepare.add_argument("--out", required=True)
+    matbench_evaluate = sub.add_parser("matbench-evaluate", help="Evaluate external predictions on all five pinned official folds.")
+    matbench_evaluate.add_argument("predictions")
+    matbench_evaluate.add_argument("--dataset", required=True)
+    matbench_evaluate.add_argument("--cache-dir", default="outputs/matbench")
+    matbench_evaluate.add_argument("--prediction-column", default="prediction")
+    matbench_evaluate.add_argument("--release-policy", default=None)
+    matbench_evaluate.add_argument("--output-dir", default="reports/matbench")
+
     run = sub.add_parser("run", help="Run a local evaluation task from a YAML config file.")
     run.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
     run.add_argument("--protocol", default=None, help="Exact plb://namespace/name@version or local protocol YAML.")
@@ -902,6 +915,9 @@ def main() -> int:
         return leaderboard_command(args)
     if args.command in {"tdc-prepare", "tdc-evaluate"}:
         return tdc_command(args)
+    if args.command in {"matbench-prepare", "matbench-evaluate"}:
+        from privatelabbench.integrations.matbench import matbench_command
+        return matbench_command(args)
     if args.command == "run":
         return run_from_config(args)
     if args.command in {"list-protocols", "show-protocol"}:
