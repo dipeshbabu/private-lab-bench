@@ -4,6 +4,7 @@
 
 ### Added
 
+- Linux/gVisor execution for untrusted Python inference scripts with a reviewed immutable runtime image, denied network access, restricted mounts and outputs, resource limits, and actual adversarial CI checks. Predictions and provenance stay local.
 - Expand pinned coverage to six TDC ADMET tasks, five Matbench tasks, and ten ProteinGym substitution assays, with new versioned protocols and actual upstream parity records.
 - Optional OpenDP bounded-mean backend with upstream clipping, floating-point sensitivity bounds, Laplace sampling, and an explicit shared budget. Its release object excludes exact means and private inputs.
 
