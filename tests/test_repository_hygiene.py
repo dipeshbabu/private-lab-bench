@@ -30,7 +30,8 @@ def test_citation_metadata_is_parseable_and_points_to_repository():
     assert payload["title"] == "PrivateLabBench"
     assert payload["license"] == "MIT"
     assert payload["repository-code"] == "https://github.com/dipeshbabu/private-lab-bench"
-    assert payload["authors"][0]["family-names"] == "Mahato"
+    author = payload["authors"][0]
+    assert f"{author['given-names']} {author['family-names']}" == "Dipesh Tharu Mahato"
 
 
 def test_issue_templates_are_structured_and_nonempty():

@@ -1,5 +1,10 @@
 # Report Integrity, Manifests, and Receipts
 
+For public-key signer authentication, use the [receipt trust workflow](receipt_trust.md).
+Hash checks and shared-secret HMAC checks below do not establish scientific validity
+or independently verifiable lab identity. `plb verify --json` reports integrity,
+signature, signer trust, and protocol binding separately.
+
 PrivateLabBench uses three related artifact layers. They solve different problems and intentionally remain separate.
 
 ## 1. JSON reports

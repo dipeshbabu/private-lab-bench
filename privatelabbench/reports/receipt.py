@@ -244,14 +244,14 @@ def validate_receipt_shape(payload: Mapping[str, Any]) -> None:
             raise ValueError(f"Receipt shareable section is missing {section!r}")
 
 
-def verify_receipt(path: str | Path, *, signing_secret: str | None = None) -> dict[str, Any]:
+def verify_receipt(path: str | Path, *, signing_secret: str | None = None, trust_store: Mapping[str, Any] | None = None, require_trusted_signer: bool = False, expected_protocol_sha256: str | None = None) -> dict[str, Any]:
     receipt_path = Path(path)
     payload = _read_json(receipt_path)
     try:
         validate_receipt_shape(payload)
     except ValueError as exc:
         return {"valid": False, "reason": "invalid_receipt_schema", "error": str(exc), "path": str(receipt_path)}
-    result = verify_report(str(receipt_path), signing_secret=signing_secret)
+    result = verify_report(str(receipt_path), signing_secret=signing_secret, trust_store=trust_store, require_trusted_signer=require_trusted_signer, expected_protocol_sha256=expected_protocol_sha256)
     result["schema_version"] = payload.get("schema_version")
     result["scope"] = payload.get("scope")
     result["receipt_id"] = payload.get("receipt_id")

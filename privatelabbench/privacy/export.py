@@ -289,7 +289,7 @@ def atomic_write_json(path: Path, payload: Mapping[str, Any]) -> None:
             temporary.unlink(missing_ok=True)
 
 
-def publish_shareable_artifact(candidate: Any, policy: Any, path: str | Path, *, evidence: Any = None, signing_secret: str | None = None) -> ReleaseDecision:
+def publish_shareable_artifact(candidate: Any, policy: Any, path: str | Path, *, evidence: Any = None, signing_secret: str | None = None, signer: Mapping[str, Any] | None = None) -> ReleaseDecision:
     """The sole shareable JSON writer. Denial removes any previous export."""
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -313,7 +313,12 @@ def publish_shareable_artifact(candidate: Any, policy: Any, path: str | Path, *,
                 # Record approval first: a failed export conservatively retains it.
                 ledger[decision.policy_id] = digest
                 atomic_write_json(ledger_path, ledger)
-                atomic_write_json(output, attach_integrity_metadata(payload, signing_secret=signing_secret))
+                if signer is not None:
+                    from privatelabbench.reports.trust import sign_artifact
+                    artifact = sign_artifact(payload, signer)
+                else:
+                    artifact = attach_integrity_metadata(payload, signing_secret=signing_secret)
+                atomic_write_json(output, artifact)
         except (OSError, ValueError, TypeError):
             output.unlink(missing_ok=True)
             decision = ReleaseDecision("needs_review", ("release_storage_or_lock_failed",), decision.policy_id)

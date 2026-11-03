@@ -119,6 +119,14 @@ Shareable receipts require an explicit `release-policy/v1` policy. A blocked exp
 
 Verification checks artifact integrity and optional signatures. A matching self-contained hash alone does not establish authorship, correct execution, or scientific validity. See [evaluation receipts](docs/evaluation_receipts.md) and [report integrity](docs/report_integrity.md).
 
+For offline signer authentication, use optional Ed25519 signatures and pinned public keys:
+
+```sh
+plb verify receipt.shareable.json --trust-store trusted-labs.yaml --require-trusted-signer --json
+```
+
+See the [receipt trust guide](docs/receipt_trust.md) for signing, key rotation, protocol binding, and the limits of these checks.
+
 ## Privacy and Sharing
 
 Keeping data local limits data movement; aggregate results can still disclose sensitive information. PrivateLabBench provides separate tools for exact reporting, empirical privacy audits, release-policy checks, and heuristic `metric_perturbation`.

@@ -80,8 +80,10 @@ def test_clean_intervals_and_slices_are_withheld_for_perturbed_metrics():
     value["shareable"]["evaluation"]["uncertainty"] = {"status": "evaluated", "metric_basis": "clean_metrics", "metrics": {"mae": {"estimate": 999, "lower": 900, "upper": 1000}}}
     decision, output = check_release(value, policy())
     assert decision.decision == "allow"
-    assert "999" not in json.dumps(output)
-    assert output["shareable"]["evaluation"]["uncertainty"]["status"] == "withheld_metric_basis_mismatch"
+    released = output["shareable"]["evaluation"]
+    assert released["uncertainty"] == {"status": "withheld_metric_basis_mismatch", "metric_basis": "clean_metrics", "released_metric_basis": "reported_metrics"}
+    assert released["metrics"] == {"mae": 0.2, "rmse": 0.3}
+    assert released["slices"] == {}
 
 
 def test_repeated_changed_releases_require_audited_review(tmp_path):
