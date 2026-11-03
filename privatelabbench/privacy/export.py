@@ -104,11 +104,11 @@ def _release_statistics(value: Any, policy: Mapping[str, Any]) -> dict[str, Any]
 
 def validate_policy(value: Any) -> dict[str, Any]:
     policy = dict(_mapping(value))
-    allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "include_input_schema", "include_quality_gate", "include_protocol", "include_degradation", "include_slice_inference", "include_multiplicity", "public_shift_features", "public_benchmark", "public_sites", "public_models", "slices", "reviewed_repeat", "review_reference"}
+    allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "require_design_audit", "include_design_audit", "include_input_schema", "include_quality_gate", "include_protocol", "include_degradation", "include_slice_inference", "include_multiplicity", "public_shift_features", "public_benchmark", "public_sites", "public_models", "slices", "reviewed_repeat", "review_reference"}
     if set(policy) - allowed or policy.get("schema_version") != POLICY_SCHEMA:
         raise ValueError("Invalid release policy schema or unknown policy fields")
     _token(policy.get("id"))
-    for key in ("enabled", "require_privacy_audit", "include_input_schema", "include_quality_gate", "include_protocol", "include_degradation", "include_slice_inference", "include_multiplicity", "reviewed_repeat"):
+    for key in ("enabled", "require_privacy_audit", "require_design_audit", "include_design_audit", "include_input_schema", "include_quality_gate", "include_protocol", "include_degradation", "include_slice_inference", "include_multiplicity", "reviewed_repeat"):
         if key in policy and not isinstance(policy[key], bool):
             raise ValueError(f"{key} must be boolean")
     for key, default in (("min_samples", 20), ("min_cell_size", 5)):
@@ -294,6 +294,11 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
         if policy.get("include_degradation") and evaluation.get("degradation_summary"):
             from privatelabbench.eval.degradation import sanitize_degradation
             clean["evaluation"]["degradation_summary"] = sanitize_degradation(evaluation["degradation_summary"], policy) if mode == "none" else {"status": "withheld_metric_basis_mismatch"}
+        if policy.get("include_design_audit"):
+            from privatelabbench.design_audit import sanitize_design_audit
+            for key in ("design_audit", "reference_design_audit"):
+                if evaluation.get(key):
+                    clean["evaluation"][key] = sanitize_design_audit(evaluation[key], policy)
     elif schema == "paired-comparison-artifact/v1":
         n = shared.get("n_samples")
         if isinstance(n, bool) or not isinstance(n, int) or n < policy["min_samples"]:
@@ -323,6 +328,9 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
             clean["multiplicity"] = multiplicity
         if policy.get("include_protocol") and shared.get("protocol"):
             clean["protocol"] = protocol_identity(shared["protocol"])
+        if policy.get("include_design_audit") and shared.get("design_audits"):
+            from privatelabbench.design_audit import sanitize_design_audit
+            clean["design_audits"] = [sanitize_design_audit(audit, policy) for audit in shared["design_audits"]]
         identifier = "comparison_id"
     elif schema == "cross-site-aggregate/v1":
         from privatelabbench.aggregate import sanitize_aggregate
@@ -353,6 +361,21 @@ def check_release(candidate: Any, policy: Any, *, evidence: Any = None) -> tuple
         shared = _mapping(candidate.get("shareable"))
         privacy = _mapping(shared.get("privacy", {}))
         evidence = _mapping(evidence if evidence is not None else privacy)
+        evaluation_evidence = _mapping(shared.get("evaluation", {})) if candidate.get("schema_version") == "evaluation-receipt/v1" else {}
+        design_evidence = evidence.get("design_audits", [])
+        if not isinstance(design_evidence, list):
+            raise ValueError("Invalid design-audit evidence")
+        comparison_designs = shared.get("design_audits", []) if candidate.get("schema_version") == "paired-comparison-artifact/v1" else []
+        if not isinstance(comparison_designs, list): raise ValueError("Invalid paired design evidence")
+        design_evidence = [*design_evidence, *comparison_designs, *[evaluation_evidence[key] for key in ("design_audit", "reference_design_audit") if evaluation_evidence.get(key)]]
+        from privatelabbench.design_audit import validate_audit_summary
+        declared_audits = [validate_audit_summary(audit) for audit in design_evidence]
+        if any(audit["status"] == "fail" for audit in declared_audits):
+            return ReleaseDecision("deny", ("evaluation_design_failed",), policy_id), None
+        if approved.get("require_design_audit") and (not declared_audits or any(audit["status"] != "pass" or not audit["training_reference_present"] or not audit["reference_declared_complete"] for audit in declared_audits)):
+            return ReleaseDecision("needs_review", ("required_design_evidence_missing_or_incomplete",), policy_id), None
+        if approved.get("require_design_audit") and candidate.get("schema_version") == "paired-comparison-artifact/v1" and {audit.get("model_role") for audit in declared_audits} != {"model_a", "model_b"}:
+            return ReleaseDecision("needs_review", ("required_model_specific_design_evidence_missing",), policy_id), None
         gates = evidence.get("gates", [privacy.get("release", {})])
         if not isinstance(gates, list):
             raise ValueError("Invalid gate evidence")

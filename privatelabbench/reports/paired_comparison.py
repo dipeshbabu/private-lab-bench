@@ -27,6 +27,7 @@ def _shareable_comparison(result: Mapping[str, Any]) -> dict[str, Any]:
         "comparison_schema": result.get("schema_version"),
         "protocol": result.get("protocol", {}),
         "multiplicity": result.get("multiplicity", {}),
+        "design_audits": list(result.get("design_audits", [])),
         "task_type": result.get("task_type"),
         "class_labels": list(result.get("class_labels", [])),
         "sample_id_column": result.get("sample_id_column"),
@@ -55,6 +56,7 @@ def build_paired_comparison_artifact(
     comparison_id: str | None = None,
     created_at: str | None = None,
 ) -> dict[str, Any]:
+    snapshots = {record["model_role"]: record["artifact"]["local"]["evaluation_sha256"] for record in result.get("design_audits_local", [])}
     payload = {
         "schema_version": PAIRED_COMPARISON_ARTIFACT_SCHEMA,
         "comparison_id": comparison_id or str(uuid4()),
@@ -65,9 +67,10 @@ def build_paired_comparison_artifact(
             "sharing": "local_only",
             "protocol_definition": result.get("protocol_definition", {}),
             "sampling_design": result.get("sampling_design"),
+            "design_audits": result.get("design_audits_local", []),
             "inputs": {
-                "model_a": {"path": str(path_a), "sha256": _sha256_file(path_a)},
-                "model_b": {"path": str(path_b), "sha256": _sha256_file(path_b)},
+                "model_a": {"path": str(path_a), "sha256": snapshots.get("model_a") or _sha256_file(path_a)},
+                "model_b": {"path": str(path_b), "sha256": snapshots.get("model_b") or _sha256_file(path_b)},
             },
         },
     }
@@ -182,6 +185,9 @@ def render_paired_comparison_markdown(artifact: Mapping[str, Any]) -> str:
     if result.get("multiplicity"):
         family = result["multiplicity"]
         lines.extend(["", "## Slice test family", f"- Method: {family['method']}; family: {family['family']}", f"- Tests: {family['n_tests']}; usable: {family['n_usable_tests']}; missing: {family['n_missing_tests']}", "- Adjusted p-values require valid tests and the declared dependence assumptions; they do not establish causality."])
+    for audit in result.get("design_audits", []):
+        from privatelabbench.design_audit import render_design_audit
+        lines.append(render_design_audit(audit, heading=f"{audit.get('model_role', 'Model')} design audit"))
     return "\n".join(lines) + "\n"
 
 

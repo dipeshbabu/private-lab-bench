@@ -42,11 +42,23 @@ def compare_prediction_files(
     release_policy: Mapping[str, Any] | None = None,
     protocol: str | None = None,
     sampling_design: Any = None,
+    evaluation_design: Any = None,
+    design_audit_options: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    options = dict(design_audit_options or {})
     local_path = Path(json_path)
+    public_path = local_path.with_name(f"{local_path.stem}.shareable{local_path.suffix}")
+    protected = {Path(path_a).resolve(), Path(path_b).resolve(), *([Path(options["training_reference"]).resolve()] if options.get("training_reference") else []), *([Path(protocol).resolve()] if protocol and not protocol.startswith("plb://") else [])}
+    outputs = [local_path, public_path, Path(markdown_path), public_path.with_suffix(".release-audit.json"), local_path.parent/".plb-release-ledger.json", local_path.parent/".plb-release.lock", *[local_path.with_name(f"{local_path.stem}_{role}_design_audit.json") for role in ("model_a", "model_b")]]
+    if any(output.resolve() in protected for output in outputs):
+        raise ValueError("Choose comparison outputs separate from every input")
     local_path.with_name(f"{local_path.stem}.shareable{local_path.suffix}").unlink(missing_ok=True)
+    Path(markdown_path).unlink(missing_ok=True)
     settings = {"metric": metric, "confidence_level": confidence_level, "resamples": resamples, "permutations": permutations, "seed": seed, "min_samples": min_samples, "practical_threshold": practical_threshold, "noninferiority_margin": noninferiority_margin, "include_slice_uncertainty": include_slice_uncertainty, "min_slice_size": min_slice_size}
     definition = None
+    from privatelabbench.design_audit import EvaluationDesign, DesignAuditFailure, prepare_evaluation
+    from privatelabbench.privacy.export import atomic_write_json
+    audit_design = EvaluationDesign.from_dict(evaluation_design) if evaluation_design is not None else None
     from privatelabbench.eval.sampling import sampling_design as parse_design
     design = parse_design(sampling_design)
     if protocol is not None:
@@ -55,13 +67,34 @@ def compare_prediction_files(
         rules = definition.as_dict()
         settings = _bind({key: value for key, value in settings.items() if value is not None}, rules["comparison"], "comparison")
         bound_input = {key: value for key, value in {"task_type": task_type, "class_labels": list(class_labels) if class_labels else None, "slice_columns": list(slice_columns) if slice_columns is not None else None}.items() if value is not None}
-        bound_config = apply_protocol({"input": bound_input, **({"sampling_design": design.as_dict()} if design else {})}, definition)
+        bound_config = apply_protocol({"input": bound_input, **({"sampling_design": design.as_dict()} if design else {}), **({"evaluation_design": audit_design.as_dict()} if audit_design else {})}, definition)
         bound = bound_config["input"]
         design = parse_design(bound_config.get("sampling_design"))
+        audit_design = EvaluationDesign.from_dict(bound_config["evaluation_design"]) if bound_config.get("evaluation_design") else None
         task_type, class_labels, slice_columns = bound["task_type"], bound["class_labels"], bound["slice_columns"]
     else:
         settings = {**asdict(PairedComparisonConfig()), **{key: value for key, value in settings.items() if value is not None}}
     config = PairedComparisonConfig(**settings)
+    prepared_frames, audit_records = [], []
+    if set(options)-{"training_reference", "reference_complete", "failure_mode"} or options.get("failure_mode", "stop") not in {"stop", "local_only"}:
+        raise ValueError("Unsupported comparison design-audit options")
+    if not audit_design and (options.get("training_reference") or options.get("reference_complete") or options.get("failure_mode", "stop") != "stop"):
+        raise ValueError("Training-reference comparison options require an evaluation design")
+    if audit_design:
+        rules = audit_design.as_dict()
+        if rules["sample_id_column"] != sample_id_column or rules["label_column"] not in (None, target):
+            raise ValueError("Comparison bindings conflict with the declared evaluation design")
+        for role, path in (("model_a", path_a), ("model_b", path_b)):
+            audit_path = local_path.with_name(f"{local_path.stem}_{role}_design_audit.json")
+            protected = {Path(path_a).resolve(), Path(path_b).resolve(), *([Path(options["training_reference"]).resolve()] if options.get("training_reference") else [])}
+            if audit_path.resolve() in protected: raise ValueError("Choose comparison outputs separate from every input")
+            audit_path.unlink(missing_ok=True)
+            prepared = prepare_evaluation(path, audit_design, training_reference=options.get("training_reference"), reference_complete=options.get("reference_complete", False), additional_identifier_columns=design.metadata_columns if design else ())
+            atomic_write_json(audit_path, prepared.artifact)
+            audit_records.append({"model_role": role, "path": str(audit_path), "artifact": prepared.artifact})
+            if prepared.artifact["audit"]["status"] == "fail" and options.get("failure_mode", "stop") == "stop":
+                raise DesignAuditFailure(f"Evaluation design failed before paired scoring; inspect local audit: {audit_path}")
+            prepared_frames.append(prepared.frame)
     result = compare_prediction_tables(
         path_a,
         path_b,
@@ -76,10 +109,15 @@ def compare_prediction_files(
         model_b_name=model_b_name,
         config=config,
         sampling_design=design,
+        frame_a=prepared_frames[0] if prepared_frames else None,
+        frame_b=prepared_frames[1] if prepared_frames else None,
     )
     if definition is not None:
         result["protocol"] = definition.identity()
         result["protocol_definition"] = definition.as_dict()
+    if audit_records:
+        result["design_audits"] = [{**record["artifact"]["audit"], "model_role": record["model_role"]} for record in audit_records]
+        result["design_audits_local"] = audit_records
     artifacts = write_paired_comparison_artifacts(
         json_path=json_path,
         markdown_path=markdown_path,

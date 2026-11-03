@@ -253,6 +253,16 @@
         "uncertainty": "uncertainty/v1",
         "comparison": "paired-comparison-artifact/v1"
       }
+    },
+    "evaluation_design": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "evaluation-design-v1.schema.json"
+        }
+      ]
     }
   },
   "additionalProperties": false

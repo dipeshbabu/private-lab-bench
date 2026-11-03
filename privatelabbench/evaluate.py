@@ -131,6 +131,8 @@ def prediction_bindings(
             ),
         )
     )
+    if selected.empty:
+        raise ValueError("No eligible evaluation rows are available")
     if selected[selected_target].isna().any():
         raise ValueError(
             "Target contains missing labels; resolve them before evaluation"
@@ -230,9 +232,20 @@ def make_evaluation_config(
     quality_policy: Any = None,
     release_policy: Any = None,
     sampling_design: Any = None,
+    evaluation_design: Any = None,
     **bindings: Any,
 ) -> dict[str, Any]:
     definition = resolve_protocol(protocol) if protocol else None
+    from privatelabbench.design_audit import EvaluationDesign
+
+    audit_value = (
+        evaluation_design
+        if evaluation_design is not None
+        else definition.as_dict().get("evaluation_design") if definition else None
+    )
+    audit_design = (
+        EvaluationDesign.from_dict(audit_value) if audit_value is not None else None
+    )
     if definition:
         rules = definition.as_dict()
         if (
@@ -270,6 +283,21 @@ def make_evaluation_config(
                     *[column for column, value in design.critical_slices],
                 ]
             )
+        )
+    if audit_design:
+        rules_audit = audit_design.as_dict()
+        if bindings.get("sample_id_column") not in (
+            None,
+            rules_audit["sample_id_column"],
+        ):
+            raise ValueError("Sample-ID binding conflicts with the evaluation design")
+        bindings["sample_id_column"] = rules_audit["sample_id_column"]
+        from privatelabbench.design_audit import select_eligible
+
+        bindings["frame"] = select_eligible(
+            path,
+            audit_design,
+            additional_identifier_columns=design.metadata_columns if design else (),
         )
     input_cfg = prediction_bindings(path, **bindings)
     if min_slice_size is not None and (
@@ -315,6 +343,8 @@ def make_evaluation_config(
         cfg["quality_gate"] = validate_quality_policy(quality_policy)
     if design:
         cfg["sampling_design"] = design.as_dict()
+    if audit_design:
+        cfg["evaluation_design"] = audit_design.as_dict()
     if release_policy is not None:
         cfg["release"] = validate_policy(release_policy)
     if definition:
@@ -413,6 +443,9 @@ def evaluation_summary(
         )
     if "quality_gate" in summary:
         lines.append(f"Quality gate         {summary['quality_gate']['status']}")
+    if summary.get("design_audit"):
+        audit = summary["design_audit"]
+        lines.append(f"Design audit         {audit['status']} (supplied records only)")
     if summary.get("degradation_summary"):
         changes = summary["degradation_summary"]
         overall = changes["overall"][primary]

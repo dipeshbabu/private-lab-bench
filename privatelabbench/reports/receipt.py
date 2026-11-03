@@ -163,6 +163,8 @@ def build_evaluation_receipt(
             "quality_gate": result.get("quality_gate", {}),
             "protocol": extra.get("evaluation_protocol", {}),
             "degradation_summary": result.get("degradation_summary", {}),
+            "design_audit": result.get("design_audit", {}),
+            "reference_design_audit": result.get("reference_design_audit", {}),
         },
         "privacy": _privacy_summary(report, result),
         "provenance": {"package": manifest.get("package", {}), "attestation_id": attestation.get("attestation_id")},
@@ -178,11 +180,12 @@ def build_evaluation_receipt(
         "quality_gate": result.get("quality_gate", {}),
         "protocol_definition": extra.get("protocol_definition", {}),
         "diagnostics": extra.get("diagnostics_local", {}),
+        "design_audits": extra.get("design_audits_local", []),
         "uncertainty": dict(result.get("uncertainty", {})) if isinstance(result.get("uncertainty"), Mapping) else {},
         "runner": manifest.get("runner", {}),
         "attestation": manifest.get("attestation", {}),
         "manifest_integrity": manifest.get("integrity", {}),
-        "release_evidence": {"gates": [result[key] for key in ("privacy_gate", "aggregate_release") if key in result], "audit": result.get("privacy_risk")},
+        "release_evidence": {"gates": [result[key] for key in ("privacy_gate", "aggregate_release", "design_release_gate") if key in result], "audit": result.get("privacy_risk"), "design_audits": [result[key] for key in ("design_audit", "reference_design_audit") if result.get(key)]},
     }
 
     payload = {
@@ -335,6 +338,10 @@ def render_receipt_markdown(receipt: Mapping[str, Any]) -> str:
     if evaluation.get("degradation_summary", {}).get("schema_version") == "degradation-summary/v1":
         from privatelabbench.eval.degradation import render_degradation
         lines.append(render_degradation(evaluation["degradation_summary"]))
+    for key in ("design_audit", "reference_design_audit"):
+        if evaluation.get(key):
+            from privatelabbench.design_audit import render_design_audit
+            lines.append(render_design_audit(evaluation[key], heading="Reference-cohort design audit" if key.startswith("reference") else "Evaluation-design audit"))
     lines.extend(["", "## Privacy and release", f"- Mechanism mode: {privacy.get('mechanism', {}).get('mode')}", f"- Release status: {privacy.get('release', {}).get('status', 'not_evaluated')}", f"- Privacy audits: {', '.join(privacy.get('audits', {}).keys()) or '(none)'}", "", "## Provenance", f"- Package: {provenance.get('package', {}).get('name')} {provenance.get('package', {}).get('version')}", f"- Attestation ID: {provenance.get('attestation_id')}", "", "## Artifact hashes"])
     artifacts = shareable.get("artifacts", [])
     if artifacts:

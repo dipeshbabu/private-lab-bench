@@ -10,6 +10,8 @@
     "min_samples": {"type": "integer", "minimum": 2, "default": 20},
     "min_cell_size": {"type": "integer", "minimum": 2, "default": 5},
     "require_privacy_audit": {"type": "boolean", "default": true},
+    "require_design_audit": {"type": "boolean", "default": false},
+    "include_design_audit": {"type": "boolean", "default": false},
     "include_input_schema": {"type": "boolean", "default": false},
     "include_quality_gate": {"type": "boolean", "default": false},
     "include_protocol": {"type": "boolean", "default": false},
