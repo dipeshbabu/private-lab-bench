@@ -8,6 +8,7 @@ from typing import Any, Mapping
 from uuid import uuid4
 
 from privatelabbench.reports.integrity import attach_integrity_metadata
+from privatelabbench.privacy.export import check_release, publish_shareable_artifact
 
 
 PAIRED_COMPARISON_ARTIFACT_SCHEMA = "paired-comparison-artifact/v1"
@@ -70,15 +71,11 @@ def build_paired_comparison_artifact(
 
 
 def make_shareable_paired_comparison(
-    artifact: Mapping[str, Any], *, signing_secret: str | None = None
+    artifact: Mapping[str, Any], *, signing_secret: str | None = None, policy: Mapping[str, Any] | None = None
 ) -> dict[str, Any]:
-    payload = {
-        "schema_version": PAIRED_COMPARISON_ARTIFACT_SCHEMA,
-        "comparison_id": artifact.get("comparison_id"),
-        "created_at": artifact.get("created_at"),
-        "scope": "shareable",
-        "shareable": dict(artifact.get("shareable", {})),
-    }
+    decision, payload = check_release(artifact, policy)
+    if payload is None:
+        raise ValueError(f"Shareable comparison blocked: {', '.join(decision.reason_codes)}")
     return attach_integrity_metadata(payload, signing_secret=signing_secret)
 
 
@@ -181,6 +178,7 @@ def write_paired_comparison_artifacts(
     path_a: str | Path,
     path_b: str | Path,
     signing_secret: str | None = None,
+    release_policy: Mapping[str, Any] | None = None,
 ) -> dict[str, Path]:
     local = build_paired_comparison_artifact(
         result=result,
@@ -188,17 +186,19 @@ def write_paired_comparison_artifacts(
         path_b=path_b,
         signing_secret=signing_secret,
     )
-    shareable = make_shareable_paired_comparison(local, signing_secret=signing_secret)
     local_path = Path(json_path)
     shareable_path = local_path.with_name(f"{local_path.stem}.shareable{local_path.suffix}")
+    shareable_path.unlink(missing_ok=True)
     markdown_output = Path(markdown_path)
     for path in (local_path, shareable_path, markdown_output):
         path.parent.mkdir(parents=True, exist_ok=True)
     local_path.write_text(json.dumps(local, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    shareable_path.write_text(json.dumps(shareable, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    markdown_output.write_text(render_paired_comparison_markdown(shareable), encoding="utf-8")
-    return {
+    decision = publish_shareable_artifact(local, release_policy, shareable_path, signing_secret=signing_secret)
+    markdown_output.write_text("LOCAL ONLY: review export policy before sharing.\n\n" + render_paired_comparison_markdown(local), encoding="utf-8")
+    paths = {
         "json_report": local_path,
-        "shareable_json_report": shareable_path,
         "markdown_report": markdown_output,
     }
+    if decision.decision == "allow":
+        paths["shareable_json_report"] = shareable_path
+    return paths

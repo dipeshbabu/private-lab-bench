@@ -71,7 +71,11 @@ def test_pack_runs_match_known_good_receipt_semantics(pack_ref):
     assert generated["evaluation"]["sample_counts"] == expected["evaluation"]["sample_counts"]
     assert generated["evaluation"]["input_schema"] == expected["evaluation"]["input_schema"]
     assert generated["evaluation"]["metrics"] == pytest.approx(expected["evaluation"]["metrics"])
-    assert generated["evaluation"]["slices"]
+    if pack.id == "community-molecules-regression":
+        # Singleton categories must not be reconstructed from other groups + total.
+        assert generated["evaluation"]["slices"] == {}
+    else:
+        assert generated["evaluation"]["slices"]
 
 
 def test_protein_pack_is_self_contained_synthetic_data():
