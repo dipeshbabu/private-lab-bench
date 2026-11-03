@@ -26,6 +26,7 @@
       "propertyNames": {
         "enum": [
           "mae",
+          "spearman",
           "rmse",
           "r2",
           "accuracy",
@@ -152,7 +153,7 @@
         }
       },
       "patternProperties": {
-        "^worst_(mae|rmse|r2|accuracy|f1|auroc|macro_f1|weighted_f1|log_loss|macro_auroc_ovr)_(min|max)$": {
+        "^worst_(mae|rmse|r2|spearman|accuracy|f1|auroc|macro_f1|weighted_f1|log_loss|macro_auroc_ovr)_(min|max)$": {
           "type": "number"
         }
       },
@@ -270,6 +271,7 @@
     "metric": {
       "enum": [
         "mae",
+        "spearman",
         "rmse",
         "r2",
         "accuracy",

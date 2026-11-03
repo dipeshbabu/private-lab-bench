@@ -166,6 +166,22 @@ def build_parser() -> argparse.ArgumentParser:
     matbench_evaluate.add_argument("--release-policy", default=None)
     matbench_evaluate.add_argument("--output-dir", default="reports/matbench")
 
+    sub.add_parser("proteingym-list", help="List the pinned DMS substitution assay subset.")
+    protein_prepare = sub.add_parser("proteingym-prepare", help="Verify pinned ProteinGym assays and create a target-free prediction template.")
+    protein_prepare.add_argument("--assay", action="append", required=True)
+    protein_prepare.add_argument("--cache-dir", default="outputs/proteingym")
+    protein_prepare.add_argument("--download", action="store_true")
+    protein_prepare.add_argument("--out", required=True)
+    protein_evaluate = sub.add_parser("proteingym-evaluate", help="Evaluate model scores within each pinned assay and apply declared protein/function aggregation.")
+    protein_evaluate.add_argument("predictions")
+    protein_evaluate.add_argument("--assay", action="append", required=True)
+    protein_evaluate.add_argument("--cache-dir", default="outputs/proteingym")
+    protein_evaluate.add_argument("--model", required=True, help="Declared model-id@revision.")
+    protein_evaluate.add_argument("--score-direction", choices=["higher","lower"], required=True, help="Which original model-score direction predicts higher fitness.")
+    protein_evaluate.add_argument("--prediction-column", default="prediction")
+    protein_evaluate.add_argument("--release-policy", default=None)
+    protein_evaluate.add_argument("--output-dir", default="reports/proteingym")
+
     run = sub.add_parser("run", help="Run a local evaluation task from a YAML config file.")
     run.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
     run.add_argument("--protocol", default=None, help="Exact plb://namespace/name@version or local protocol YAML.")
@@ -918,6 +934,9 @@ def main() -> int:
     if args.command in {"matbench-prepare", "matbench-evaluate"}:
         from privatelabbench.integrations.matbench import matbench_command
         return matbench_command(args)
+    if args.command in {"proteingym-list", "proteingym-prepare", "proteingym-evaluate"}:
+        from privatelabbench.integrations.proteingym import proteingym_command
+        return proteingym_command(args)
     if args.command == "run":
         return run_from_config(args)
     if args.command in {"list-protocols", "show-protocol"}:

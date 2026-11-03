@@ -157,6 +157,20 @@ jobs:
       - name: Check fold contracts and actual upstream metric agreement
         run: pytest -q tests/test_matbench_integration.py
 
+  proteingym-adapter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install optional protein baseline tooling
+        run: pip install -e '.[dev,proteingym]'
+      - name: Check assay contracts, tied ranks, and scoped uncertainty
+        run: pytest -q tests/test_proteingym_integration.py tests/test_spearman_metrics.py
+
   docs:
     runs-on: ubuntu-latest
     steps:

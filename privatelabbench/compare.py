@@ -89,7 +89,10 @@ def compare_prediction_files(
             protected = {Path(path_a).resolve(), Path(path_b).resolve(), *([Path(options["training_reference"]).resolve()] if options.get("training_reference") else [])}
             if audit_path.resolve() in protected: raise ValueError("Choose comparison outputs separate from every input")
             audit_path.unlink(missing_ok=True)
-            prepared = prepare_evaluation(path, audit_design, training_reference=options.get("training_reference"), reference_complete=options.get("reference_complete", False), additional_identifier_columns=design.metadata_columns if design else ())
+            identifiers=tuple(design.metadata_columns) if design else ()
+            group=definition.as_dict().get("evaluation_group") if definition is not None else None
+            if group: identifiers=(*identifiers,group["column"])
+            prepared = prepare_evaluation(path, audit_design, training_reference=options.get("training_reference"), reference_complete=options.get("reference_complete", False), additional_identifier_columns=identifiers)
             atomic_write_json(audit_path, prepared.artifact)
             audit_records.append({"model_role": role, "path": str(audit_path), "artifact": prepared.artifact})
             if prepared.artifact["audit"]["status"] == "fail" and options.get("failure_mode", "stop") == "stop":
@@ -111,6 +114,7 @@ def compare_prediction_files(
         sampling_design=design,
         frame_a=prepared_frames[0] if prepared_frames else None,
         frame_b=prepared_frames[1] if prepared_frames else None,
+        evaluation_group=definition.as_dict().get("evaluation_group") if definition is not None else None,
     )
     if definition is not None:
         result["protocol"] = definition.identity()

@@ -315,6 +315,7 @@
     "metric": {
       "enum": [
         "mae",
+        "spearman",
         "rmse",
         "r2",
         "accuracy",

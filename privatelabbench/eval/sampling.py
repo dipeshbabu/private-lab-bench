@@ -422,7 +422,7 @@ def bootstrap_samples(
     values = {name: np.full(resamples, np.nan, dtype=float) for name in metric_names}
     for index in range(resamples):
         selected = plan.draw(rng)
-        scores = _metrics_for_task(task_type, y[selected], predictions[selected])
+        scores = _metrics_for_task(task_type, y[selected], predictions[selected],metric_names=metric_names)
         for name in metric_names:
             value = float(scores.get(name, float("nan")))
             if math.isfinite(value):
@@ -533,7 +533,7 @@ def adjust_pvalues(
 
 
 def metric_intervals(
-    y, predictions, *, task_type, config, design: SamplingDesign, metadata: pd.DataFrame
+    y, predictions, *, task_type, config, design: SamplingDesign, metadata: pd.DataFrame,metric_names=None
 ) -> dict[str, Any]:
     from privatelabbench.eval.uncertainty import _interval_entry, _metrics_for_task
 
@@ -565,7 +565,7 @@ def metric_intervals(
     )
     if status != "evaluated":
         return {**output, "status": status}
-    points = _metrics_for_task(task_type, y, predictions)
+    points = _metrics_for_task(task_type, y, predictions,metric_names=metric_names)
     try:
         samples = bootstrap_samples(
             y,

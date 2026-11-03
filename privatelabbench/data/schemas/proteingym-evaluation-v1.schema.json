@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Assay-level ProteinGym DMS evaluation v1",
+  "type": "object", "required": ["schema_version", "evaluation_id", "created_at", "scope", "shareable", "integrity"],
+  "properties": {
+    "schema_version": {"const": "proteingym-evaluation/v1"}, "evaluation_id": {"type": "string"}, "created_at": {"type": "string"}, "scope": {"enum": ["local", "shareable"]},
+    "shareable": {
+      "type": "object", "required": ["benchmark", "protocol", "model", "original_score_direction", "per_assay", "per_protein_function", "per_function", "per_taxon", "metrics", "status", "aggregation", "aggregation_precision", "uncertainty_scope", "benchmark_scope", "full_benchmark_assay_count", "reference_commit"],
+      "properties": {
+        "benchmark": {"type": "object", "required": ["id", "version", "suite", "domain", "protocol"], "properties": {"id": {"const": "proteingym-dms-substitutions"}, "version": {"type": "string"}, "suite": {"const": "proteingym"}, "domain": {"const": "proteins"}, "protocol": {"const": "prediction-table/v1"}}, "additionalProperties": false},
+        "protocol": {"type": "object", "required": ["id", "version", "sha256", "metrics", "primary_metric"], "properties": {"id": {"type": "string"}, "version": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "metrics": {"const": ["spearman"]}, "primary_metric": {"const": "spearman"}}, "additionalProperties": false},
+        "model": {"type": "object", "required": ["id", "revision"], "properties": {"id": {"type": "string"}, "revision": {"type": "string"}}, "additionalProperties": false},
+        "original_score_direction": {"enum": ["higher", "lower"]},
+        "per_assay": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["assay", "uniprot_id", "function", "taxon", "n_variants", "spearman", "aggregation_spearman"], "properties": {"assay": {"type": "string"}, "uniprot_id": {"type": "string"}, "function": {"type": "string"}, "taxon": {"type": "string"}, "n_variants": {"type": "integer", "minimum": 2}, "spearman": {"$ref": "#/$defs/coefficient"}, "aggregation_spearman": {"$ref": "#/$defs/coefficient"}}, "additionalProperties": false}},
+        "per_protein_function": {"type": "array", "items": {"type": "object", "required": ["uniprot_id", "function", "n_assays", "spearman"], "properties": {"uniprot_id": {"type": "string"}, "function": {"type": "string"}, "n_assays": {"type": "integer", "minimum": 1}, "spearman": {"$ref": "#/$defs/coefficient"}}, "additionalProperties": false}},
+        "per_function": {"type": "array", "items": {"type": "object", "required": ["function", "n_proteins", "spearman"], "properties": {"function": {"type": "string"}, "n_proteins": {"type": "integer", "minimum": 1}, "spearman": {"$ref": "#/$defs/coefficient"}}, "additionalProperties": false}},
+        "per_taxon": {"type": "array", "items": {"type": "object", "required": ["taxon", "n_proteins", "spearman"], "properties": {"taxon": {"type": "string"}, "n_proteins": {"type": "integer", "minimum": 1}, "spearman": {"$ref": "#/$defs/coefficient"}}, "additionalProperties": false}},
+        "metrics": {"type": "object", "required": ["spearman"], "properties": {"spearman": {"$ref": "#/$defs/coefficient"}}, "additionalProperties": false},
+        "status": {"enum": ["evaluated", "undefined_assay_score"]}, "aggregation": {"const": "mean_assays_within_protein_function_then_mean_proteins_within_function_then_mean_functions"}, "aggregation_precision": {"const": "assay_scores_rounded_to_3_decimals_before_grouping"}, "uncertainty_scope": {"const": "point_estimates_no_aggregate_bootstrap"}, "benchmark_scope": {"const": "selected_assay_subset"}, "full_benchmark_assay_count": {"type": "integer", "minimum": 1}, "reference_commit": {"type": "string", "pattern": "^[a-f0-9]{40}$"}, "release": {"type": "object"}
+      }, "additionalProperties": false
+    }, "local": {"type": "object"}, "integrity": {"type": "object"}, "signer_statement": {"type": "object"}
+  },
+  "allOf": [{"if": {"properties": {"scope": {"const": "shareable"}}}, "then": {"not": {"required": ["local"]}}}],
+  "additionalProperties": false,
+  "$defs": {"coefficient": {"type": ["number", "null"], "minimum": -1, "maximum": 1}}
+}

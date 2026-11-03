@@ -1,0 +1,259 @@
+{
+  "actual_upstream_pipeline_checked": true,
+  "archive_sha256": "3a83766254ac9ac9984ec25cb73c6e010ea4418f5e35f143933e6b6e6473b921",
+  "assay_count": 7,
+  "benchmark_scope": "selected_assay_subset",
+  "data_provenance": "real_public_upstream_benchmark",
+  "full_benchmark_assay_count": 217,
+  "limitations": [
+    "BLOSUM62 substitution sums and fixed-random scores are reproducibility controls, not competitive protein AI model claims.",
+    "The selected subset is not the full ProteinGym leaderboard; no aggregate uncertainty or clinical validation is claimed.",
+    "Only aggregate statistics are retained here; sequences, mutation rows, and raw model scores remain local."
+  ],
+  "models": [
+    {
+      "actual_upstream_hierarchical_mean_3dp": 0.224,
+      "assay_receipts_verified": true,
+      "hierarchical_mean": 0.2242,
+      "max_error": 5.551115123125783e-17,
+      "model": {
+        "id": "blosum62",
+        "revision": "biopython-1.88"
+      },
+      "per_assay": [
+        {
+          "absolute_error": 5.551115123125783e-17,
+          "aggregation_spearman": 0.268,
+          "assay": "BLAT_ECOLX_Stiffler_2015",
+          "function": "OrganismalFitness",
+          "n_variants": 4996,
+          "spearman": 0.26815572869491194,
+          "taxon": "Prokaryote",
+          "uniprot_id": "BLAT_ECOLX",
+          "upstream_spearman": 0.2681557286949119
+        },
+        {
+          "absolute_error": 0.0,
+          "aggregation_spearman": 0.077,
+          "assay": "OTU7A_HUMAN_Tsuboyama_2023_2L2D",
+          "function": "Stability",
+          "n_variants": 635,
+          "spearman": 0.07678017243173499,
+          "taxon": "Human",
+          "uniprot_id": "OTU7A_HUMAN",
+          "upstream_spearman": 0.07678017243173499
+        },
+        {
+          "absolute_error": 2.7755575615628914e-17,
+          "aggregation_spearman": 0.148,
+          "assay": "RL40A_YEAST_Mavor_2016",
+          "function": "OrganismalFitness",
+          "n_variants": 1253,
+          "spearman": 0.14752480796298068,
+          "taxon": "Eukaryote",
+          "uniprot_id": "RL40A_YEAST",
+          "upstream_spearman": 0.14752480796298065
+        },
+        {
+          "absolute_error": 0.0,
+          "aggregation_spearman": 0.18,
+          "assay": "RL40A_YEAST_Roscoe_2013",
+          "function": "OrganismalFitness",
+          "n_variants": 1195,
+          "spearman": 0.18014173363775576,
+          "taxon": "Eukaryote",
+          "uniprot_id": "RL40A_YEAST",
+          "upstream_spearman": 0.18014173363775576
+        },
+        {
+          "absolute_error": 0.0,
+          "aggregation_spearman": 0.315,
+          "assay": "SPIKE_SARS2_Starr_2020_binding",
+          "function": "Binding",
+          "n_variants": 3802,
+          "spearman": 0.3151250527713011,
+          "taxon": "Virus",
+          "uniprot_id": "SPIKE_SARS2",
+          "upstream_spearman": 0.3151250527713011
+        },
+        {
+          "absolute_error": 0.0,
+          "aggregation_spearman": 0.25,
+          "assay": "SPIKE_SARS2_Starr_2020_expression",
+          "function": "Expression",
+          "n_variants": 3798,
+          "spearman": 0.25030626864546085,
+          "taxon": "Virus",
+          "uniprot_id": "SPIKE_SARS2",
+          "upstream_spearman": 0.25030626864546085
+        },
+        {
+          "absolute_error": 5.551115123125783e-17,
+          "aggregation_spearman": 0.263,
+          "assay": "UBE4B_MOUSE_Starita_2013",
+          "function": "Activity",
+          "n_variants": 899,
+          "spearman": 0.262937967146221,
+          "taxon": "Eukaryote",
+          "uniprot_id": "UBE4B_MOUSE",
+          "upstream_spearman": 0.2629379671462209
+        }
+      ],
+      "per_function": [
+        {
+          "function": "Activity",
+          "n_proteins": 1,
+          "spearman": 0.263
+        },
+        {
+          "function": "Binding",
+          "n_proteins": 1,
+          "spearman": 0.315
+        },
+        {
+          "function": "Expression",
+          "n_proteins": 1,
+          "spearman": 0.25
+        },
+        {
+          "function": "OrganismalFitness",
+          "n_proteins": 2,
+          "spearman": 0.216
+        },
+        {
+          "function": "Stability",
+          "n_proteins": 1,
+          "spearman": 0.077
+        }
+      ]
+    },
+    {
+      "actual_upstream_hierarchical_mean_3dp": -0.003,
+      "assay_receipts_verified": true,
+      "hierarchical_mean": -0.0034999999999999996,
+      "max_error": 1.0408340855860843e-17,
+      "model": {
+        "id": "fixed-random",
+        "revision": "seed-13"
+      },
+      "per_assay": [
+        {
+          "absolute_error": 8.673617379884035e-19,
+          "aggregation_spearman": 0.006,
+          "assay": "BLAT_ECOLX_Stiffler_2015",
+          "function": "OrganismalFitness",
+          "n_variants": 4996,
+          "spearman": 0.005710119378224164,
+          "taxon": "Prokaryote",
+          "uniprot_id": "BLAT_ECOLX",
+          "upstream_spearman": 0.005710119378224163
+        },
+        {
+          "absolute_error": 0.0,
+          "aggregation_spearman": -0.018,
+          "assay": "OTU7A_HUMAN_Tsuboyama_2023_2L2D",
+          "function": "Stability",
+          "n_variants": 635,
+          "spearman": -0.01827675236803958,
+          "taxon": "Human",
+          "uniprot_id": "OTU7A_HUMAN",
+          "upstream_spearman": -0.01827675236803958
+        },
+        {
+          "absolute_error": 4.336808689942018e-19,
+          "aggregation_spearman": -0.003,
+          "assay": "RL40A_YEAST_Mavor_2016",
+          "function": "OrganismalFitness",
+          "n_variants": 1253,
+          "spearman": -0.00273345003146633,
+          "taxon": "Eukaryote",
+          "uniprot_id": "RL40A_YEAST",
+          "upstream_spearman": -0.0027334500314663297
+        },
+        {
+          "absolute_error": 3.469446951953614e-18,
+          "aggregation_spearman": -0.027,
+          "assay": "RL40A_YEAST_Roscoe_2013",
+          "function": "OrganismalFitness",
+          "n_variants": 1195,
+          "spearman": -0.02665346716510302,
+          "taxon": "Eukaryote",
+          "uniprot_id": "RL40A_YEAST",
+          "upstream_spearman": -0.026653467165103025
+        },
+        {
+          "absolute_error": 1.734723475976807e-18,
+          "aggregation_spearman": -0.015,
+          "assay": "SPIKE_SARS2_Starr_2020_binding",
+          "function": "Binding",
+          "n_variants": 3802,
+          "spearman": -0.01543653403129838,
+          "taxon": "Virus",
+          "uniprot_id": "SPIKE_SARS2",
+          "upstream_spearman": -0.015436534031298382
+        },
+        {
+          "absolute_error": 1.0408340855860843e-17,
+          "aggregation_spearman": 0.021,
+          "assay": "SPIKE_SARS2_Starr_2020_expression",
+          "function": "Expression",
+          "n_variants": 3798,
+          "spearman": 0.020540018725162045,
+          "taxon": "Virus",
+          "uniprot_id": "SPIKE_SARS2",
+          "upstream_spearman": 0.020540018725162056
+        },
+        {
+          "absolute_error": 0.0,
+          "aggregation_spearman": -0.001,
+          "assay": "UBE4B_MOUSE_Starita_2013",
+          "function": "Activity",
+          "n_variants": 899,
+          "spearman": -0.001020213523919984,
+          "taxon": "Eukaryote",
+          "uniprot_id": "UBE4B_MOUSE",
+          "upstream_spearman": -0.001020213523919984
+        }
+      ],
+      "per_function": [
+        {
+          "function": "Activity",
+          "n_proteins": 1,
+          "spearman": -0.001
+        },
+        {
+          "function": "Binding",
+          "n_proteins": 1,
+          "spearman": -0.015
+        },
+        {
+          "function": "Expression",
+          "n_proteins": 1,
+          "spearman": 0.021
+        },
+        {
+          "function": "OrganismalFitness",
+          "n_proteins": 2,
+          "spearman": -0.0045
+        },
+        {
+          "function": "Stability",
+          "n_proteins": 1,
+          "spearman": -0.018
+        }
+      ]
+    }
+  ],
+  "reference_commit": "144fe22b07dfaeec2b366f2346203a9838a55b4c",
+  "reference_file_sha256": "a8f498011532a74aa9fe556a50555a75e928c5837d19c06a87592ae04049b308",
+  "reference_scorer_sha256": "0002bc1b031c02dc2d67fde53da092c8fd301415645e8e83b425b4183570eba2",
+  "schema_version": "proteingym-parity-result/v1",
+  "tolerance": 1e-12,
+  "versions": {
+    "biopython": "1.88",
+    "numpy": "2.4.6",
+    "pandas": "3.1.0",
+    "scikit-learn": "1.9.1",
+    "scipy": "1.17.1"
+  }
+}

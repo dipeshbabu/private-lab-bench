@@ -26,7 +26,7 @@ ID_PATTERN = r"plb://[a-z0-9][a-z0-9-]*(?:/[a-z0-9][a-z0-9-]*)+"
 VERSION_PATTERN = r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
 WITHDRAWN_PROTOCOLS = {"plb://generic/binary@1.0.0": "Binary label order was unspecified. Re-evaluate with plb://generic/binary@1.0.1 or an explicit versioned definition with ordered class labels."}
 TASK_METRICS = {
-    "regression": {"mae", "rmse", "r2"},
+    "regression": {"mae", "rmse", "r2", "spearman"},
     "classification": {"accuracy", "f1", "auroc"},
     "multiclass": {"accuracy", "macro_f1", "weighted_f1", "log_loss", "macro_auroc_ovr"},
 }
@@ -80,6 +80,7 @@ class EvaluationProtocol:
         audit_payload = raw.pop("evaluation_design", None)
         ranking_payload = raw.pop("ranking", None)
         target_unit = raw.pop("target_unit", None)
+        evaluation_group = raw.pop("evaluation_group", None)
         payload = deepcopy(_object(raw, fields, "Protocol"))
         if payload["schema_version"] != PROTOCOL_SCHEMA:
             raise ValueError(f"Expected {PROTOCOL_SCHEMA}")
@@ -155,6 +156,11 @@ class EvaluationProtocol:
             if not isinstance(target_unit,str) or not target_unit.strip() or len(target_unit)>128 or any(ord(char)<32 for char in target_unit):
                 raise ValueError("Protocol target_unit must be a bounded unit declaration")
             payload["target_unit"] = target_unit
+        if evaluation_group is not None:
+            group = _object(evaluation_group,{"column","max_groups"},"evaluation_group")
+            if group["column"] not in required or type(group["max_groups"]) is not int or group["max_groups"] != 1:
+                raise ValueError("A single evaluation group must name a required slice column and max_groups=1")
+            payload["evaluation_group"] = deepcopy(group)
         return cls(json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8"))
 
     def as_dict(self) -> dict[str, Any]:
