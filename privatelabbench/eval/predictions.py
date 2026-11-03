@@ -11,6 +11,7 @@ from privatelabbench.eval.metrics import (
     multiclass_metrics,
     regression_metrics,
 )
+from privatelabbench.eval.slices import iter_slice_groups
 from privatelabbench.eval.uncertainty import BootstrapConfig, bootstrap_metric_intervals
 from privatelabbench.privacy.attacks import membership_inference_risk
 from privatelabbench.tasks.molecules import infer_task_type
@@ -148,6 +149,16 @@ def _resolve_prediction_columns(
     raise ValueError(
         "A prediction table requires prediction_column or prediction_columns."
     )
+
+
+def validate_prediction_roles(*, target, prediction_columns, sample_id_column):
+    columns = [target, *prediction_columns]
+    if sample_id_column:
+        columns.append(sample_id_column)
+    if len(set(columns)) != len(columns):
+        raise ValueError(
+            "Target, predictions, and stable sample IDs must use distinct columns"
+        )
 
 
 def _infer_or_validate_task_type(
@@ -331,11 +342,7 @@ def _slice_metrics(
     slice_counter = 0
     for column in slice_columns:
         column_results: dict[str, dict[str, object]] = {}
-        for value, indices in df.groupby(
-            column, dropna=False, sort=True
-        ).indices.items():
-            index_array = np.asarray(indices, dtype=int)
-            key = "<NA>" if pd.isna(value) else str(value)
+        for key, index_array in iter_slice_groups(df, column):
             entry: dict[str, object] = {"n": int(len(index_array))}
             if sampling_design:
                 from privatelabbench.eval.sampling import plan_sampling
@@ -460,6 +467,11 @@ def evaluate_prediction_table(
     prediction_cols = _resolve_prediction_columns(
         prediction_column=prediction_column,
         prediction_columns=prediction_columns,
+    )
+    validate_prediction_roles(
+        target=target,
+        prediction_columns=prediction_cols,
+        sample_id_column=sample_id_column,
     )
     configured_metadata = _normalize_string_list(
         metadata_columns, label="metadata_columns"

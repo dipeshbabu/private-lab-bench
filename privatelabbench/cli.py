@@ -843,6 +843,9 @@ def run_from_config(args: argparse.Namespace) -> int:
     except DesignAuditFailure as exc:
         print(str(exc))
         return 1
+    except (ValueError, TypeError, KeyError, OSError, yaml.YAMLError) as exc:
+        print(f"Run rejected: {exc}")
+        return 2
     print_run_summary(summary)
     _print_receipt_paths(summary)
     if any(
@@ -1670,7 +1673,17 @@ def verify_manifest_command(args: argparse.Namespace) -> int:
     return 0 if result["valid"] else 1
 
 
+def _validate_legacy_report_paths(args: argparse.Namespace, inputs) -> None:
+    from privatelabbench.core.local_io import validate_output_paths
+
+    outputs = [args.report]
+    if getattr(args, "json_report", None):
+        outputs.append(args.json_report)
+    validate_output_paths(inputs, outputs)
+
+
 def eval_molecules(args: argparse.Namespace) -> int:
+    _validate_legacy_report_paths(args, [args.csv_path])
     dataset = load_molecule_csv(
         args.csv_path,
         target=args.target,
@@ -1709,6 +1722,9 @@ def eval_molecules(args: argparse.Namespace) -> int:
 
 
 def eval_federated(args: argparse.Namespace) -> int:
+    _validate_legacy_report_paths(
+        args, [args.client_dir, *Path(args.client_dir).glob("*.csv")]
+    )
     privacy_config = make_privacy_config(args)
     result = evaluate_federated_directory(
         args.client_dir,
@@ -1743,6 +1759,7 @@ def eval_federated(args: argparse.Namespace) -> int:
 
 
 def eval_predictions(args: argparse.Namespace) -> int:
+    _validate_legacy_report_paths(args, [args.csv_path])
     privacy_config = make_privacy_config(args)
     result = evaluate_prediction_csv(
         args.csv_path,
@@ -1905,12 +1922,17 @@ def main() -> int:
         return verify_report_command(args)
     if args.command == "verify-manifest":
         return verify_manifest_command(args)
-    if args.command == "eval-molecules":
-        return eval_molecules(args)
-    if args.command == "eval-federated":
-        return eval_federated(args)
-    if args.command == "eval-predictions":
-        return eval_predictions(args)
+    legacy_evaluators = {
+        "eval-molecules": eval_molecules,
+        "eval-federated": eval_federated,
+        "eval-predictions": eval_predictions,
+    }
+    if args.command in legacy_evaluators:
+        try:
+            return legacy_evaluators[args.command](args)
+        except (ValueError, TypeError, OSError) as exc:
+            print(f"Evaluation rejected: {exc}")
+            return 2
     parser.error(f"Unknown command: {args.command}")
     return 2
 

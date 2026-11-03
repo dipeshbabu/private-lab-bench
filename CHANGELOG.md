@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Reject report paths that would overwrite input CSVs or another report in the legacy evaluation commands, including hard-link aliases.
+- Make config validation and execution resolve relative inputs with the same configuration-first rules.
+- Reject overlapping target, prediction, and sample-ID columns in prediction-table and paired evaluation.
+- Reject ambiguous slice labels instead of silently replacing one group's results with another's.
+- Report invalid config-run input with a concise rejection and exit code 2, preserving the distinct exit code for failed design audits.
+
 ## v0.1.1 — 2026-11-03
 
 ### Fixed

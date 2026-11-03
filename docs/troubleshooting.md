@@ -37,7 +37,7 @@ If platform-specific RDKit packaging causes problems, use a Python/environment w
 
 ## Config paths behave differently
 
-Input paths may be absolute, relative to the working directory when they exist there, or relative to the config file. Report paths are written relative to the current working directory unless absolute paths are supplied.
+Relative input paths resolve beside the config file first. If the file is absent there, both validation and execution fall back to the current working directory. Absolute input paths are used as supplied. Report paths are relative to the current working directory unless absolute paths are supplied.
 
 Use `plb validate-config` before a long run.
 
