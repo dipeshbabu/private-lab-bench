@@ -26,7 +26,7 @@ cd private-lab-bench
 python -m venv .venv-case
 # Activate .venv-case with your shell's normal activation command.
 python -m pip install -e '.[dev,tdc,signing]' -c docs/case_study/constraints.txt
-python scripts/caco2_case_study.py --download --cache-dir outputs/tdc --output-dir outputs/caco2-case
+python -m scripts.caco2_case_study --download --cache-dir outputs/tdc --output-dir outputs/caco2-case
 ```
 
 No released PyPI package is assumed. The repository's fresh publication remains on maintainer hold. Data downloads stay local and come from the [TDC benchmark workflow](tdc_admet.md). Use an empty output directory for each run.
