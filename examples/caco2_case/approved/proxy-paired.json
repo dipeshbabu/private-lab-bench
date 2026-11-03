@@ -1,10 +1,10 @@
 {
-  "comparison_id": "6e0ef3d3-1452-4311-9a1b-cd8daf7a79c4",
-  "created_at": "2026-11-03T16:44:06.487530+00:00",
+  "comparison_id": "db77906e-da1f-47a7-9083-768d4143da4c",
+  "created_at": "2026-11-03T18:23:56.262904+00:00",
   "integrity": {
     "algorithm": "sha256",
-    "payload_sha256": "f4ffc84342a20802979d464bb530d70a6c7c69fc1b8834f43ba2f5f110da8f0d",
-    "signature": "25xF8S/AlYD4mzxq5wyqfs6roPpgvu4Mxd0r5OAL/F4zm+GTS9VFPZO+sRlJ5jCnUYxymdLe258jtdLh6eijAg==",
+    "payload_sha256": "997c2bf3db1b07a5714f1e1c2f729b03de5648688bd67925d1e15b4261f2ae70",
+    "signature": "exW8C2w6HLv7Rc/tmSKir9XmLwcpHe2i6ASgPEStODxeDB6gi+F239NC+e1sZfULOQQJfvcoIbeaZbGOzEpcDw==",
     "signature_algorithm": "ed25519",
     "signed": true
   },
@@ -277,7 +277,7 @@
   },
   "signer_statement": {
     "evaluation_code": {
-      "package_version": "0.11.0",
+      "package_version": "0.1.0",
       "python_version": "3.11.15"
     },
     "key_id": "caco2-case-example-v1",

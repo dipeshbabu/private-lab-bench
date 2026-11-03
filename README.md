@@ -6,6 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/dipeshbabu/private-lab-bench/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/dipeshbabu/private-lab-bench/ci.yml?branch=main&label=build&style=flat-square"></a>
+  <a href="https://pypi.org/project/private-lab-bench/"><img alt="PyPI" src="https://img.shields.io/pypi/v/private-lab-bench?style=flat-square"></a>
   <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/pyproject.toml"><img alt="Python 3.10, 3.11, and 3.12" src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue?style=flat-square"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-green?style=flat-square"></a>
 </p>
@@ -25,11 +26,9 @@ Evaluation runs locally without an account, hosted service, or data upload.
 
 ## Installation
 
-Use **Python 3.10 or later**. Install from source while the first PyPI release is pending:
+Use **Python 3.10 or later**. Create an environment for **v0.1.0**:
 
 ```sh
-git clone https://github.com/dipeshbabu/private-lab-bench.git
-cd private-lab-bench
 python -m venv .venv
 ```
 
@@ -42,11 +41,11 @@ source .venv/bin/activate
 # Windows PowerShell
 .venv\Scripts\Activate.ps1
 
-python -m pip install -e .
+python -m pip install private-lab-bench==0.1.0
 plb --help
 ```
 
-The `privatelabbench` command is also available. Optional molecular featurization uses `python -m pip install -e '.[rdkit]'`. See the [installation guide](docs/install.md) for details.
+The `privatelabbench` command is also available. Optional molecular featurization uses `python -m pip install 'private-lab-bench[rdkit]==0.1.0'`. See the [installation guide](docs/install.md) for source/development installs, or run the [quickstart notebook in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.0/examples/notebooks/quickstart.ipynb).
 
 ## Run Your First Evaluation
 
