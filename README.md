@@ -110,6 +110,8 @@ Combine compatible shared receipts with `plb aggregate lab-a.shareable.json lab-
 
 Inspect cohort changes with `plb evaluate current.csv --reference reference.csv --slice site`. [Reference/current diagnostics](docs/degradation.md) report performance degradation, slice prevalence, and selected distribution changes, with explicit uncertainty and release controls.
 
+Track the same model over repeated evaluations with [`plb trend`](docs/trends.md). It compares verified shareable receipts at declared collection times, retains uncertainty and quality decisions, and reports changing slices without needing prior raw datasets.
+
 For repeated or nested observations, declare a [sampling design](docs/sampling_design.md) to resample independent clusters and keep paired models aligned. Optional slice-test families record dependence assumptions and multiplicity adjustments.
 
 Check declared split integrity before scoring with `plb audit-design` or `plb evaluate --evaluation-design design.yaml`. [Evaluation-design audits](docs/evaluation_design.md) detect supported overlap/group/time violations and keep unavailable training evidence explicit.

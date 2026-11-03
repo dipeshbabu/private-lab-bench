@@ -155,6 +155,23 @@ def build_parser() -> argparse.ArgumentParser:
     aggregate.add_argument("--release-policy", default=None, help="Reviewed export policy approving public site/model labels.")
     aggregate.add_argument("--out", default="reports/cross_site_aggregate.json", help="Local aggregate artifact; optional public sibling uses .shareable.json.")
 
+    trend = sub.add_parser("trend", help="Compare verified shareable receipts over explicitly declared collection times.")
+    trend.add_argument("inputs", nargs="+")
+    trend.add_argument("--time", action="append", required=True, help="One ISO date or timezone-aware timestamp per receipt, in chronological order.")
+    trend.add_argument("--series", required=True, help="Explicit evaluation-series-id@revision.")
+    trend.add_argument("--model", required=True, help="Exact model-id@revision, checked against available source identity claims.")
+    trend.add_argument("--metric", default=None)
+    trend.add_argument("--reference-index", type=int, default=0, help="Zero-based reference period, default first.")
+    trend.add_argument("--practical-threshold", type=float, default=0.0)
+    trend.add_argument("--prevalence-threshold", type=float, default=0.1)
+    trend.add_argument("--critical-slice", action="append", default=[], help="Explicit column=value pair; scans remain exploratory.")
+    trend.add_argument("--quality-policy", default=None)
+    trend.add_argument("--release-policy", default=None)
+    trend.add_argument("--trust-store", default=None)
+    trend.add_argument("--require-trusted-signer", action="store_true")
+    trend.add_argument("--signing-secret", default=None)
+    trend.add_argument("--out", default="reports/longitudinal_series.json")
+
     validate = sub.add_parser("validate-config", help="Validate a YAML config before running it.")
     validate.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
 
@@ -874,6 +891,9 @@ def main() -> int:
         return gate_command(args)
     if args.command == "aggregate":
         return aggregate_command(args)
+    if args.command == "trend":
+        from privatelabbench.trends import trend_command
+        return trend_command(args)
     if args.command == "validate-config":
         return validate_config_command(args)
     if args.command == "list-tasks":
