@@ -542,8 +542,64 @@ def _attach_design_audits(config: RunnerConfig, summary: dict[str, Any]) -> None
     _attach_report_identity(summary, report_path, {})
 
 
+def _validate_run_paths(config: RunnerConfig) -> None:
+    """Protect source data and definitions before invalidating or writing reports."""
+    from privatelabbench.core.local_io import validate_output_paths
+    from privatelabbench.reports.manifest import _receipt_output_paths
+
+    inputs = [*config.definition_paths, config.config_path]
+    input_cfg = section(config, "input")
+    for value in (
+        input_cfg.get("path"),
+        section(config, "diagnostics").get("reference_path"),
+        section(config, "design_audit").get("training_reference"),
+    ):
+        if value:
+            inputs.append(_input_path(config, str(value)))
+    if input_cfg.get("client_dir"):
+        inputs.extend(
+            Path(_input_path(config, str(input_cfg["client_dir"]))).glob("*.csv")
+        )
+
+    manifest = Path(_manifest_path(config))
+    receipt, public, markdown = _receipt_output_paths(manifest)
+    outputs = [
+        manifest,
+        receipt,
+        public,
+        markdown,
+        _audit_path(config),
+        public.with_suffix(".release-audit.json"),
+        public.parent / ".plb-release-ledger.json",
+        public.parent / ".plb-release.lock",
+    ]
+    report_kind = {
+        "predictions": "prediction",
+        "tabular": "prediction",
+        "molecules": "molecule",
+        "multi-site": "federated",
+        "federated": "federated",
+    }.get(config.task_id)
+    for key, suffix in (("json", "json"), ("markdown", "md")):
+        if report_kind:
+            outputs.append(
+                _report_path(
+                    config, key, f"reports/{config.project}_{report_kind}_eval.{suffix}"
+                )
+            )
+        elif section(config, "report").get(key):
+            outputs.append(section(config, "report")[key])
+    if config.raw.get("evaluation_design") is not None:
+        stem = manifest.stem.removesuffix("_manifest")
+        outputs.append(manifest.with_name(f"{stem}_design_audit.json"))
+        if "diagnostics" in config.raw:
+            outputs.append(manifest.with_name(f"{stem}_reference_design_audit.json"))
+    validate_output_paths(inputs, outputs)
+
+
 def run_config(config_path: str, *, protocol_override: str | None = None) -> dict[str, Any]:
     config = load_config(config_path, protocol_override=protocol_override)
+    _validate_run_paths(config)
     # Invalidate a previous export before any evaluation or plugin can fail.
     from privatelabbench.reports.manifest import _receipt_output_paths
     _, previous_shareable, previous_markdown = _receipt_output_paths(Path(_manifest_path(config)))

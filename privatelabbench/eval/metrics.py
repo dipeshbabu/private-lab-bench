@@ -164,15 +164,29 @@ def multiclass_metrics(
         out["log_loss"] = float(log_loss(y_true, probabilities, labels=label_values))
     if "macro_auroc_ovr" in names:
         try:
-            out["macro_auroc_ovr"] = float(
-                roc_auc_score(
-                    y_true,
-                    probabilities,
-                    labels=label_values,
-                    multi_class="ovr",
-                    average="macro",
+            if probabilities.shape[1] == 2:
+                # sklearn dispatches two-class targets to its binary API, which
+                # rejects a probability matrix. Compute both declared OVR tasks.
+                out["macro_auroc_ovr"] = float(
+                    np.mean(
+                        [
+                            roc_auc_score(
+                                np.asarray(y_true) == label, probabilities[:, index]
+                            )
+                            for index, label in enumerate(label_values)
+                        ]
+                    )
                 )
-            )
+            else:
+                out["macro_auroc_ovr"] = float(
+                    roc_auc_score(
+                        y_true,
+                        probabilities,
+                        labels=label_values,
+                        multi_class="ovr",
+                        average="macro",
+                    )
+                )
         except ValueError:
             out["macro_auroc_ovr"] = float("nan")
     return {name: out[name] for name in names}

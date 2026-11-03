@@ -89,25 +89,10 @@ def _validate_ids(df: pd.DataFrame, *, sample_id_column: str, label: str) -> Non
 
 
 def _equal_series(left: pd.Series, right: pd.Series) -> np.ndarray:
-    left_numeric = pd.to_numeric(left, errors="coerce")
-    right_numeric = pd.to_numeric(right, errors="coerce")
-    numeric = left_numeric.notna() & right_numeric.notna()
-    equal = np.zeros(len(left), dtype=bool)
-    if numeric.any():
-        mask = numeric.to_numpy()
-        equal[mask] = np.isclose(
-            left_numeric[numeric].to_numpy(dtype=float),
-            right_numeric[numeric].to_numpy(dtype=float),
-            equal_nan=True,
-        )
-    non_numeric = ~numeric
-    if non_numeric.any():
-        mask = non_numeric.to_numpy()
-        equal[mask] = (
-            left[non_numeric].astype("string").fillna("<NA>").to_numpy()
-            == right[non_numeric].astype("string").fillna("<NA>").to_numpy()
-        )
-    return equal
+    # Pairing requires the same labels and metadata, not approximately equal
+    # measurements. In particular, never coerce categorical identifiers to floats.
+    equal = left.eq(right).fillna(False) | (left.isna() & right.isna())
+    return equal.to_numpy(dtype=bool)
 
 
 def _resolve_task_type(
@@ -209,7 +194,10 @@ def _load_aligned_tables(
         raise ValueError("slice_columns cannot contain duplicates")
     selected_metadata = tuple(dict.fromkeys([*slices, *metadata_columns,*([evaluation_group["column"]] if evaluation_group else [])]))
     required = {sample_id_column, target, *prediction_cols, *selected_metadata}
-    dtype = {sample_id_column: "string", **{column: "string" for column in metadata_columns}}
+    dtype = {
+        sample_id_column: "string",
+        **{column: "string" for column in selected_metadata},
+    }
     if class_labels: dtype[target] = "string"
     if evaluation_group: dtype[evaluation_group["column"]]="string"
     a = pd.read_csv(path_a, dtype=dtype) if frame_a is None else frame_a.copy(deep=False)
