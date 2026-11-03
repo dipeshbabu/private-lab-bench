@@ -139,6 +139,7 @@ def build_parser() -> argparse.ArgumentParser:
     aggregate.add_argument("--signing-secret", default=None)
     aggregate.add_argument("--trust-store", default=None)
     aggregate.add_argument("--require-trusted-signer", action="store_true")
+    aggregate.add_argument("--require-external-validation", action="store_true", help="Require approved validation profiles and matching declared model identities in every input.")
     aggregate.add_argument("--release-policy", default=None, help="Reviewed export policy approving public site/model labels.")
     aggregate.add_argument("--out", default="reports/cross_site_aggregate.json", help="Local aggregate artifact; optional public sibling uses .shareable.json.")
 
@@ -462,7 +463,7 @@ def aggregate_command(args: argparse.Namespace) -> int:
                 raise ValueError("--model requires an explicit model-id@revision")
             model_id, revision = reference.rsplit("@", 1)
             models.append({"id": model_id, "revision": revision})
-        artifact = aggregate_receipts(args.inputs, sites=args.site, models=models, metric=args.metric, assume_disjoint_sites=args.assume_disjoint_sites, range_threshold=args.range_threshold, signing_secret=_secret(args), trust_store=_read_release_policy(args.trust_store) if args.trust_store else None, require_trusted_signer=args.require_trusted_signer)
+        artifact = aggregate_receipts(args.inputs, sites=args.site, models=models, metric=args.metric, assume_disjoint_sites=args.assume_disjoint_sites, range_threshold=args.range_threshold, signing_secret=_secret(args), trust_store=_read_release_policy(args.trust_store) if args.trust_store else None, require_trusted_signer=args.require_trusted_signer, require_external_validation=args.require_external_validation)
         atomic_write_json(output, artifact)
         decision = publish_shareable_artifact(artifact, _read_release_policy(args.release_policy) if args.release_policy else None, public, signing_secret=_secret(args))
         if decision.decision == "allow":

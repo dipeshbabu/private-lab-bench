@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://privatelabbench.org/schemas/external-validation-profile-v1.schema.json",
+  "title": "Declared external-validation profile v1",
+  "type": "object",
+  "required": ["schema_version", "model", "dataset", "evaluator_relationship"],
+  "properties": {
+    "schema_version": {"const": "external-validation-profile/v1"},
+    "model": {"$ref": "#/$defs/model"},
+    "dataset": {"$ref": "#/$defs/dataset"},
+    "evaluator_relationship": {"$ref": "#/$defs/relationship"},
+    "relationship_statement": {"$ref": "#/$defs/text"}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "maxLength": 1200, "pattern": "^[^\\u0000-\\u001f]+$"},
+    "token": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.@+-]{0,127}$"},
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "relationship": {"enum": ["independent", "affiliated", "model_developer", "undisclosed"]},
+    "model": {
+      "type": "object", "required": ["id", "revision", "artifact_sha256"],
+      "properties": {
+        "id": {"$ref": "#/$defs/token"}, "revision": {"$ref": "#/$defs/token"},
+        "artifact_sha256": {"$ref": "#/$defs/digest"},
+        "paper_url": {"type": "string", "maxLength": 500, "pattern": "^https://[^?#]+$"},
+        "citation": {"$ref": "#/$defs/text"}
+      }, "additionalProperties": false
+    },
+    "dataset": {
+      "type": "object", "required": ["visibility", "training_overlap"],
+      "properties": {
+        "visibility": {"enum": ["public", "private", "restricted", "undisclosed"]},
+        "training_overlap": {"enum": ["none_known", "known", "unknown", "not_assessed"]},
+        "site": {"$ref": "#/$defs/text"}, "collection_period": {"$ref": "#/$defs/text"},
+        "inclusion_criteria": {"$ref": "#/$defs/text"}, "provenance_statement": {"$ref": "#/$defs/text"}
+      }, "additionalProperties": false
+    }
+  }
+}

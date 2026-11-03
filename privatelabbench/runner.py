@@ -190,6 +190,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     min_slice_size = int(input_cfg.get("min_slice_size", 2))
     split_column = input_cfg.get("split_column")
 
+    validation = config.validation_context
     baseline_prediction_column, baseline_metrics = _baseline_prediction_metrics(
         config,
         path=path,
@@ -202,6 +203,8 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     uncertainty_config = _uncertainty_config(config)
     uncertainty_config.validate()
     identity = _identity_metadata(config)
+    if validation is not None:
+        identity["external_validation"] = validation
 
     evaluator = evaluate_prediction_table if config.prepared_input is not None else evaluate_prediction_csv
     source = config.prepared_input if config.prepared_input is not None else path
@@ -246,6 +249,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
             "slice_metrics": result.slice_metrics,
             "baseline_prediction_column": baseline_prediction_column,
             "baseline_metrics": baseline_metrics or {},
+            "external_validation": validation or {},
             "split_column": result.split_column,
             "privacy_risk": result.privacy_risk or {},
             "privacy_gate": privacy_gate,
@@ -531,6 +535,10 @@ def run_config(config_path: str, *, protocol_override: str | None = None) -> dic
             raise ValueError("Evaluation-design filtering currently requires a prediction-table task")
         prepared, record = _prepare_design_audit(config, _input_path(config, str(section(config, "input")["path"])))
         config = replace(config, prepared_input=prepared.frame, design_audits=(record,))
+    if "external_validation" in config.raw:
+        from privatelabbench.external_validation import prepare_validation
+        frame, context = prepare_validation(config, _input_path(config, str(section(config, "input")["path"])))
+        config = replace(config, prepared_input=frame, validation_context=context)
     summary = task.runner(config)
     if "diagnostics" in config.raw:
         from privatelabbench.eval.degradation import diagnose_shift, render_degradation

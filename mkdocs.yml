@@ -28,6 +28,7 @@ nav:
   - Sampling units and slice inference: sampling_design.md
   - Evaluation-design audits: evaluation_design.md
   - TDC ADMET integration: tdc_admet.md
+  - External model validation: external_validation.md
   - Paired model comparison: paired_comparison.md
   - Tasks and plugins: tasks.md
   - Evaluation receipts: evaluation_receipts.md

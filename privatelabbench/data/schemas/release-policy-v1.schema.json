@@ -15,6 +15,16 @@
     "include_input_schema": {"type": "boolean", "default": false},
     "include_quality_gate": {"type": "boolean", "default": false},
     "include_protocol": {"type": "boolean", "default": false},
+    "public_validation": {
+      "type": "object", "required": ["model", "dataset", "evaluator_relationship"],
+      "properties": {
+        "model": {"$ref": "external-validation-profile-v1.schema.json#/$defs/model"},
+        "dataset": {"$ref": "external-validation-profile-v1.schema.json#/$defs/dataset"},
+        "evaluator_relationship": {"$ref": "external-validation-profile-v1.schema.json#/$defs/relationship"},
+        "prediction_artifact_sha256": {"$ref": "external-validation-profile-v1.schema.json#/$defs/digest"},
+        "prediction_artifact_basis": {"enum": ["input_file_bytes", "audited_frame_csv"]}
+      }, "additionalProperties": false
+    },
     "include_degradation": {"type": "boolean", "default": false},
     "include_slice_inference": {"type": "boolean", "default": false},
     "include_multiplicity": {"type": "boolean", "default": false},

@@ -116,6 +116,8 @@ Check declared split integrity before scoring with `plb audit-design` or `plb ev
 
 Evaluate real Caco2 and PGP benchmark predictions with the optional [TDC ADMET integration](docs/tdc_admet.md). It preserves the pinned official test sets and metrics, checks upstream score agreement, and supports the same evaluation protocols on private ADMET tables.
 
+Describe evaluations of released models with the [external-validation profile](docs/external_validation.md): immutable model identity, declared evaluator relationship and dataset provenance, plus explicitly approved aggregate receipts that can be compared across labs.
+
 ## Inspect Evaluation Receipts
 
 `evaluation-receipt/v1` separates local context from aggregate information intended for exchange:
