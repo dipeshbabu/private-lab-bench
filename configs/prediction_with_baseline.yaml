@@ -18,3 +18,13 @@ report:
   markdown: reports/prediction_baseline_comparison.md
   json: reports/prediction_baseline_comparison.json
   manifest: reports/prediction_baseline_comparison_manifest.json
+
+# Reviewed release settings for this synthetic example only.
+release:
+  schema_version: release-policy/v1
+  id: synthetic-configs-prediction_with_baseline
+  enabled: true
+  min_samples: 2
+  min_cell_size: 2
+  require_privacy_audit: false
+  include_input_schema: true

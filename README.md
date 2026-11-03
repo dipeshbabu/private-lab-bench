@@ -108,14 +108,16 @@ Paired comparisons report metric differences, bootstrap intervals, and a decisio
 | Artifact | Contents |
 | --- | --- |
 | `<run>_receipt.json` | Local receipt, including paths, configuration, and exact results |
-| `<run>_receipt.shareable.json` | Aggregate receipt for review before sharing |
+| `<run>_receipt.shareable.json` | Approved aggregate receipt, written only when the export policy allows it |
 | `<run>_receipt.md` | Human-readable receipt summary |
 
 ```sh
 plb verify reports/tabular_uncertainty_demo_receipt.shareable.json
 ```
 
-Verification checks artifact integrity and optional signatures. A matching self-contained hash alone does not establish authorship, correct execution, or scientific validity. Review release-policy outcomes and aggregate disclosures before exchanging a receipt. See [evaluation receipts](docs/evaluation_receipts.md) and [report integrity](docs/report_integrity.md).
+Shareable receipts require an explicit `release-policy/v1` policy. A blocked export leaves local results and a release audit, and removes any previous shareable file. The bundled synthetic packs include reviewed example policies; private-data runs need their own review. Use `plb release-check <local-receipt.json> --policy release.yaml` for a dry run.
+
+Verification checks artifact integrity and optional signatures. A matching self-contained hash alone does not establish authorship, correct execution, or scientific validity. See [evaluation receipts](docs/evaluation_receipts.md) and [report integrity](docs/report_integrity.md).
 
 ## Privacy and Sharing
 

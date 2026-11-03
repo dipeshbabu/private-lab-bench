@@ -7,6 +7,7 @@ from typing import Any, Mapping
 from uuid import uuid4
 
 from privatelabbench.reports.integrity import attach_integrity_metadata, verify_report
+from privatelabbench.privacy.export import check_release, publish_shareable_artifact
 
 RECEIPT_SCHEMA_VERSION = "evaluation-receipt/v1"
 LEGACY_MANIFEST_SCHEMA = "run-manifest/v0.1"
@@ -174,6 +175,7 @@ def build_evaluation_receipt(
         "runner": manifest.get("runner", {}),
         "attestation": manifest.get("attestation", {}),
         "manifest_integrity": manifest.get("integrity", {}),
+        "release_evidence": {"gates": [result[key] for key in ("privacy_gate", "aggregate_release") if key in result], "audit": result.get("privacy_risk")},
     }
 
     payload = {
@@ -187,15 +189,11 @@ def build_evaluation_receipt(
     return attach_integrity_metadata(payload, signing_secret=signing_secret)
 
 
-def make_shareable_receipt(receipt: Mapping[str, Any], *, signing_secret: str | None = None) -> dict[str, Any]:
+def make_shareable_receipt(receipt: Mapping[str, Any], *, signing_secret: str | None = None, policy: Mapping[str, Any] | None = None, evidence: Mapping[str, Any] | None = None) -> dict[str, Any]:
     normalized = normalize_receipt(receipt)
-    payload = {
-        "schema_version": RECEIPT_SCHEMA_VERSION,
-        "receipt_id": normalized.get("receipt_id"),
-        "created_at": normalized.get("created_at"),
-        "scope": "shareable",
-        "shareable": normalized.get("shareable", {}),
-    }
+    decision, payload = check_release(normalized, policy, evidence=evidence)
+    if payload is None:
+        raise ValueError(f"Shareable receipt blocked: {', '.join(decision.reason_codes)}")
     return attach_integrity_metadata(payload, signing_secret=signing_secret)
 
 
@@ -347,14 +345,26 @@ def write_evaluation_receipts(
     config_path: str | Path,
     signing_secret: str | None = None,
 ) -> dict[str, Path]:
-    full = build_evaluation_receipt(summary=summary, report_path=report_path, manifest_path=manifest_path, config_path=config_path, signing_secret=signing_secret)
-    shareable = make_shareable_receipt(full, signing_secret=signing_secret)
     full_output = Path(full_path)
     shareable_output = Path(shareable_path)
     markdown_output = Path(markdown_path)
+    shareable_output.unlink(missing_ok=True)
+    markdown_output.unlink(missing_ok=True)
+    full = build_evaluation_receipt(summary=summary, report_path=report_path, manifest_path=manifest_path, config_path=config_path, signing_secret=signing_secret)
     for output in (full_output, shareable_output, markdown_output):
         output.parent.mkdir(parents=True, exist_ok=True)
     full_output.write_text(json.dumps(full, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    shareable_output.write_text(json.dumps(shareable, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    markdown_output.write_text(render_receipt_markdown(shareable), encoding="utf-8")
-    return {"receipt": full_output, "receipt_shareable": shareable_output, "receipt_markdown": markdown_output}
+    report = _read_json(report_path)
+    config = report.get("config_snapshot", {})
+    policy = config.get("release") if isinstance(config, Mapping) else None
+    result = report.get("result", {})
+    evidence = full["local"]["release_evidence"]
+    decision = publish_shareable_artifact(full, policy, shareable_output, evidence=evidence, signing_secret=signing_secret)
+    paths = {"receipt": full_output, "receipt_markdown": markdown_output}
+    if decision.decision == "allow":
+        shareable = _read_json(shareable_output)
+        markdown_output.write_text(render_receipt_markdown(shareable), encoding="utf-8")
+        paths["receipt_shareable"] = shareable_output
+    else:
+        markdown_output.write_text("# Local evaluation receipt\n\nExport blocked: " + ", ".join(decision.reason_codes) + "\n\nUse the local JSON receipt to inspect exact results.\n", encoding="utf-8")
+    return paths

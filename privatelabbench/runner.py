@@ -452,6 +452,11 @@ def ensure_builtin_tasks_registered() -> None:
 
 def run_config(config_path: str) -> dict[str, Any]:
     config = load_config(config_path)
+    # Invalidate a previous export before any evaluation or plugin can fail.
+    from privatelabbench.reports.manifest import _receipt_output_paths
+    _, previous_shareable, previous_markdown = _receipt_output_paths(Path(_manifest_path(config)))
+    previous_shareable.unlink(missing_ok=True)
+    previous_markdown.unlink(missing_ok=True)
     ensure_builtin_tasks_registered()
     discover_entrypoint_tasks()
     task = get_task(config.task_id)

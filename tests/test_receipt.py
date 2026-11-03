@@ -40,6 +40,16 @@ input:
   slice_columns:
     - site
   min_slice_size: 2
+release:
+  schema_version: release-policy/v1
+  id: synthetic-test
+  enabled: true
+  min_samples: 2
+  min_cell_size: 2
+  require_privacy_audit: false
+  include_input_schema: true
+  slices:
+    site: [a, b, c]
 privacy:
   mode: {privacy_mode}
   epsilon: 0.5

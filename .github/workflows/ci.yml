@@ -55,21 +55,24 @@ jobs:
           test -f reports/kinase_prediction_eval.json
           test -f reports/kinase_prediction_audit.jsonl
           test -f reports/kinase_prediction_manifest.json
-          test -f reports/kinase_prediction_receipt.shareable.json
-          plb verify reports/kinase_prediction_receipt.shareable.json
+          test ! -f reports/kinase_prediction_receipt.shareable.json
+          test -f reports/kinase_prediction_receipt.shareable.release-audit.json
+          python -c "import json; p=json.load(open('reports/kinase_prediction_receipt.shareable.release-audit.json')); assert p['decision']=='deny'; assert 'upstream_release_gate_not_passed' in p['reason_codes']"
       - name: Smoke test non-molecular task
         run: |
           plb validate-config configs/tabular_eval.yaml
           plb run configs/tabular_eval.yaml
           test -f reports/tabular_demo_eval.json
           test -f reports/tabular_demo_manifest.json
+          test -f reports/tabular_demo_receipt.shareable.json
+          plb verify reports/tabular_demo_receipt.shareable.json
       - name: Smoke test signed local report
         env:
           PRIVATELABBENCH_SIGNING_SECRET: ci-secret
         run: |
-          plb run configs/prediction_eval.yaml
-          plb verify reports/kinase_prediction_receipt.shareable.json --signing-secret ci-secret
-          plb verify-manifest reports/kinase_prediction_manifest.json --signing-secret ci-secret
+          plb run configs/tabular_eval.yaml
+          plb verify reports/tabular_demo_receipt.shareable.json --signing-secret ci-secret
+          plb verify-manifest reports/tabular_demo_manifest.json --signing-secret ci-secret
 
   package:
     runs-on: ubuntu-latest

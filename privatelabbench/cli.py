@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 
+import yaml
+
 from privatelabbench.benchmark_packs import discover_benchmark_packs, run_benchmark_pack
 from privatelabbench.compare import compare_configs, compare_prediction_files
 from privatelabbench.core.registry import discover_entrypoint_tasks, list_tasks
@@ -15,6 +17,7 @@ from privatelabbench.models.sklearn_baseline import evaluate_random_forest
 from privatelabbench.privacy.attacks import ensure_builtin_privacy_attacks_registered
 from privatelabbench.privacy.attack_registry import list_privacy_attacks
 from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
+from privatelabbench.privacy.export import check_release
 from privatelabbench.reports.integrity import verify_report
 from privatelabbench.reports.manifest import verify_run_manifest
 from privatelabbench.reports.json import write_json_report
@@ -95,12 +98,17 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("--min-slice-size", type=int, default=5)
     compare.add_argument("--include-slice-uncertainty", action="store_true", help="Also run paired bootstrap intervals inside eligible slices.")
     compare.add_argument("--signing-secret", default=None, help="Optional HMAC secret for local/shareable paired-comparison artifacts.")
+    compare.add_argument("--release-policy", default=None, help="Explicit release-policy/v1 YAML; without it the comparison stays local.")
     compare.add_argument("--report", default="reports/model_comparison.md")
     compare.add_argument("--json-report", default="reports/model_comparison.json")
 
     verify_any = sub.add_parser("verify", help="Verify a receipt, run manifest, or JSON report.")
     verify_any.add_argument("artifact", help="Path to a receipt, run manifest, or JSON report.")
     verify_any.add_argument("--signing-secret", default=None, help="Optional HMAC signing secret.")
+
+    release_check = sub.add_parser("release-check", help="Dry-run disclosure checks without exporting or uploading anything.")
+    release_check.add_argument("artifact", help="Local evaluation receipt or paired-comparison artifact.")
+    release_check.add_argument("--policy", required=True, help="release-policy/v1 YAML file.")
 
     verify_report_parser = sub.add_parser("verify-report", help="Verify JSON report integrity and optional HMAC signature.")
     verify_report_parser.add_argument("json_report", help="Path to a PrivateLabBench JSON report.")
@@ -152,7 +160,10 @@ def _print_receipt_paths(summary: dict[str, object]) -> None:
     markdown = manifest.with_name(f"{base}_receipt.md")
     if receipt.exists():
         print(f"Local receipt saved to: {receipt}")
-        print(f"Shareable receipt saved to: {shareable}")
+        if shareable.exists():
+            print(f"Shareable receipt saved to: {shareable}")
+        else:
+            print(f"Export blocked; see: {shareable.with_suffix('.release-audit.json')}")
         print(f"Receipt Markdown saved to: {markdown}")
 
 
@@ -257,6 +268,7 @@ def compare_command(args: argparse.Namespace) -> int:
         markdown_path=args.report,
         json_path=args.json_report,
         signing_secret=args.signing_secret or os.getenv("PRIVATELABBENCH_SIGNING_SECRET"),
+        release_policy=_read_release_policy(args.release_policy) if args.release_policy else None,
     )
     interval = result["paired_interval"]
     print("PrivateLabBench paired prediction comparison")
@@ -276,12 +288,39 @@ def compare_command(args: argparse.Namespace) -> int:
     print(f"Decision: {result['decision']['confidence_interval']}")
     print(f"Markdown report saved to: {Path(result['markdown_report'])}")
     print(f"Local JSON artifact saved to: {Path(result['json_report'])}")
-    print(f"Shareable JSON artifact saved to: {Path(result['shareable_json_report'])}")
+    if result["shareable_json_report"]:
+        print(f"Shareable JSON artifact saved to: {Path(result['shareable_json_report'])}")
+    else:
+        print("Export blocked; inspect the local release audit or supply --release-policy.")
     return 0
 
 
 def _secret(args: argparse.Namespace) -> str | None:
     return args.signing_secret or os.getenv("PRIVATELABBENCH_SIGNING_SECRET")
+
+
+def _read_release_policy(path: str) -> object:
+    try:
+        return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError):
+        return {"schema_version": "invalid"}
+
+
+def release_check_command(args: argparse.Namespace) -> int:
+    try:
+        payload = json.loads(Path(args.artifact).read_text(encoding="utf-8"))
+        policy = _read_release_policy(args.policy)
+        evidence = None
+        if isinstance(payload, dict) and payload.get("scope") == "local":
+            # The complete local evidence is bound into the local receipt.
+            evidence = payload.get("local", {}).get("release_evidence")
+        decision, _ = check_release(payload, policy, evidence=evidence)
+        print(json.dumps(decision.as_dict(), indent=2))
+        print("Dry run only; repeated-release history is checked during export.")
+        return 0 if decision.decision == "allow" else 1
+    except (OSError, ValueError, TypeError):
+        print(json.dumps({"decision": "needs_review", "reason_codes": ["unreadable_policy_or_artifact"]}))
+        return 1
 
 
 def _print_basic_verification(result: dict[str, object]) -> int:
@@ -401,6 +440,7 @@ def eval_predictions(args: argparse.Namespace) -> int:
     print(f"Privacy: {privacy_summary(privacy_config)}")
     print(f"Markdown report saved to: {Path(report_path)}")
     print(f"JSON report saved to: {Path(json_path)}")
+    print("Local-only report. Use a config with an explicit release policy to export a receipt.")
     return 0
 
 
@@ -423,6 +463,8 @@ def main() -> int:
         return compare_command(args)
     if args.command == "verify":
         return verify_any_command(args)
+    if args.command == "release-check":
+        return release_check_command(args)
     if args.command == "verify-report":
         return verify_report_command(args)
     if args.command == "verify-manifest":
