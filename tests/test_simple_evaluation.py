@@ -328,3 +328,28 @@ def test_multiclass_probability_order_and_manual_config_protection(
     original = "# Manually authored config\n" + yaml.safe_dump(parsed)
     config.write_text(original)
     assert invoke(monkeypatch, args) == 2 and config.read_text() == original
+
+
+def test_generated_config_pins_local_protocol_rules(tmp_path, monkeypatch):
+    from privatelabbench.config import load_config
+    from privatelabbench.protocols import resolve_protocol
+
+    path = table(tmp_path)
+    protocol_path = tmp_path / "protocol.yaml"
+    rules = resolve_protocol("plb://generic/regression@1.0.0").as_dict()
+    protocol_path.write_text(yaml.safe_dump(rules))
+    config = tmp_path / "evaluation.yaml"
+    assert (
+        invoke(
+            monkeypatch, ["init", path, "--out", config, "--protocol", protocol_path]
+        )
+        == 0
+    )
+    assert (
+        load_config(str(config)).protocol.sha256
+        == yaml.safe_load(config.read_text())["protocol_sha256"]
+    )
+    rules["uncertainty"]["seed"] += 1
+    protocol_path.write_text(yaml.safe_dump(rules))
+    with pytest.raises(ValueError, match="digest changed"):
+        load_config(str(config))

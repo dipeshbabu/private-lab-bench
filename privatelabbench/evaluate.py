@@ -270,6 +270,7 @@ def make_evaluation_config(
             if protocol.startswith("plb://")
             else str(Path(protocol).resolve())
         )
+        cfg["protocol_sha256"] = definition.sha256
         apply_protocol(cfg, definition)
     return cfg
 

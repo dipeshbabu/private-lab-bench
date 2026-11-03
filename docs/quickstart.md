@@ -64,7 +64,7 @@ plb list-protocols
 plb evaluate predictions.csv --protocol plb://generic/regression@1.0.0
 ```
 
-`init` writes local paths and settings without copying dataset rows. Existing configs require `--force` to overwrite. Evaluation also keeps a generated config under its output directory; use `--output-dir reports/another_run` to retain separate runs. Manually authored configs in that directory are protected. Exact [protocol versions](protocols.md) bind scientific settings and reject contradictory overrides.
+`init` writes local paths and settings without copying dataset rows. With a protocol, it also pins the exact digest so later changes to a local definition are rejected. Existing configs require `--force` to overwrite. Evaluation also keeps a generated config under its output directory; use `--output-dir reports/another_run` to retain separate runs. Manually authored configs in that directory are protected. Exact [protocol versions](protocols.md) bind scientific settings and reject contradictory overrides.
 
 ## 5. Compare and exchange results
 
