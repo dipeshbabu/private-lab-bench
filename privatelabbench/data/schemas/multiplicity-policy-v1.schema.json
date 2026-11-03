@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PrivateLabBench declared slice test-family policy v1",
+  "type": "object",
+  "required": ["schema_version"],
+  "properties": {
+    "schema_version": {"const": "multiplicity/v1"},
+    "method": {"enum": ["benjamini_hochberg", "benjamini_yekutieli"], "default": "benjamini_yekutieli"},
+    "family": {"enum": ["exploratory_slices", "critical_slices"], "default": "exploratory_slices"},
+    "alpha": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1, "default": 0.05},
+    "dependence": {"enum": ["arbitrary", "independent_or_prds"], "default": "arbitrary"}
+  },
+  "allOf": [{"if": {"required": ["method"], "properties": {"method": {"const": "benjamini_hochberg"}}}, "then": {"required": ["dependence"], "properties": {"dependence": {"const": "independent_or_prds"}}}}],
+  "additionalProperties": false
+}

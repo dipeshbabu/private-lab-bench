@@ -118,6 +118,7 @@ def prediction_bindings(
         if frame is not None
         else pd.read_csv(
             source,
+            dtype={sample_id: "string"},
             usecols=list(
                 dict.fromkeys(
                     [
@@ -228,6 +229,7 @@ def make_evaluation_config(
     min_slice_size: int | None = None,
     quality_policy: Any = None,
     release_policy: Any = None,
+    sampling_design: Any = None,
     **bindings: Any,
 ) -> dict[str, Any]:
     definition = resolve_protocol(protocol) if protocol else None
@@ -252,6 +254,23 @@ def make_evaluation_config(
                 "--primary-metric conflicts with the protocol primary metric"
             )
         primary_metric = rules["primary_metric"]
+    from privatelabbench.eval.sampling import sampling_design as parse_design
+
+    design = parse_design(
+        sampling_design
+        if sampling_design is not None
+        else definition.as_dict().get("sampling_design") if definition else None
+    )
+    if design:
+        bindings["metadata"] = list(
+            dict.fromkeys(
+                [
+                    *(bindings.get("metadata") or ()),
+                    *design.metadata_columns,
+                    *[column for column, value in design.critical_slices],
+                ]
+            )
+        )
     input_cfg = prediction_bindings(path, **bindings)
     if min_slice_size is not None and (
         type(min_slice_size) is not int or min_slice_size < 1
@@ -294,6 +313,8 @@ def make_evaluation_config(
         cfg["uncertainty"] = settings
     if quality_policy is not None:
         cfg["quality_gate"] = validate_quality_policy(quality_policy)
+    if design:
+        cfg["sampling_design"] = design.as_dict()
     if release_policy is not None:
         cfg["release"] = validate_policy(release_policy)
     if definition:
@@ -335,6 +356,16 @@ def evaluation_summary(
         lines.insert(2, f"Positive class       {result['class_labels'][-1]}")
     mode = report.get("privacy", {}).get("mode", "none")
     uncertainty = result.get("uncertainty", {})
+    if "n_independent_units" in uncertainty:
+        unit = uncertainty.get("sampling_design", {}).get("unit", "cluster")
+        lines.append(
+            f"Independent units    {uncertainty['n_independent_units']} ({unit})"
+        )
+    if (
+        uncertainty.get("multiplicity", {}).get("status")
+        == "not_applicable_no_hypothesis_tests"
+    ):
+        lines.append("Multiple testing     not applied: no hypothesis tests")
     interval = uncertainty.get("metrics", {}).get(primary, {})
     if mode == "none" and interval.get("status") == "evaluated":
         lines.append(

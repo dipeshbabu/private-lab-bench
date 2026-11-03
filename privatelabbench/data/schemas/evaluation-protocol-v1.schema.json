@@ -20,6 +20,16 @@
     "artifact_versions"
   ],
   "properties": {
+    "sampling_design": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "sampling-design-v1.schema.json"
+        }
+      ]
+    },
     "schema_version": {
       "const": "evaluation-protocol/v1"
     },

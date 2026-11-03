@@ -313,6 +313,8 @@ def render_receipt_markdown(receipt: Mapping[str, Any]) -> str:
         lines.extend(["", "### Uncertainty"])
         lines.append(f"- Status: {uncertainty.get('status')}")
         lines.append(f"- Method: {uncertainty.get('method')}")
+        if "n_independent_units" in uncertainty:
+            lines.append(f"- Independent units: {uncertainty['n_independent_units']}")
         if uncertainty.get("confidence_level") is not None:
             lines.append(f"- Confidence level: {float(uncertainty['confidence_level']):.1%}")
         metric_intervals = uncertainty.get("metrics", {})

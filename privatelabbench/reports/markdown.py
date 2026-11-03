@@ -34,6 +34,13 @@ def _append_uncertainty(lines: list[str], uncertainty: object, *, heading: str =
         lines.append(f"- Seed: {uncertainty['seed']}")
     if uncertainty.get("sampling"):
         lines.append(f"- Sampling: {uncertainty['sampling']}")
+    if "n_independent_units" in uncertainty:
+        lines.append(f"- Independent units: {uncertainty['n_independent_units']}; observations: {uncertainty.get('n_samples')}")
+        if uncertainty.get("cluster_sizes"):
+            sizes = uncertainty["cluster_sizes"]
+            lines.append(f"- Cluster sizes: min={sizes['min']}, median={sizes['median']}, max={sizes['max']}")
+        for flag in uncertainty.get("reliability_flags", []):
+            lines.append(f"- Reliability flag: {flag}")
     intervals = uncertainty.get("metrics", {})
     if isinstance(intervals, Mapping):
         for metric_name, interval_value in intervals.items():

@@ -195,6 +195,7 @@ def _load_aligned_tables(
     task_type: str | None,
     class_labels: Sequence[str] | None,
     slice_columns: Sequence[str] | None,
+    metadata_columns: Sequence[str] = (),
 ) -> _AlignedTables:
     prediction_cols = _prediction_columns(
         prediction_column=prediction_column,
@@ -203,8 +204,9 @@ def _load_aligned_tables(
     slices = tuple(str(column) for column in (slice_columns or ()))
     if len(set(slices)) != len(slices):
         raise ValueError("slice_columns cannot contain duplicates")
-    required = {sample_id_column, target, *prediction_cols, *slices}
-    dtype = {sample_id_column: "string"}
+    selected_metadata = tuple(dict.fromkeys([*slices, *metadata_columns]))
+    required = {sample_id_column, target, *prediction_cols, *selected_metadata}
+    dtype = {sample_id_column: "string", **{column: "string" for column in metadata_columns}}
     a = pd.read_csv(path_a, dtype=dtype)
     b = pd.read_csv(path_b, dtype=dtype)
 
@@ -238,7 +240,7 @@ def _load_aligned_tables(
         raise ValueError(
             f"Targets disagree between prediction tables for sample ID(s): {', '.join(mismatches)}"
         )
-    for column in slices:
+    for column in selected_metadata:
         equal = _equal_series(a[column], b[column])
         if not bool(np.all(equal)):
             mismatches = a.index[~equal].astype(str).tolist()[:3]
@@ -263,8 +265,8 @@ def _load_aligned_tables(
                 raise ValueError(f"{label} binary probabilities must be between 0 and 1")
 
     metadata = (
-        a[list(slices)].reset_index(drop=True)
-        if slices
+        a[list(selected_metadata)].reset_index(drop=True)
+        if selected_metadata
         else pd.DataFrame(index=range(len(a)))
     )
     return _AlignedTables(
@@ -387,7 +389,11 @@ def _bootstrap_improvements(
     metric: str,
     direction: str,
     config: PairedComparisonConfig,
+    sampling_design: Any = None,
 ) -> dict[str, object]:
+    if sampling_design is not None:
+        from privatelabbench.eval.sampling import paired_interval
+        return paired_interval(data, metric=metric, direction=direction, config=config, design=sampling_design)
     metadata: dict[str, object] = {
         "method": "paired_percentile_bootstrap",
         "confidence_level": config.confidence_level,
@@ -487,7 +493,11 @@ def _randomization_test(
     direction: str,
     observed_improvement: float,
     config: PairedComparisonConfig,
+    sampling_design: Any = None,
 ) -> dict[str, object]:
+    if sampling_design is not None:
+        from privatelabbench.eval.sampling import paired_randomization
+        return paired_randomization(data, metric=metric, direction=direction, observed_improvement=observed_improvement, config=config, design=sampling_design)
     metadata: dict[str, object] = {
         "method": "paired_randomization_swap",
         "alternative": "two_sided",
@@ -627,6 +637,7 @@ def _slice_results(
     direction: str,
     slice_columns: Sequence[str] | None,
     config: PairedComparisonConfig,
+    sampling_design: Any = None,
 ) -> dict[str, dict[str, dict[str, object]]]:
     results: dict[str, dict[str, dict[str, object]]] = {}
     slice_seed = 0
@@ -636,6 +647,9 @@ def _slice_results(
             idx = np.asarray(indices, dtype=int)
             key = "<NA>" if pd.isna(value) else str(value)
             entry: dict[str, object] = {"n": int(len(idx))}
+            if sampling_design:
+                from privatelabbench.eval.sampling import plan_sampling
+                entry["n_independent_units"] = plan_sampling(data.metadata.iloc[idx], sampling_design).n_units
             if len(idx) < config.min_slice_size:
                 entry["status"] = "skipped_min_slice_size"
                 groups[key] = entry
@@ -675,13 +689,13 @@ def _slice_results(
                     "winner": "a" if improvement > 0 else "b" if improvement < 0 else "tie",
                 }
             )
-            if config.include_slice_uncertainty:
+            if config.include_slice_uncertainty or sampling_design and sampling_design.multiplicity:
                 slice_seed += 1
                 slice_config = PairedComparisonConfig(
                     metric=metric,
                     confidence_level=config.confidence_level,
                     resamples=config.resamples,
-                    permutations=0,
+                    permutations=config.permutations if sampling_design and sampling_design.multiplicity else 0,
                     seed=config.seed + slice_seed,
                     min_samples=config.min_samples,
                     practical_threshold=config.practical_threshold,
@@ -689,12 +703,10 @@ def _slice_results(
                     include_slice_uncertainty=False,
                     min_slice_size=config.min_slice_size,
                 )
-                entry["paired_interval"] = _bootstrap_improvements(
-                    subset,
-                    metric=metric,
-                    direction=direction,
-                    config=slice_config,
-                )
+                if config.include_slice_uncertainty:
+                    entry["paired_interval"] = _bootstrap_improvements(subset, metric=metric, direction=direction, config=slice_config, sampling_design=sampling_design)
+                if sampling_design and sampling_design.multiplicity:
+                    entry["randomization_test"] = _randomization_test(subset, metric=metric, direction=direction, observed_improvement=improvement, config=slice_config, sampling_design=sampling_design)
             groups[key] = entry
         results[str(column)] = groups
     return results
@@ -714,7 +726,11 @@ def compare_prediction_tables(
     model_a_name: str | None = None,
     model_b_name: str | None = None,
     config: PairedComparisonConfig | None = None,
+    sampling_design: Any = None,
 ) -> dict[str, Any]:
+    from privatelabbench.eval.sampling import sampling_design as parse_design, apply_multiplicity
+    design = parse_design(sampling_design)
+    slices = tuple(dict.fromkeys([*(slice_columns or ()), *[column for column, value in design.critical_slices]])) if design else slice_columns
     resolved_config = config or PairedComparisonConfig()
     resolved_config.validate()
     data = _load_aligned_tables(
@@ -726,7 +742,8 @@ def compare_prediction_tables(
         sample_id_column=sample_id_column,
         task_type=task_type,
         class_labels=class_labels,
-        slice_columns=slice_columns,
+        slice_columns=slices,
+        metadata_columns=design.metadata_columns if design else (),
     )
     metrics_a = _metric_values(data.task_type, data.y_true, data.predictions_a)
     metrics_b = _metric_values(data.task_type, data.y_true, data.predictions_b)
@@ -749,6 +766,7 @@ def compare_prediction_tables(
         metric=metric,
         direction=direction,
         config=resolved_config,
+        sampling_design=design,
     )
     interval["estimate"] = improvement
     randomization = _randomization_test(
@@ -757,7 +775,10 @@ def compare_prediction_tables(
         direction=direction,
         observed_improvement=improvement,
         config=resolved_config,
+        sampling_design=design,
     )
+    slice_results = _slice_results(data, metric=metric, direction=direction, slice_columns=slices, config=resolved_config, sampling_design=design)
+    multiplicity = apply_multiplicity(slice_results, design) if design else {}
     return {
         "schema_version": PAIRED_COMPARISON_SCHEMA_VERSION,
         "task_type": data.task_type,
@@ -792,11 +813,7 @@ def compare_prediction_tables(
             interval=interval,
             config=resolved_config,
         ),
-        "slices": _slice_results(
-            data,
-            metric=metric,
-            direction=direction,
-            slice_columns=slice_columns,
-            config=resolved_config,
-        ),
+        "slices": slice_results,
+        "sampling_design": design.as_dict() if design else None,
+        "multiplicity": multiplicity,
     }

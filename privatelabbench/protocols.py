@@ -73,7 +73,11 @@ class EvaluationProtocol:
     @classmethod
     def from_dict(cls, value: Any) -> EvaluationProtocol:
         fields = {"schema_version", "id", "version", "task", "task_type", "input_schema", "metrics", "primary_metric", "uncertainty", "slices", "comparison", "quality_gate", "privacy", "release", "artifact_versions"}
-        payload = deepcopy(_object(value, fields, "Protocol"))
+        if not isinstance(value, Mapping):
+            raise ValueError("Protocol must be a mapping")
+        raw = dict(value)
+        design_payload = raw.pop("sampling_design", None)
+        payload = deepcopy(_object(raw, fields, "Protocol"))
         if payload["schema_version"] != PROTOCOL_SCHEMA:
             raise ValueError(f"Expected {PROTOCOL_SCHEMA}")
         for key, pattern in (("id", ID_PATTERN), ("version", VERSION_PATTERN)):
@@ -127,6 +131,12 @@ class EvaluationProtocol:
                     used.add(key.removeprefix("worst_").rsplit("_", 1)[0])
             if not used <= set(metrics):
                 raise ValueError("Protocol quality gates must use declared metrics")
+        if design_payload is not None:
+            from privatelabbench.eval.sampling import sampling_design
+            design = sampling_design(design_payload)
+            if not {column for column, value in design.critical_slices} <= set(required + optional):
+                raise ValueError("Protocol critical-slice columns must be declared in its required/optional slices")
+            payload["sampling_design"] = design.as_dict()
         return cls(json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8"))
 
     def as_dict(self) -> dict[str, Any]:
@@ -204,6 +214,13 @@ def apply_protocol(payload: Mapping[str, Any], protocol: EvaluationProtocol) -> 
     result = deepcopy(dict(payload))
     rules = protocol.as_dict()
     result["evaluation"] = _bind(result.get("evaluation"), {"primary_metric": rules["primary_metric"]}, "evaluation")
+    from privatelabbench.eval.sampling import sampling_design
+    fixed_design = sampling_design(rules.get("sampling_design"))
+    requested_design = sampling_design(result.get("sampling_design"))
+    if requested_design is not None and (fixed_design is None or requested_design != fixed_design):
+        raise ValueError("sampling_design conflicts with the versioned protocol; declare it in a new protocol version")
+    if fixed_design:
+        result["sampling_design"] = fixed_design.as_dict()
     for key in ("task", "uncertainty", "privacy", "quality_gate"):
         result[key] = _bind(result.get(key), rules[key], key)
     if result["quality_gate"] is None:

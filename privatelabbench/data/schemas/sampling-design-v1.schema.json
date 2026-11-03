@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PrivateLabBench declared sampling design v1",
+  "type": "object",
+  "required": ["schema_version", "unit", "method", "cluster_columns"],
+  "properties": {
+    "schema_version": {"const": "sampling-design/v1"},
+    "unit": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"},
+    "method": {"enum": ["cluster_bootstrap", "hierarchical_bootstrap"]},
+    "cluster_columns": {"type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "sampling_level": {"type": "string", "minLength": 1},
+    "strata_column": {"type": ["string", "null"], "minLength": 1},
+    "resample_rows_within_leaf": {"type": "boolean", "default": false},
+    "min_independent_units": {"type": "integer", "minimum": 2, "default": 20},
+    "exchangeability": {"enum": ["none", "model_vectors_within_clusters"], "default": "none"},
+    "max_resample_rows": {"type": "integer", "minimum": 2, "default": 2000000},
+    "critical_slices": {"type": "array", "uniqueItems": true, "items": {"type": "object", "required": ["column", "value"], "properties": {"column": {"type": "string", "minLength": 1}, "value": {"type": "string", "minLength": 1}}, "additionalProperties": false}},
+    "multiplicity": {"anyOf": [{"type": "null"}, {"$ref": "multiplicity-policy-v1.schema.json"}]}
+  },
+  "allOf": [
+    {"if": {"properties": {"method": {"const": "cluster_bootstrap"}}}, "then": {"properties": {"cluster_columns": {"maxItems": 1}, "resample_rows_within_leaf": {"const": false}}}},
+    {"if": {"properties": {"method": {"const": "hierarchical_bootstrap"}}}, "then": {"properties": {"cluster_columns": {"minItems": 2}}}}
+  ],
+  "additionalProperties": false
+}

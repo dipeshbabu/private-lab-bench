@@ -49,6 +49,9 @@ def load_config(path: str, *, protocol_override: str | None = None) -> RunnerCon
         payload = apply_protocol(payload, protocol)
     elif payload.get("protocol_sha256") is not None:
         raise ValueError("protocol_sha256 requires a protocol reference")
+    if payload.get("sampling_design") is not None:
+        from privatelabbench.eval.sampling import sampling_design
+        payload["sampling_design"] = sampling_design(payload["sampling_design"]).as_dict()
 
     project = str(payload.get("project", config_path.stem))
     task_value = payload.get("task")

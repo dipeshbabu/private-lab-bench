@@ -248,6 +248,7 @@ def _slice_metrics(
     target_values: np.ndarray,
     prediction_values: np.ndarray,
     uncertainty_config: BootstrapConfig | None = None,
+    sampling_design: Any = None,
 ) -> dict[str, dict[str, dict[str, object]]]:
     if min_slice_size < 1:
         raise ValueError("min_slice_size must be at least 1")
@@ -259,6 +260,9 @@ def _slice_metrics(
             index_array = np.asarray(indices, dtype=int)
             key = "<NA>" if pd.isna(value) else str(value)
             entry: dict[str, object] = {"n": int(len(index_array))}
+            if sampling_design:
+                from privatelabbench.eval.sampling import plan_sampling
+                entry["n_independent_units"] = plan_sampling(df.iloc[index_array], sampling_design).n_units
             if len(index_array) < min_slice_size:
                 entry["status"] = "skipped_min_slice_size"
             else:
@@ -275,6 +279,8 @@ def _slice_metrics(
                         y_true=target_values[index_array],
                         predictions=prediction_values[index_array],
                         config=uncertainty_config.for_slice(seed_offset=slice_counter),
+                        sampling_design=sampling_design,
+                        sampling_metadata=df.iloc[index_array].reset_index(drop=True),
                     )
             column_results[key] = entry
         out[column] = column_results
@@ -296,13 +302,17 @@ def evaluate_prediction_csv(
     class_labels: Sequence[str] | None = None,
     split_column: str | None = None,
     uncertainty_config: BootstrapConfig | None = None,
+    sampling_design: Any = None,
 ) -> PredictionEvaluation:
+    from privatelabbench.eval.sampling import sampling_design as parse_design
+    design = parse_design(sampling_design)
     return evaluate_prediction_table(
-        pd.read_csv(path), dataset_path=str(path), target=target,
+        pd.read_csv(path, dtype={**({sample_id_column: "string"} if sample_id_column else {}), **({column: "string" for column in design.metadata_columns} if design else {})}), dataset_path=str(path), target=target,
         prediction_column=prediction_column, prediction_columns=prediction_columns,
         task_type=task_type, sample_id_column=sample_id_column, require_sample_id=require_sample_id,
         metadata_columns=metadata_columns, slice_columns=slice_columns, min_slice_size=min_slice_size,
         class_labels=class_labels, split_column=split_column, uncertainty_config=uncertainty_config,
+        sampling_design=design,
     )
 
 
@@ -322,16 +332,21 @@ def evaluate_prediction_table(
     class_labels: Sequence[str] | None = None,
     split_column: str | None = None,
     uncertainty_config: BootstrapConfig | None = None,
+    sampling_design: Any = None,
 ) -> PredictionEvaluation:
     path = dataset_path
     if not isinstance(df, pd.DataFrame) or df.columns.duplicated().any():
         raise ValueError("Prediction table must be a DataFrame with unique column names")
+    from privatelabbench.eval.sampling import sampling_design as parse_design
+    design = parse_design(sampling_design)
     prediction_cols = _resolve_prediction_columns(
         prediction_column=prediction_column,
         prediction_columns=prediction_columns,
     )
     configured_metadata = _normalize_string_list(metadata_columns, label="metadata_columns")
     configured_slices = _normalize_string_list(slice_columns, label="slice_columns")
+    if design:
+        configured_slices = tuple(dict.fromkeys([*configured_slices, *[column for column, value in design.critical_slices]]))
 
     required = {target, *prediction_cols, *configured_metadata, *configured_slices}
     if split_column:
@@ -352,6 +367,8 @@ def evaluate_prediction_table(
     selected_for_dropna = [target, *prediction_cols]
     if split_column:
         selected_for_dropna.append(split_column)
+    if design and df[selected_for_dropna].isna().any().any():
+        raise ValueError("Sampling designs require complete targets/predictions; declare exclusions before evaluation")
     df = df.dropna(subset=selected_for_dropna).reset_index(drop=True)
     if df.empty:
         raise ValueError("No valid rows found after dropping missing targets or predictions.")
@@ -422,7 +439,9 @@ def evaluate_prediction_table(
         y_true=y_true,
         predictions=prediction_values,
         config=resolved_uncertainty,
-    ) if resolved_uncertainty.enabled else {}
+        sampling_design=design,
+        sampling_metadata=df,
+    ) if resolved_uncertainty.enabled or design else {}
 
     inferred_metadata = tuple(
         str(column)
@@ -441,6 +460,7 @@ def evaluate_prediction_table(
         target_values=y_true,
         prediction_values=prediction_values,
         uncertainty_config=resolved_uncertainty,
+        sampling_design=design,
     )
 
     privacy_risk = None

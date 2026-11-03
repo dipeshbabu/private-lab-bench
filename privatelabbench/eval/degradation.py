@@ -61,7 +61,19 @@ def _encoded(frame, target, predictions, task_type, labels):
     return y, p[:, 0] if len(predictions) == 1 else p
 
 
-def _samples(y, p, *, task_type, names, config, rng):
+def _samples(y, p, *, task_type, names, config, rng, plan=None):
+    if plan is not None:
+        from privatelabbench.eval.sampling import bootstrap_samples
+
+        return bootstrap_samples(
+            y,
+            p,
+            task_type=task_type,
+            metric_names=tuple(names),
+            plan=plan,
+            resamples=config.resamples,
+            rng=rng,
+        )
     if task_type == "regression":
         return _regression_bootstrap_values(y, p, resamples=config.resamples, rng=rng)
     return _generic_bootstrap_values(
@@ -87,43 +99,63 @@ def _changes(
     independent,
     overlapping,
     thresholds,
+    sampling_design=None,
+    metadata_reference=None,
+    metadata_current=None,
 ):
-    status = (
-        "disabled"
-        if not config.enabled
-        else (
-            "independence_not_declared"
-            if not independent
-            else (
-                "overlapping_cohorts_not_supported"
-                if overlapping
-                else (
-                    "skipped_min_samples"
-                    if min(len(y_ref), len(y_cur)) < config.min_samples
-                    else "evaluated"
-                )
-            )
-        )
+    from privatelabbench.eval.sampling import plan_sampling, ResampleLimit
+
+    plan_a = (
+        plan_sampling(metadata_reference, sampling_design) if sampling_design else None
     )
+    plan_b = (
+        plan_sampling(metadata_current, sampling_design) if sampling_design else None
+    )
+    units = (
+        {
+            "n_independent_units_reference": plan_a.n_units,
+            "n_independent_units_current": plan_b.n_units,
+        }
+        if plan_a
+        else {}
+    )
+    overlapping = overlapping or bool(plan_a and plan_a.root_ids & plan_b.root_ids)
+    if not config.enabled:
+        status = "disabled"
+    elif not independent:
+        status = "independence_not_declared"
+    elif overlapping:
+        status = "overlapping_cohorts_not_supported"
+    elif plan_a and (plan_a.status != "evaluated" or plan_b.status != "evaluated"):
+        status = plan_a.status if plan_a.status != "evaluated" else plan_b.status
+    elif min(len(y_ref), len(y_cur)) < config.min_samples:
+        status = "skipped_min_samples"
+    else:
+        status = "evaluated"
     ref_values = cur_values = None
     if status == "evaluated":
         ref_seed, cur_seed = np.random.SeedSequence(config.seed).spawn(2)
-        ref_values = _samples(
-            y_ref,
-            p_ref,
-            task_type=task_type,
-            names=reference,
-            config=config,
-            rng=np.random.default_rng(ref_seed),
-        )
-        cur_values = _samples(
-            y_cur,
-            p_cur,
-            task_type=task_type,
-            names=current,
-            config=config,
-            rng=np.random.default_rng(cur_seed),
-        )
+        try:
+            ref_values = _samples(
+                y_ref,
+                p_ref,
+                task_type=task_type,
+                names=reference,
+                config=config,
+                rng=np.random.default_rng(ref_seed),
+                plan=plan_a,
+            )
+            cur_values = _samples(
+                y_cur,
+                p_cur,
+                task_type=task_type,
+                names=current,
+                config=config,
+                rng=np.random.default_rng(cur_seed),
+                plan=plan_b,
+            )
+        except ResampleLimit:
+            status = "not_supported_resource_limit"
     changes = {}
     for name in sorted(set(reference) | set(current)):
         a, b = _finite(reference.get(name)), _finite(current.get(name))
@@ -148,6 +180,7 @@ def _changes(
                 confidence_level=config.confidence_level,
                 requested_resamples=config.resamples,
             )
+        interval.update(units)
         changes[name] = {
             "reference": a,
             "current": b,
@@ -252,6 +285,7 @@ def diagnose_shift(
     prevalence_threshold: float = 0.1,
     numeric_metadata: Sequence[str] = (),
     categorical_metadata: Sequence[str] = (),
+    sampling_design: Any = None,
 ) -> dict[str, Any]:
     if (
         type(independent_cohorts) is not bool
@@ -264,7 +298,28 @@ def diagnose_shift(
     thresholds = _thresholds(practical_thresholds or {})
     config = uncertainty_config or BootstrapConfig(enabled=True)
     config.validate()
-    frames = [pd.read_csv(path) for path in (reference_path, current_path)]
+    from privatelabbench.eval.sampling import (
+        sampling_design as parse_design,
+        plan_sampling,
+    )
+
+    design = parse_design(sampling_design)
+    slice_columns = (
+        tuple(
+            dict.fromkeys(
+                [*slice_columns, *[column for column, value in design.critical_slices]]
+            )
+        )
+        if design
+        else slice_columns
+    )
+    dtypes = {
+        sample_id_column: "string",
+        **({column: "string" for column in design.metadata_columns} if design else {}),
+    }
+    frames = [
+        pd.read_csv(path, dtype=dtypes) for path in (reference_path, current_path)
+    ]
     bindings = prediction_bindings(
         reference_path,
         frame=frames[0],
@@ -308,6 +363,7 @@ def diagnose_shift(
             require_sample_id=True,
             slice_columns=slice_columns,
             min_slice_size=min_slice_size,
+            sampling_design=design,
         )
         for frame, path in zip(frames, (reference_path, current_path))
     ]
@@ -340,6 +396,9 @@ def diagnose_shift(
         independent=independent_cohorts,
         overlapping=overlapping,
         thresholds=thresholds,
+        sampling_design=design,
+        metadata_reference=frames[0],
+        metadata_current=frames[1],
     )
     slices, ranking = {}, []
     seed_offset = 0
@@ -378,6 +437,16 @@ def diagnose_shift(
                 "status": status,
                 "metrics": {},
             }
+            i_a, i_b = np.flatnonzero(normalized_a == label), np.flatnonzero(
+                normalized_b == label
+            )
+            if design:
+                entry["n_independent_units_reference"] = plan_sampling(
+                    frames[0].iloc[i_a], design
+                ).n_units
+                entry["n_independent_units_current"] = plan_sampling(
+                    frames[1].iloc[i_b], design
+                ).n_units
             if status == "evaluated":
                 seed_offset += 1
                 i_a, i_b = np.flatnonzero(normalized_a == label), np.flatnonzero(
@@ -399,6 +468,9 @@ def diagnose_shift(
                     independent=independent_cohorts,
                     overlapping=overlapping,
                     thresholds=thresholds,
+                    sampling_design=design,
+                    metadata_reference=frames[0].iloc[i_a].reset_index(drop=True),
+                    metadata_current=frames[1].iloc[i_b].reset_index(drop=True),
                 )
                 delta = entry["metrics"][metric]["degradation"]
                 if delta is not None:
@@ -452,11 +524,40 @@ def diagnose_shift(
         "uncertainty": {
             **config.as_dict(),
             "schema_version": "cohort-delta-uncertainty/v1",
-            "method": "independent_percentile_bootstrap",
+            "method": (
+                "independent_percentile_bootstrap"
+                if not design
+                else (
+                    "independent_cluster_percentile_bootstrap"
+                    if design.method == "cluster_bootstrap"
+                    else "independent_hierarchical_percentile_bootstrap"
+                )
+            ),
             "independent_cohorts_declared": independent_cohorts,
             "overlapping_sample_ids": overlapping,
+            **(
+                {
+                    "sampling_design": design.as_dict(),
+                    "overlapping_independent_units": bool(
+                        plan_sampling(frames[0], design).root_ids
+                        & plan_sampling(frames[1], design).root_ids
+                    ),
+                }
+                if design
+                else {}
+            ),
             "sampling": (
-                "iid_rows" if task_type == "regression" else "stratified_by_target"
+                "independent_clusters"
+                if design and design.method == "cluster_bootstrap"
+                else (
+                    "nested_clusters"
+                    if design
+                    else (
+                        "iid_rows"
+                        if task_type == "regression"
+                        else "stratified_by_target"
+                    )
+                )
             ),
         },
         "limitations": LIMITATIONS,
@@ -498,11 +599,18 @@ def sanitize_degradation(
         raise ValueError("Unsupported degradation metric")
     uncertainty_metadata = _mapping(summary.get("uncertainty"))
     declaration = uncertainty_metadata.get("independent_cohorts_declared")
-    overlap = uncertainty_metadata.get("overlapping_sample_ids", False)
+    overlap = uncertainty_metadata.get(
+        "overlapping_sample_ids", False
+    ) or uncertainty_metadata.get("overlapping_independent_units", False)
     if (
         type(declaration) is not bool
         or type(overlap) is not bool
-        or uncertainty_metadata.get("method") != "independent_percentile_bootstrap"
+        or uncertainty_metadata.get("method")
+        not in {
+            "independent_percentile_bootstrap",
+            "independent_cluster_percentile_bootstrap",
+            "independent_hierarchical_percentile_bootstrap",
+        }
         or uncertainty_metadata.get("schema_version") != "cohort-delta-uncertainty/v1"
     ):
         raise ValueError("Invalid cohort uncertainty method/declaration")
@@ -525,7 +633,7 @@ def sanitize_degradation(
         seed=uncertainty_metadata["seed"],
     ).validate()
 
-    def change(entry, name):
+    def change(entry, name, *, full_cohort=False):
         entry = _mapping(entry)
         a, b = _number(entry.get("reference")), _number(entry.get("current"))
         threshold = _number(entry.get("practical_threshold", 0.0))
@@ -547,9 +655,45 @@ def sanitize_degradation(
             "skipped_min_samples",
             "undefined_point_estimate",
             "insufficient_valid_resamples",
+            "skipped_min_independent_units",
+            "skipped_min_units_per_stratum",
+            "not_supported_missing_cluster_columns",
+            "not_supported_missing_cluster_ids",
+            "not_supported_nonconstant_cluster_strata",
+            "not_supported_crossed_clusters",
+            "not_supported_resource_limit",
+            "withheld_small_independent_unit_count",
         }:
             raise ValueError("Invalid degradation interval status")
         low, high = _number(interval.get("lower")), _number(interval.get("upper"))
+        unit_counts = {
+            key: interval[key]
+            for key in ("n_independent_units_reference", "n_independent_units_current")
+            if key in interval
+        }
+        if unit_counts and (
+            len(unit_counts) != 2
+            or any(
+                type(count) is not int or count < 0 for count in unit_counts.values()
+            )
+        ):
+            raise ValueError("Invalid cohort independent-unit counts")
+        if (
+            full_cohort
+            and unit_counts
+            and min(unit_counts.values())
+            < max(policy["min_samples"], policy["min_cell_size"])
+        ):
+            raise ValueError(
+                "Both cohort independent-unit counts must meet release minimums"
+            )
+        if unit_counts and min(unit_counts.values()) < policy["min_cell_size"]:
+            status, low, high, unit_counts = (
+                "withheld_small_independent_unit_count",
+                None,
+                None,
+                {},
+            )
         if status == "evaluated" and (
             low is None
             or high is None
@@ -581,17 +725,18 @@ def sanitize_degradation(
                 "status": status,
                 "lower": low if status == "evaluated" else None,
                 "upper": high if status == "evaluated" else None,
+                **unit_counts,
             },
         }
 
-    def metrics(entries):
+    def metrics(entries, *, full_cohort=False):
         return {
-            name: change(entry, name)
+            name: change(entry, name, full_cohort=full_cohort)
             for name, entry in _mapping(entries).items()
             if name in METRIC_DIRECTIONS
         }
 
-    overall = metrics(summary.get("overall", {}))
+    overall = metrics(summary.get("overall", {}), full_cohort=True)
     if primary not in overall:
         raise ValueError("Primary degradation metric is missing")
     prevalence = _number(summary.get("prevalence_threshold"))
@@ -606,6 +751,20 @@ def sanitize_degradation(
             (entry.get("n_reference"), entry.get("n_current"))
             for entry in groups.values()
         ]
+        if any(
+            any(
+                key in entry
+                and (
+                    type(entry[key]) is not int or entry[key] < policy["min_cell_size"]
+                )
+                for key in (
+                    "n_independent_units_reference",
+                    "n_independent_units_current",
+                )
+            )
+            for entry in groups.values()
+        ):
+            continue
         if (
             any(
                 type(a) is not int
@@ -631,6 +790,14 @@ def sanitize_degradation(
                 "material_prevalence_change": abs(delta) > prevalence,
                 "status": "evaluated" if values else "skipped_min_slice_size",
                 "metrics": values,
+                **{
+                    key: entry[key]
+                    for key in (
+                        "n_independent_units_reference",
+                        "n_independent_units_current",
+                    )
+                    if key in entry
+                },
             }
             if primary in values and values[primary]["degradation"] is not None:
                 ranking.append(
@@ -691,7 +858,7 @@ def sanitize_degradation(
     uncertainty = _statistics(
         dict(uncertainty_metadata) | {"method": "percentile_bootstrap"}
     )
-    uncertainty["method"] = "independent_percentile_bootstrap"
+    uncertainty["method"] = uncertainty_metadata["method"]
     uncertainty["schema_version"] = "cohort-delta-uncertainty/v1"
     uncertainty["independent_cohorts_declared"] = declaration
     return {

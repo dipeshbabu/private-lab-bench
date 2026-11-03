@@ -152,6 +152,7 @@ def _baseline_prediction_metrics(
         task_type=task_type,
         sample_id_column=sample_id_column,
         require_sample_id=False,
+        sampling_design=config.raw.get("sampling_design"),
         split_column=str(split_column) if split_column else None,
     )
     return str(baseline_column), baseline.metrics
@@ -212,6 +213,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
         class_labels=class_labels or None,
         split_column=str(split_column) if split_column else None,
         uncertainty_config=uncertainty_config,
+        sampling_design=config.raw.get("sampling_design"),
     )
     clean_metrics = result.metrics
     reported_metrics = privatize_metrics(clean_metrics, privacy_config)
@@ -464,6 +466,8 @@ def run_config(config_path: str, *, protocol_override: str | None = None) -> dic
     ensure_builtin_tasks_registered()
     discover_entrypoint_tasks()
     task = get_task(config.task_id)
+    if config.raw.get("sampling_design") is not None and task.source == "builtin" and config.task_id not in {"predictions", "tabular"}:
+        raise ValueError("Declared sampling designs currently require a prediction-table task")
     summary = task.runner(config)
     if "diagnostics" in config.raw:
         from privatelabbench.eval.degradation import diagnose_shift, render_degradation
@@ -477,7 +481,7 @@ def run_config(config_path: str, *, protocol_override: str | None = None) -> dic
         input_cfg = section(config, "input")
         reference = _input_path(config, str(required(diagnostics, "reference_path", section_name="diagnostics")))
         primary = section(config, "evaluation").get("primary_metric") or (config.protocol.as_dict()["primary_metric"] if config.protocol else None)
-        shift = diagnose_shift(reference, _input_path(config, str(input_cfg["path"])), target=input_cfg["target_column"], prediction_column=input_cfg.get("prediction_column"), prediction_columns=input_cfg.get("prediction_columns"), task_type=input_cfg.get("task_type"), class_labels=input_cfg.get("class_labels"), sample_id_column=input_cfg.get("sample_id_column", "sample_id"), slice_columns=input_cfg.get("slice_columns", []), min_slice_size=input_cfg.get("min_slice_size", 5), metric=primary, uncertainty_config=_uncertainty_config(config), **{key: value for key, value in diagnostics.items() if key != "reference_path"})
+        shift = diagnose_shift(reference, _input_path(config, str(input_cfg["path"])), target=input_cfg["target_column"], prediction_column=input_cfg.get("prediction_column"), prediction_columns=input_cfg.get("prediction_columns"), task_type=input_cfg.get("task_type"), class_labels=input_cfg.get("class_labels"), sample_id_column=input_cfg.get("sample_id_column", "sample_id"), slice_columns=input_cfg.get("slice_columns", []), min_slice_size=input_cfg.get("min_slice_size", 5), metric=primary, uncertainty_config=_uncertainty_config(config), sampling_design=config.raw.get("sampling_design"), **{key: value for key, value in diagnostics.items() if key != "reference_path"})
         report_path = Path(summary["json_report"])
         report = json.loads(report_path.read_text(encoding="utf-8"))
         report["result"]["degradation_summary"] = shift["degradation_summary"]

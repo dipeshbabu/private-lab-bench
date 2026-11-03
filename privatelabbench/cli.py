@@ -65,6 +65,7 @@ def add_simple_prediction_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--metadata", action="append", default=None)
     parser.add_argument("--baseline-column", default=None)
     parser.add_argument("--protocol", default=None)
+    parser.add_argument("--sampling-design", default=None, help="Local sampling-design/v1 YAML with declared independent units.")
     parser.add_argument("--primary-metric", default=None, help="Default: RMSE / AUROC / macro AUROC, or the protocol primary metric.")
     parser.add_argument("--resamples", type=int, default=None)
     parser.add_argument("--confidence-level", type=float, default=None)
@@ -154,6 +155,7 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("--model-a-name", default=None)
     compare.add_argument("--model-b-name", default=None)
     compare.add_argument("--protocol", default=None, help="Bind an exact versioned protocol and its comparison rules.")
+    compare.add_argument("--sampling-design", default=None, help="Declared cluster/hierarchical sampling and optional slice test-family policy.")
     compare.add_argument("--confidence-level", type=float, default=None, help="Default: 0.95, or protocol setting.")
     compare.add_argument("--resamples", type=int, default=None, help="Paired bootstrap resamples. Default: 1000, or protocol setting.")
     compare.add_argument("--permutations", type=int, default=None, help="Prediction-swap permutations; 0 disables. Default: 1000, or protocol setting.")
@@ -306,7 +308,7 @@ def simple_evaluation_command(args: argparse.Namespace) -> int:
         uncertainty = {key: value for key, value in {"resamples": args.resamples, "confidence_level": args.confidence_level, "seed": args.seed, "min_samples": args.min_samples, "include_slices": args.include_slice_uncertainty}.items() if value is not None}
         if args.no_uncertainty:
             uncertainty["enabled"] = False
-        config = make_evaluation_config(source, output_dir=output, protocol=args.protocol, primary_metric=args.primary_metric, uncertainty=uncertainty, min_slice_size=args.min_slice_size, quality_policy=_read_release_policy(args.quality_policy) if args.quality_policy else None, release_policy=_read_release_policy(args.release_policy) if args.release_policy else None, target=args.target, prediction_column=args.prediction_column, prediction_columns=args.prediction_columns, sample_id_column=args.sample_id_column, task_type=args.task_type, class_labels=args.class_labels, slices=args.slice, metadata=args.metadata, baseline_column=args.baseline_column)
+        config = make_evaluation_config(source, output_dir=output, protocol=args.protocol, primary_metric=args.primary_metric, uncertainty=uncertainty, min_slice_size=args.min_slice_size, quality_policy=_read_release_policy(args.quality_policy) if args.quality_policy else None, release_policy=_read_release_policy(args.release_policy) if args.release_policy else None, sampling_design=_read_release_policy(args.sampling_design) if args.sampling_design else None, target=args.target, prediction_column=args.prediction_column, prediction_columns=args.prediction_columns, sample_id_column=args.sample_id_column, task_type=args.task_type, class_labels=args.class_labels, slices=args.slice, metadata=args.metadata, baseline_column=args.baseline_column)
         if args.reference:
             config["diagnostics"] = {"reference_path": str(Path(args.reference).resolve()), "independent_cohorts": args.independent_cohorts, "prevalence_threshold": args.prevalence_threshold, "numeric_metadata": args.numeric_metadata or [], "categorical_metadata": args.categorical_metadata or [], "practical_thresholds": {config["evaluation"]["primary_metric"]: args.degradation_threshold} if args.degradation_threshold is not None else {}}
         elif args.independent_cohorts or args.degradation_threshold is not None or args.numeric_metadata or args.categorical_metadata:
@@ -478,10 +480,13 @@ def compare_command(args: argparse.Namespace) -> int:
         signing_secret=args.signing_secret or os.getenv("PRIVATELABBENCH_SIGNING_SECRET"),
         release_policy=_read_release_policy(args.release_policy) if args.release_policy else None,
         protocol=args.protocol,
+        sampling_design=_read_release_policy(args.sampling_design) if args.sampling_design else None,
     )
     interval = result["paired_interval"]
     print("PrivateLabBench paired prediction comparison")
     print(f"Samples: {result['n_samples']}")
+    if "n_independent_units" in interval:
+        print(f"Independent units: {interval['n_independent_units']}; method: {interval['method']}")
     print(f"Metric: {result['metric']} ({result['direction']})")
     print(f"Model A: {result['model_a']['name']} = {float(result['model_a']['selected_metric']):.6f}")
     print(f"Model B: {result['model_b']['name']} = {float(result['model_b']['selected_metric']):.6f}")
@@ -495,6 +500,9 @@ def compare_command(args: argparse.Namespace) -> int:
     if randomization.get("p_value") is not None:
         print(f"Paired randomization p-value: {float(randomization['p_value']):.6g}")
     print(f"Decision: {result['decision']['confidence_interval']}")
+    if result.get("multiplicity"):
+        family = result["multiplicity"]
+        print(f"Slice tests: {family['family']} ({family['method']}), {family['n_usable_tests']}/{family['n_tests']} usable; {family['status']}")
     print(f"Markdown report saved to: {Path(result['markdown_report'])}")
     print(f"Local JSON artifact saved to: {Path(result['json_report'])}")
     if result["shareable_json_report"]:
