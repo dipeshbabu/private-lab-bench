@@ -20,14 +20,18 @@ def _format_value_lines(values: Mapping[str, object]) -> list[str]:
     return [f"- {key}: {_format_report_value(value)}" for key, value in values.items()]
 
 
-def _append_uncertainty(lines: list[str], uncertainty: object, *, heading: str = "Statistical uncertainty") -> None:
+def _append_uncertainty(
+    lines: list[str], uncertainty: object, *, heading: str = "Statistical uncertainty"
+) -> None:
     if not isinstance(uncertainty, Mapping) or not uncertainty:
         return
     lines.extend(["", f"## {heading}"])
     lines.append(f"- Status: {uncertainty.get('status', 'unknown')}")
     lines.append(f"- Method: {uncertainty.get('method', 'unknown')}")
     if uncertainty.get("confidence_level") is not None:
-        lines.append(f"- Confidence level: {float(uncertainty['confidence_level']):.1%}")
+        lines.append(
+            f"- Confidence level: {float(uncertainty['confidence_level']):.1%}"
+        )
     if uncertainty.get("resamples") is not None:
         lines.append(f"- Bootstrap resamples: {uncertainty['resamples']}")
     if uncertainty.get("seed") is not None:
@@ -35,16 +39,22 @@ def _append_uncertainty(lines: list[str], uncertainty: object, *, heading: str =
     if uncertainty.get("sampling"):
         lines.append(f"- Sampling: {uncertainty['sampling']}")
     if "n_independent_units" in uncertainty:
-        lines.append(f"- Independent units: {uncertainty['n_independent_units']}; observations: {uncertainty.get('n_samples')}")
+        lines.append(
+            f"- Independent units: {uncertainty['n_independent_units']}; observations: {uncertainty.get('n_samples')}"
+        )
         if uncertainty.get("cluster_sizes"):
             sizes = uncertainty["cluster_sizes"]
-            lines.append(f"- Cluster sizes: min={sizes['min']}, median={sizes['median']}, max={sizes['max']}")
+            lines.append(
+                f"- Cluster sizes: min={sizes['min']}, median={sizes['median']}, max={sizes['max']}"
+            )
         for flag in uncertainty.get("reliability_flags", []):
             lines.append(f"- Reliability flag: {flag}")
     intervals = uncertainty.get("metrics", {})
     if isinstance(intervals, Mapping):
         for metric_name, interval_value in intervals.items():
-            interval = dict(interval_value) if isinstance(interval_value, Mapping) else {}
+            interval = (
+                dict(interval_value) if isinstance(interval_value, Mapping) else {}
+            )
             if interval.get("lower") is not None and interval.get("upper") is not None:
                 lines.append(
                     f"- {metric_name}: {float(interval.get('estimate')):.6f} "
@@ -90,7 +100,15 @@ def write_markdown_report(
     lines.extend(_format_metric_lines(clean_metrics))
     lines.extend(["", "## Privacy-preserving reported metrics"])
     lines.extend(_format_metric_lines(private_metrics))
-    lines.extend(["", "## Privacy mode", privacy_summary(privacy_config), "", "## Dataset shift summary"])
+    lines.extend(
+        [
+            "",
+            "## Privacy mode",
+            privacy_summary(privacy_config),
+            "",
+            "## Dataset shift summary",
+        ]
+    )
     lines.extend(_format_metric_lines(dict(result["shift"])))
     error_slices = dict(result.get("error_slices", {}))
     if error_slices:
@@ -100,12 +118,20 @@ def write_markdown_report(
     if privacy_risk:
         lines.extend(["", "## Privacy attack risk"])
         lines.extend(_format_value_lines(privacy_risk))
-    lines.extend(["", "## Notes", "PrivateLabBench runs evaluation locally. Raw scientific samples are not uploaded by this CLI."])
+    lines.extend(
+        [
+            "",
+            "## Notes",
+            "PrivateLabBench runs evaluation locally. Raw scientific samples are not uploaded by this CLI.",
+        ]
+    )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
 
 
-def _append_slice_metrics(lines: list[str], slice_metrics: Mapping[str, object]) -> None:
+def _append_slice_metrics(
+    lines: list[str], slice_metrics: Mapping[str, object]
+) -> None:
     if not slice_metrics:
         return
     lines.extend(["", "## Slice metrics"])
@@ -114,7 +140,9 @@ def _append_slice_metrics(lines: list[str], slice_metrics: Mapping[str, object])
         lines.extend(["", f"### `{column}`"])
         for group, entry_value in groups.items():
             entry = dict(entry_value)
-            lines.append(f"- **{group}** — n={entry.get('n', 0)}, status={entry.get('status', 'unknown')}")
+            lines.append(
+                f"- **{group}** — n={entry.get('n', 0)}, status={entry.get('status', 'unknown')}"
+            )
             metrics = entry.get("metrics")
             if isinstance(metrics, Mapping):
                 for key, value in metrics.items():
@@ -124,8 +152,15 @@ def _append_slice_metrics(lines: list[str], slice_metrics: Mapping[str, object])
                 intervals = uncertainty.get("metrics", {})
                 if isinstance(intervals, Mapping):
                     for key, interval_value in intervals.items():
-                        interval = dict(interval_value) if isinstance(interval_value, Mapping) else {}
-                        if interval.get("lower") is not None and interval.get("upper") is not None:
+                        interval = (
+                            dict(interval_value)
+                            if isinstance(interval_value, Mapping)
+                            else {}
+                        )
+                        if (
+                            interval.get("lower") is not None
+                            and interval.get("upper") is not None
+                        ):
                             lines.append(
                                 f"  - {key} CI: [{float(interval['lower']):.6f}, {float(interval['upper']):.6f}]"
                             )
@@ -145,10 +180,18 @@ def write_prediction_markdown_report(
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     schema = result.schema.as_dict()
-    prediction_columns = ", ".join(f"`{column}`" for column in schema["prediction_columns"])
-    metadata_columns = ", ".join(f"`{column}`" for column in schema["metadata_columns"]) or "(none)"
-    slice_columns = ", ".join(f"`{column}`" for column in schema["slice_columns"]) or "(none)"
-    class_labels = ", ".join(str(label) for label in schema["class_labels"]) or "(not applicable)"
+    prediction_columns = ", ".join(
+        f"`{column}`" for column in schema["prediction_columns"]
+    )
+    metadata_columns = (
+        ", ".join(f"`{column}`" for column in schema["metadata_columns"]) or "(none)"
+    )
+    slice_columns = (
+        ", ".join(f"`{column}`" for column in schema["slice_columns"]) or "(none)"
+    )
+    class_labels = (
+        ", ".join(str(label) for label in schema["class_labels"]) or "(not applicable)"
+    )
     lines = [
         "# PrivateLabBench Prediction Evaluation Report",
         "",
@@ -159,7 +202,9 @@ def write_prediction_markdown_report(
         "",
         "## Prediction table schema",
         f"- Schema: `{schema['schema_version']}`",
-        f"- Sample ID column: `{schema['sample_id_column']}`" if schema["sample_id_column"] else "- Sample ID column: (not configured)",
+        f"- Sample ID column: `{schema['sample_id_column']}`"
+        if schema["sample_id_column"]
+        else "- Sample ID column: (not configured)",
         f"- Sample ID status: {schema['sample_id_status']}",
         f"- Target column: `{schema['target_column']}`",
         f"- Prediction column(s): {prediction_columns}",
@@ -172,7 +217,14 @@ def write_prediction_markdown_report(
     lines.extend(_format_metric_lines(clean_metrics))
     _append_uncertainty(lines, result.uncertainty)
     if baseline_prediction_column and baseline_metrics:
-        lines.extend(["", "## Baseline comparison", f"- Baseline prediction column: `{baseline_prediction_column}`", ""])
+        lines.extend(
+            [
+                "",
+                "## Baseline comparison",
+                f"- Baseline prediction column: `{baseline_prediction_column}`",
+                "",
+            ]
+        )
         lines.extend(_format_metric_lines(baseline_metrics))
     lines.extend(["", "## Reported metrics"])
     lines.extend(_format_metric_lines(private_metrics))
@@ -183,17 +235,27 @@ def write_prediction_markdown_report(
     if result.privacy_risk:
         lines.extend(["", "## Privacy attack risk"])
         lines.extend(_format_value_lines(result.privacy_risk))
-    lines.extend([
-        "",
-        "## Sharing boundary",
-        "- Row-level sample IDs, targets, predictions, and metadata values are not written into this aggregate report.",
-        "- Confidence intervals are computed locally from row-level data; only aggregate interval bounds and method metadata are reported.",
-        "- The report contains aggregate metrics, prediction summaries, slice counts/metrics, privacy-audit summaries, and schema column names.",
-        "- The local source path is included for local reproducibility; the shareable receipt removes local-only fields.",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Sharing boundary",
+            "- Row-level sample IDs, targets, predictions, and metadata values are not written into this aggregate report.",
+            "- Confidence intervals are computed locally from row-level data; only aggregate interval bounds and method metadata are reported.",
+            "- The report contains aggregate metrics, prediction summaries, slice counts/metrics, privacy-audit summaries, and schema column names.",
+            "- The local source path is included for local reproducibility; the shareable receipt removes local-only fields.",
+        ]
+    )
     if json_report_path:
-        lines.extend(["", "## Machine-readable report", f"- JSON report: `{json_report_path}`"])
-    lines.extend(["", "## Notes", "This workflow evaluates predictions generated by any model or tool. PrivateLabBench only reads the local prediction table during evaluation."])
+        lines.extend(
+            ["", "## Machine-readable report", f"- JSON report: `{json_report_path}`"]
+        )
+    lines.extend(
+        [
+            "",
+            "## Notes",
+            "This workflow evaluates predictions generated by any model or tool. PrivateLabBench only reads the local prediction table during evaluation.",
+        ]
+    )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
 
@@ -234,17 +296,19 @@ def write_federated_markdown_report(
         lines.extend(_format_value_lines(aggregate_release))
     lines.extend(["", "## Per-client results"])
     for client in clients:
-        lines.extend([
-            "",
-            f"### {client.client_id}",
-            f"- Source: `{client.dataset_path}`",
-            f"- Samples: {client.n_samples}",
-            f"- Train/Test split: {client.n_train} / {client.n_test}",
-            f"- Task type: {client.task_type}",
-            f"- Model: {client.model}",
-            "",
-            "Clean metrics:",
-        ])
+        lines.extend(
+            [
+                "",
+                f"### {client.client_id}",
+                f"- Source: `{client.dataset_path}`",
+                f"- Samples: {client.n_samples}",
+                f"- Train/Test split: {client.n_train} / {client.n_test}",
+                f"- Task type: {client.task_type}",
+                f"- Model: {client.model}",
+                "",
+                "Clean metrics:",
+            ]
+        )
         lines.extend(_format_metric_lines(client.clean_metrics))
         lines.append("")
         lines.append("Reported metrics:")
@@ -252,6 +316,12 @@ def write_federated_markdown_report(
         lines.append("")
         lines.append("Shift summary:")
         lines.extend(_format_metric_lines(client.shift))
-    lines.extend(["", "## Notes", "This report evaluates multiple local site/lab CSVs independently and combines aggregate metrics. Raw scientific samples are not uploaded by this CLI."])
+    lines.extend(
+        [
+            "",
+            "## Notes",
+            "This report evaluates multiple local site/lab CSVs independently and combines aggregate metrics. Raw scientific samples are not uploaded by this CLI.",
+        ]
+    )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path

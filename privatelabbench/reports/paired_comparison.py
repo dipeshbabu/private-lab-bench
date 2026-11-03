@@ -7,9 +7,8 @@ from pathlib import Path
 from typing import Any, Mapping
 from uuid import uuid4
 
-from privatelabbench.reports.integrity import attach_integrity_metadata
 from privatelabbench.privacy.export import check_release, publish_shareable_artifact
-
+from privatelabbench.reports.integrity import attach_integrity_metadata
 
 PAIRED_COMPARISON_ARTIFACT_SCHEMA = "paired-comparison-artifact/v1"
 
@@ -56,7 +55,10 @@ def build_paired_comparison_artifact(
     comparison_id: str | None = None,
     created_at: str | None = None,
 ) -> dict[str, Any]:
-    snapshots = {record["model_role"]: record["artifact"]["local"]["evaluation_sha256"] for record in result.get("design_audits_local", [])}
+    snapshots = {
+        record["model_role"]: record["artifact"]["local"]["evaluation_sha256"]
+        for record in result.get("design_audits_local", [])
+    }
     payload = {
         "schema_version": PAIRED_COMPARISON_ARTIFACT_SCHEMA,
         "comparison_id": comparison_id or str(uuid4()),
@@ -69,8 +71,14 @@ def build_paired_comparison_artifact(
             "sampling_design": result.get("sampling_design"),
             "design_audits": result.get("design_audits_local", []),
             "inputs": {
-                "model_a": {"path": str(path_a), "sha256": snapshots.get("model_a") or _sha256_file(path_a)},
-                "model_b": {"path": str(path_b), "sha256": snapshots.get("model_b") or _sha256_file(path_b)},
+                "model_a": {
+                    "path": str(path_a),
+                    "sha256": snapshots.get("model_a") or _sha256_file(path_a),
+                },
+                "model_b": {
+                    "path": str(path_b),
+                    "sha256": snapshots.get("model_b") or _sha256_file(path_b),
+                },
             },
         },
     }
@@ -78,11 +86,16 @@ def build_paired_comparison_artifact(
 
 
 def make_shareable_paired_comparison(
-    artifact: Mapping[str, Any], *, signing_secret: str | None = None, policy: Mapping[str, Any] | None = None
+    artifact: Mapping[str, Any],
+    *,
+    signing_secret: str | None = None,
+    policy: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     decision, payload = check_release(artifact, policy)
     if payload is None:
-        raise ValueError(f"Shareable comparison blocked: {', '.join(decision.reason_codes)}")
+        raise ValueError(
+            f"Shareable comparison blocked: {', '.join(decision.reason_codes)}"
+        )
     return attach_integrity_metadata(payload, signing_secret=signing_secret)
 
 
@@ -158,17 +171,24 @@ def render_paired_comparison_markdown(artifact: Mapping[str, Any]) -> str:
                     )
                 )
                 slice_interval = entry.get("paired_interval")
-                if isinstance(slice_interval, Mapping) and slice_interval.get("lower") is not None:
+                if (
+                    isinstance(slice_interval, Mapping)
+                    and slice_interval.get("lower") is not None
+                ):
                     lines.append(
                         f"  - paired CI: [{float(slice_interval['lower']):.6f}, "
                         f"{float(slice_interval['upper']):.6f}]"
                     )
                 test = entry.get("randomization_test", {})
                 if test.get("p_value") is not None:
-                    lines.append(f"  - Unadjusted prediction-swap p-value: {test['p_value']:.6g}")
+                    lines.append(
+                        f"  - Unadjusted prediction-swap p-value: {test['p_value']:.6g}"
+                    )
                 corrected = entry.get("multiplicity", {})
                 if corrected:
-                    lines.append(f"  - {corrected['method']} ({corrected['family']}): adjusted p={corrected.get('adjusted_p_value')}; status={corrected['status']}")
+                    lines.append(
+                        f"  - {corrected['method']} ({corrected['family']}): adjusted p={corrected.get('adjusted_p_value')}; status={corrected['status']}"
+                    )
 
     lines.extend(
         [
@@ -184,10 +204,23 @@ def render_paired_comparison_markdown(artifact: Mapping[str, Any]) -> str:
     )
     if result.get("multiplicity"):
         family = result["multiplicity"]
-        lines.extend(["", "## Slice test family", f"- Method: {family['method']}; family: {family['family']}", f"- Tests: {family['n_tests']}; usable: {family['n_usable_tests']}; missing: {family['n_missing_tests']}", "- Adjusted p-values require valid tests and the declared dependence assumptions; they do not establish causality."])
+        lines.extend(
+            [
+                "",
+                "## Slice test family",
+                f"- Method: {family['method']}; family: {family['family']}",
+                f"- Tests: {family['n_tests']}; usable: {family['n_usable_tests']}; missing: {family['n_missing_tests']}",
+                "- Adjusted p-values require valid tests and the declared dependence assumptions; they do not establish causality.",
+            ]
+        )
     for audit in result.get("design_audits", []):
         from privatelabbench.design_audit import render_design_audit
-        lines.append(render_design_audit(audit, heading=f"{audit.get('model_role', 'Model')} design audit"))
+
+        lines.append(
+            render_design_audit(
+                audit, heading=f"{audit.get('model_role', 'Model')} design audit"
+            )
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -208,14 +241,24 @@ def write_paired_comparison_artifacts(
         signing_secret=signing_secret,
     )
     local_path = Path(json_path)
-    shareable_path = local_path.with_name(f"{local_path.stem}.shareable{local_path.suffix}")
+    shareable_path = local_path.with_name(
+        f"{local_path.stem}.shareable{local_path.suffix}"
+    )
     shareable_path.unlink(missing_ok=True)
     markdown_output = Path(markdown_path)
     for path in (local_path, shareable_path, markdown_output):
         path.parent.mkdir(parents=True, exist_ok=True)
-    local_path.write_text(json.dumps(local, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    decision = publish_shareable_artifact(local, release_policy, shareable_path, signing_secret=signing_secret)
-    markdown_output.write_text("LOCAL ONLY: review export policy before sharing.\n\n" + render_paired_comparison_markdown(local), encoding="utf-8")
+    local_path.write_text(
+        json.dumps(local, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    decision = publish_shareable_artifact(
+        local, release_policy, shareable_path, signing_secret=signing_secret
+    )
+    markdown_output.write_text(
+        "LOCAL ONLY: review export policy before sharing.\n\n"
+        + render_paired_comparison_markdown(local),
+        encoding="utf-8",
+    )
     paths = {
         "json_report": local_path,
         "markdown_report": markdown_output,

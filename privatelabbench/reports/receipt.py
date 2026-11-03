@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Any, Mapping
 from uuid import uuid4
 
-from privatelabbench.reports.integrity import attach_integrity_metadata, verify_report
 from privatelabbench.privacy.export import check_release, publish_shareable_artifact
+from privatelabbench.reports.integrity import attach_integrity_metadata, verify_report
 
 RECEIPT_SCHEMA_VERSION = "evaluation-receipt/v1"
 LEGACY_MANIFEST_SCHEMA = "run-manifest/v0.1"
@@ -55,31 +55,49 @@ def _input_schema(result: Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(schema, Mapping):
         return dict(schema)
     out: dict[str, Any] = {"schema_version": "legacy-task-input/v1"}
-    for key in ("target_column", "prediction_column", "task_type", "adapter", "fingerprint"):
+    for key in (
+        "target_column",
+        "prediction_column",
+        "task_type",
+        "adapter",
+        "fingerprint",
+    ):
         if result.get(key) is not None:
             out[key] = result.get(key)
     return out
 
 
-def _privacy_summary(report: Mapping[str, Any], result: Mapping[str, Any]) -> dict[str, Any]:
-    privacy = dict(report.get("privacy", {})) if isinstance(report.get("privacy"), Mapping) else {}
+def _privacy_summary(
+    report: Mapping[str, Any], result: Mapping[str, Any]
+) -> dict[str, Any]:
+    privacy = (
+        dict(report.get("privacy", {}))
+        if isinstance(report.get("privacy"), Mapping)
+        else {}
+    )
     audits: dict[str, Any] = {}
     if isinstance(result.get("privacy_risk"), Mapping) and result.get("privacy_risk"):
         audits["membership_inference"] = dict(result["privacy_risk"])
     release: dict[str, Any] = {"status": "not_evaluated"}
     if isinstance(result.get("privacy_gate"), Mapping) and result.get("privacy_gate"):
         release = dict(result["privacy_gate"])
-    elif isinstance(result.get("aggregate_release"), Mapping) and result.get("aggregate_release"):
+    elif isinstance(result.get("aggregate_release"), Mapping) and result.get(
+        "aggregate_release"
+    ):
         release = dict(result["aggregate_release"])
     return {"mechanism": privacy, "audits": audits, "release": release}
 
 
-def _shareable_uncertainty(report: Mapping[str, Any], result: Mapping[str, Any]) -> dict[str, Any]:
+def _shareable_uncertainty(
+    report: Mapping[str, Any], result: Mapping[str, Any]
+) -> dict[str, Any]:
     uncertainty = result.get("uncertainty")
     if not isinstance(uncertainty, Mapping) or not uncertainty:
         return {}
     payload = dict(uncertainty)
-    privacy = report.get("privacy", {}) if isinstance(report.get("privacy"), Mapping) else {}
+    privacy = (
+        report.get("privacy", {}) if isinstance(report.get("privacy"), Mapping) else {}
+    )
     release_mode = str(privacy.get("mode", "none"))
     if payload.get("metric_basis") == "clean_metrics" and release_mode != "none":
         return {
@@ -101,7 +119,13 @@ def _public_artifacts(manifest: Mapping[str, Any]) -> list[dict[str, Any]]:
     for artifact in manifest.get("artifacts", []):
         if not isinstance(artifact, Mapping):
             continue
-        artifacts.append({"kind": artifact.get("kind"), "name": artifact.get("name"), "sha256": artifact.get("sha256")})
+        artifacts.append(
+            {
+                "kind": artifact.get("kind"),
+                "name": artifact.get("name"),
+                "sha256": artifact.get("sha256"),
+            }
+        )
     return artifacts
 
 
@@ -135,7 +159,11 @@ def build_evaluation_receipt(
     metric_source, metrics = _reported_metrics(result)
     clean_metrics = _clean_metrics(result)
     extra = report.get("extra", {}) if isinstance(report.get("extra"), Mapping) else {}
-    attestation = manifest.get("attestation", {}) if isinstance(manifest.get("attestation"), Mapping) else {}
+    attestation = (
+        manifest.get("attestation", {})
+        if isinstance(manifest.get("attestation"), Mapping)
+        else {}
+    )
 
     shareable = {
         "run": {
@@ -147,10 +175,12 @@ def build_evaluation_receipt(
         },
         "benchmark": {
             "id": summary.get("benchmark_id") or extra.get("benchmark_id"),
-            "version": summary.get("benchmark_version") or extra.get("benchmark_version"),
+            "version": summary.get("benchmark_version")
+            or extra.get("benchmark_version"),
             "suite": summary.get("benchmark_suite") or extra.get("benchmark_suite"),
             "domain": summary.get("domain") or extra.get("domain"),
-            "protocol": summary.get("benchmark_protocol") or extra.get("benchmark_protocol"),
+            "protocol": summary.get("benchmark_protocol")
+            or extra.get("benchmark_protocol"),
         },
         "evaluation": {
             "task_type": result.get("task_type"),
@@ -159,7 +189,9 @@ def build_evaluation_receipt(
             "metrics": metrics,
             "metric_source": metric_source,
             "uncertainty": _shareable_uncertainty(report, result),
-            "slices": dict(result.get("slice_metrics", {})) if isinstance(result.get("slice_metrics"), Mapping) else {},
+            "slices": dict(result.get("slice_metrics", {}))
+            if isinstance(result.get("slice_metrics"), Mapping)
+            else {},
             "quality_gate": result.get("quality_gate", {}),
             "protocol": extra.get("evaluation_protocol", {}),
             "degradation_summary": result.get("degradation_summary", {}),
@@ -169,13 +201,21 @@ def build_evaluation_receipt(
             "benchmark_submission": result.get("benchmark_submission", {}),
         },
         "privacy": _privacy_summary(report, result),
-        "provenance": {"package": manifest.get("package", {}), "attestation_id": attestation.get("attestation_id")},
+        "provenance": {
+            "package": manifest.get("package", {}),
+            "attestation_id": attestation.get("attestation_id"),
+        },
         "artifacts": _public_artifacts(manifest),
     }
 
     local = {
         "sharing": "local_only",
-        "paths": {**_local_paths(manifest), "manifest": str(manifest_path), "receipt_source_report": str(report_path), "config": str(config_path)},
+        "paths": {
+            **_local_paths(manifest),
+            "manifest": str(manifest_path),
+            "receipt_source_report": str(report_path),
+            "config": str(config_path),
+        },
         "config_snapshot": report.get("config_snapshot", {}),
         "exact_metrics": clean_metrics,
         "baseline_metrics": result.get("baseline_metrics", {}),
@@ -183,11 +223,25 @@ def build_evaluation_receipt(
         "protocol_definition": extra.get("protocol_definition", {}),
         "diagnostics": extra.get("diagnostics_local", {}),
         "design_audits": extra.get("design_audits_local", []),
-        "uncertainty": dict(result.get("uncertainty", {})) if isinstance(result.get("uncertainty"), Mapping) else {},
+        "uncertainty": dict(result.get("uncertainty", {}))
+        if isinstance(result.get("uncertainty"), Mapping)
+        else {},
         "runner": manifest.get("runner", {}),
         "attestation": manifest.get("attestation", {}),
         "manifest_integrity": manifest.get("integrity", {}),
-        "release_evidence": {"gates": [result[key] for key in ("privacy_gate", "aggregate_release", "design_release_gate") if key in result], "audit": result.get("privacy_risk"), "design_audits": [result[key] for key in ("design_audit", "reference_design_audit") if result.get(key)]},
+        "release_evidence": {
+            "gates": [
+                result[key]
+                for key in ("privacy_gate", "aggregate_release", "design_release_gate")
+                if key in result
+            ],
+            "audit": result.get("privacy_risk"),
+            "design_audits": [
+                result[key]
+                for key in ("design_audit", "reference_design_audit")
+                if result.get(key)
+            ],
+        },
     }
 
     payload = {
@@ -201,34 +255,79 @@ def build_evaluation_receipt(
     return attach_integrity_metadata(payload, signing_secret=signing_secret)
 
 
-def make_shareable_receipt(receipt: Mapping[str, Any], *, signing_secret: str | None = None, policy: Mapping[str, Any] | None = None, evidence: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def make_shareable_receipt(
+    receipt: Mapping[str, Any],
+    *,
+    signing_secret: str | None = None,
+    policy: Mapping[str, Any] | None = None,
+    evidence: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     normalized = normalize_receipt(receipt)
     decision, payload = check_release(normalized, policy, evidence=evidence)
     if payload is None:
-        raise ValueError(f"Shareable receipt blocked: {', '.join(decision.reason_codes)}")
+        raise ValueError(
+            f"Shareable receipt blocked: {', '.join(decision.reason_codes)}"
+        )
     return attach_integrity_metadata(payload, signing_secret=signing_secret)
 
 
 def receipt_from_legacy_manifest(manifest: Mapping[str, Any]) -> dict[str, Any]:
     if manifest.get("schema_version") != LEGACY_MANIFEST_SCHEMA:
-        raise ValueError(f"Expected {LEGACY_MANIFEST_SCHEMA}; found {manifest.get('schema_version')!r}")
+        raise ValueError(
+            f"Expected {LEGACY_MANIFEST_SCHEMA}; found {manifest.get('schema_version')!r}"
+        )
     run = manifest.get("run", {}) if isinstance(manifest.get("run"), Mapping) else {}
-    benchmark = manifest.get("benchmark", {}) if isinstance(manifest.get("benchmark"), Mapping) else {}
-    attestation = manifest.get("attestation", {}) if isinstance(manifest.get("attestation"), Mapping) else {}
+    benchmark = (
+        manifest.get("benchmark", {})
+        if isinstance(manifest.get("benchmark"), Mapping)
+        else {}
+    )
+    attestation = (
+        manifest.get("attestation", {})
+        if isinstance(manifest.get("attestation"), Mapping)
+        else {}
+    )
     payload = {
         "schema_version": RECEIPT_SCHEMA_VERSION,
         "receipt_id": f"legacy-manifest:{manifest.get('manifest_id', 'unknown')}",
         "created_at": manifest.get("created_at"),
         "scope": "compatibility",
         "shareable": {
-            "run": {"run_id": run.get("run_id"), "created_at": manifest.get("created_at"), "project": run.get("project"), "task": run.get("task") or run.get("workflow"), "report_type": run.get("report_type")},
+            "run": {
+                "run_id": run.get("run_id"),
+                "created_at": manifest.get("created_at"),
+                "project": run.get("project"),
+                "task": run.get("task") or run.get("workflow"),
+                "report_type": run.get("report_type"),
+            },
             "benchmark": dict(benchmark),
-            "evaluation": {"task_type": None, "sample_counts": {}, "input_schema": {"schema_version": "legacy-manifest/unknown-input"}, "metrics": {}, "metric_source": "not_present_in_legacy_manifest", "uncertainty": {}, "slices": {}},
-            "privacy": {"mechanism": manifest.get("privacy", {}), "audits": {}, "release": {"status": "not_present_in_legacy_manifest"}},
-            "provenance": {"package": manifest.get("package", {}), "attestation_id": attestation.get("attestation_id")},
+            "evaluation": {
+                "task_type": None,
+                "sample_counts": {},
+                "input_schema": {"schema_version": "legacy-manifest/unknown-input"},
+                "metrics": {},
+                "metric_source": "not_present_in_legacy_manifest",
+                "uncertainty": {},
+                "slices": {},
+            },
+            "privacy": {
+                "mechanism": manifest.get("privacy", {}),
+                "audits": {},
+                "release": {"status": "not_present_in_legacy_manifest"},
+            },
+            "provenance": {
+                "package": manifest.get("package", {}),
+                "attestation_id": attestation.get("attestation_id"),
+            },
             "artifacts": _public_artifacts(manifest),
         },
-        "local": {"sharing": "local_only", "legacy_schema": LEGACY_MANIFEST_SCHEMA, "paths": _local_paths(manifest), "runner": manifest.get("runner", {}), "attestation": manifest.get("attestation", {})},
+        "local": {
+            "sharing": "local_only",
+            "legacy_schema": LEGACY_MANIFEST_SCHEMA,
+            "paths": _local_paths(manifest),
+            "runner": manifest.get("runner", {}),
+            "attestation": manifest.get("attestation", {}),
+        },
     }
     return attach_integrity_metadata(payload)
 
@@ -251,19 +350,44 @@ def validate_receipt_shape(payload: Mapping[str, Any]) -> None:
     shareable = normalized.get("shareable")
     if not isinstance(shareable, Mapping):
         raise ValueError("Receipt is missing shareable section")
-    for section in ("run", "benchmark", "evaluation", "privacy", "provenance", "artifacts"):
+    for section in (
+        "run",
+        "benchmark",
+        "evaluation",
+        "privacy",
+        "provenance",
+        "artifacts",
+    ):
         if section not in shareable:
             raise ValueError(f"Receipt shareable section is missing {section!r}")
 
 
-def verify_receipt(path: str | Path, *, signing_secret: str | None = None, trust_store: Mapping[str, Any] | None = None, require_trusted_signer: bool = False, expected_protocol_sha256: str | None = None) -> dict[str, Any]:
+def verify_receipt(
+    path: str | Path,
+    *,
+    signing_secret: str | None = None,
+    trust_store: Mapping[str, Any] | None = None,
+    require_trusted_signer: bool = False,
+    expected_protocol_sha256: str | None = None,
+) -> dict[str, Any]:
     receipt_path = Path(path)
     payload = _read_json(receipt_path)
     try:
         validate_receipt_shape(payload)
     except ValueError as exc:
-        return {"valid": False, "reason": "invalid_receipt_schema", "error": str(exc), "path": str(receipt_path)}
-    result = verify_report(str(receipt_path), signing_secret=signing_secret, trust_store=trust_store, require_trusted_signer=require_trusted_signer, expected_protocol_sha256=expected_protocol_sha256)
+        return {
+            "valid": False,
+            "reason": "invalid_receipt_schema",
+            "error": str(exc),
+            "path": str(receipt_path),
+        }
+    result = verify_report(
+        str(receipt_path),
+        signing_secret=signing_secret,
+        trust_store=trust_store,
+        require_trusted_signer=require_trusted_signer,
+        expected_protocol_sha256=expected_protocol_sha256,
+    )
     result["schema_version"] = payload.get("schema_version")
     result["scope"] = payload.get("scope")
     result["receipt_id"] = payload.get("receipt_id")
@@ -321,12 +445,19 @@ def render_receipt_markdown(receipt: Mapping[str, Any]) -> str:
         if "n_independent_units" in uncertainty:
             lines.append(f"- Independent units: {uncertainty['n_independent_units']}")
         if uncertainty.get("confidence_level") is not None:
-            lines.append(f"- Confidence level: {float(uncertainty['confidence_level']):.1%}")
+            lines.append(
+                f"- Confidence level: {float(uncertainty['confidence_level']):.1%}"
+            )
         metric_intervals = uncertainty.get("metrics", {})
         if isinstance(metric_intervals, Mapping):
             for name, interval_value in metric_intervals.items():
-                interval = dict(interval_value) if isinstance(interval_value, Mapping) else {}
-                if interval.get("lower") is not None and interval.get("upper") is not None:
+                interval = (
+                    dict(interval_value) if isinstance(interval_value, Mapping) else {}
+                )
+                if (
+                    interval.get("lower") is not None
+                    and interval.get("upper") is not None
+                ):
                     lines.append(
                         f"- {name}: [{float(interval['lower']):.6f}, {float(interval['upper']):.6f}]"
                     )
@@ -339,25 +470,70 @@ def render_receipt_markdown(receipt: Mapping[str, Any]) -> str:
             lines.append(f"- `{column}`: {len(groups)} group(s)")
     if evaluation.get("external_validation"):
         from privatelabbench.external_validation import render_validation
+
         lines.append(render_validation(evaluation["external_validation"]))
     if evaluation.get("benchmark_submission"):
         submission = evaluation["benchmark_submission"]
-        lines.extend(["", "## Benchmark submission", f"- Submission: {submission['id']}", f"- Model: {submission['model']['id']}@{submission['model']['revision']}", f"- Submitted prediction artifact SHA-256: `{submission['artifact_sha256']}`", f"- Evaluation mode: {submission['submission_kind']}"])
-    if evaluation.get("degradation_summary", {}).get("schema_version") == "degradation-summary/v1":
+        lines.extend(
+            [
+                "",
+                "## Benchmark submission",
+                f"- Submission: {submission['id']}",
+                f"- Model: {submission['model']['id']}@{submission['model']['revision']}",
+                f"- Submitted prediction artifact SHA-256: `{submission['artifact_sha256']}`",
+                f"- Evaluation mode: {submission['submission_kind']}",
+            ]
+        )
+    if (
+        evaluation.get("degradation_summary", {}).get("schema_version")
+        == "degradation-summary/v1"
+    ):
         from privatelabbench.eval.degradation import render_degradation
+
         lines.append(render_degradation(evaluation["degradation_summary"]))
     for key in ("design_audit", "reference_design_audit"):
         if evaluation.get(key):
             from privatelabbench.design_audit import render_design_audit
-            lines.append(render_design_audit(evaluation[key], heading="Reference-cohort design audit" if key.startswith("reference") else "Evaluation-design audit"))
-    lines.extend(["", "## Privacy and release", f"- Mechanism mode: {privacy.get('mechanism', {}).get('mode')}", f"- Release status: {privacy.get('release', {}).get('status', 'not_evaluated')}", f"- Privacy audits: {', '.join(privacy.get('audits', {}).keys()) or '(none)'}", "", "## Provenance", f"- Package: {provenance.get('package', {}).get('name')} {provenance.get('package', {}).get('version')}", f"- Attestation ID: {provenance.get('attestation_id')}", "", "## Artifact hashes"])
+
+            lines.append(
+                render_design_audit(
+                    evaluation[key],
+                    heading="Reference-cohort design audit"
+                    if key.startswith("reference")
+                    else "Evaluation-design audit",
+                )
+            )
+    lines.extend(
+        [
+            "",
+            "## Privacy and release",
+            f"- Mechanism mode: {privacy.get('mechanism', {}).get('mode')}",
+            f"- Release status: {privacy.get('release', {}).get('status', 'not_evaluated')}",
+            f"- Privacy audits: {', '.join(privacy.get('audits', {}).keys()) or '(none)'}",
+            "",
+            "## Provenance",
+            f"- Package: {provenance.get('package', {}).get('name')} {provenance.get('package', {}).get('version')}",
+            f"- Attestation ID: {provenance.get('attestation_id')}",
+            "",
+            "## Artifact hashes",
+        ]
+    )
     artifacts = shareable.get("artifacts", [])
     if artifacts:
         for artifact in artifacts:
-            lines.append(f"- {artifact.get('kind')}: `{artifact.get('name')}` — `{artifact.get('sha256')}`")
+            lines.append(
+                f"- {artifact.get('kind')}: `{artifact.get('name')}` — `{artifact.get('sha256')}`"
+            )
     else:
         lines.append("- (none)")
-    lines.extend(["", "## Sharing boundary", "This rendering is derived only from the receipt's `shareable` section.", "Local paths, config snapshots, exact local-only metrics, and full runner attestation are excluded."])
+    lines.extend(
+        [
+            "",
+            "## Sharing boundary",
+            "This rendering is derived only from the receipt's `shareable` section.",
+            "Local paths, config snapshots, exact local-only metrics, and full runner attestation are excluded.",
+        ]
+    )
     return "\n".join(lines) + "\n"
 
 
@@ -377,21 +553,35 @@ def write_evaluation_receipts(
     markdown_output = Path(markdown_path)
     shareable_output.unlink(missing_ok=True)
     markdown_output.unlink(missing_ok=True)
-    full = build_evaluation_receipt(summary=summary, report_path=report_path, manifest_path=manifest_path, config_path=config_path, signing_secret=signing_secret)
+    full = build_evaluation_receipt(
+        summary=summary,
+        report_path=report_path,
+        manifest_path=manifest_path,
+        config_path=config_path,
+        signing_secret=signing_secret,
+    )
     for output in (full_output, shareable_output, markdown_output):
         output.parent.mkdir(parents=True, exist_ok=True)
-    full_output.write_text(json.dumps(full, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    full_output.write_text(
+        json.dumps(full, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     report = _read_json(report_path)
     config = report.get("config_snapshot", {})
     policy = config.get("release") if isinstance(config, Mapping) else None
-    result = report.get("result", {})
     evidence = full["local"]["release_evidence"]
-    decision = publish_shareable_artifact(full, policy, shareable_output, evidence=evidence, signing_secret=signing_secret)
+    decision = publish_shareable_artifact(
+        full, policy, shareable_output, evidence=evidence, signing_secret=signing_secret
+    )
     paths = {"receipt": full_output, "receipt_markdown": markdown_output}
     if decision.decision == "allow":
         shareable = _read_json(shareable_output)
         markdown_output.write_text(render_receipt_markdown(shareable), encoding="utf-8")
         paths["receipt_shareable"] = shareable_output
     else:
-        markdown_output.write_text("# Local evaluation receipt\n\nExport blocked: " + ", ".join(decision.reason_codes) + "\n\nUse the local JSON receipt to inspect exact results.\n", encoding="utf-8")
+        markdown_output.write_text(
+            "# Local evaluation receipt\n\nExport blocked: "
+            + ", ".join(decision.reason_codes)
+            + "\n\nUse the local JSON receipt to inspect exact results.\n",
+            encoding="utf-8",
+        )
     return paths

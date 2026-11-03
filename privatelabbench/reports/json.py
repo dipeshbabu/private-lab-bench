@@ -74,5 +74,7 @@ def write_json_report(
         config_snapshot=config_snapshot,
         signing_secret=signing_secret,
     )
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     return path
