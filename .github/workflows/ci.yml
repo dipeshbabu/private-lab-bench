@@ -105,6 +105,9 @@ jobs:
           /tmp/plb-wheel/bin/plb list-packs | grep -q community-proteins-binary
           /tmp/plb-wheel/bin/plb list-protocols | grep -q plb://generic/regression@1.0.0
           /tmp/plb-wheel/bin/plb show-protocol plb://generic/binary@1.0.1
+          PLB_WHEEL_PREDICTIONS=$(/tmp/plb-wheel/bin/python -c "from privatelabbench.benchmark_packs import get_benchmark_pack; print(get_benchmark_pack('community-tabular-regression@1.0.0').predictions_path)")
+          /tmp/plb-wheel/bin/plb evaluate "$PLB_WHEEL_PREDICTIONS" --task-type regression --resamples 100 --output-dir /tmp/plb-simple-evaluation
+          /tmp/plb-wheel/bin/plb verify /tmp/plb-simple-evaluation/evaluation_receipt.json
           /tmp/plb-wheel/bin/plb run-pack community-tabular-regression@1.0.0
           /tmp/plb-wheel/bin/plb verify reports/benchmark_packs/tabular_regression_receipt.shareable.json
 
