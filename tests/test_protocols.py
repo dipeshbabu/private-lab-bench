@@ -137,3 +137,25 @@ def test_config_local_path_resolution_and_cli_commands(tmp_path, monkeypatch, ca
     monkeypatch.setattr("sys.argv", ["plb", "show-protocol", REF])
     assert main() == 0
     assert json.loads(capsys.readouterr().out)["identity"] == resolve_protocol(REF).identity()
+
+
+def test_binary_protocol_requires_fixed_label_order_and_withdrawn_version_is_rejected(tmp_path):
+    from privatelabbench.eval.predictions import evaluate_prediction_csv
+    protocol = resolve_protocol("plb://generic/binary@1.0.1")
+    assert protocol.as_dict()["input_schema"]["class_labels"] == ["0", "1"]
+    rows = [("positive", 1, 0.9), ("negative", 0, 0.1), ("positive-2", 1, 0.8), ("negative-2", 0, 0.2)]
+    scores = []
+    for index, ordered in enumerate((rows, list(reversed(rows)))):
+        path = tmp_path / f"binary-{index}.csv"
+        path.write_text("sample_id,target,prediction\n" + "".join(f"{sample},{target},{prediction}\n" for sample, target, prediction in ordered))
+        bound = apply_protocol({}, protocol)
+        for labels in (None, bound["input"]["class_labels"]):
+            result = evaluate_prediction_csv(str(path), target="target", prediction_column="prediction", task_type="classification", class_labels=labels)
+            scores.append(result.metrics)
+    assert all(score["auroc"] == 1.0 and score["accuracy"] == 1.0 for score in scores)
+    rules = protocol.as_dict()
+    rules["input_schema"]["class_labels"] = []
+    with pytest.raises(ValueError, match="ordered class_labels"):
+        EvaluationProtocol.from_dict(rules)
+    with pytest.raises(ValueError, match="label order"):
+        resolve_protocol("plb://generic/binary@1.0.0")

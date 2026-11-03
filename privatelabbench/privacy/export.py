@@ -141,9 +141,11 @@ def validate_policy(value: Any) -> dict[str, Any]:
 
 def protocol_identity(value: Any) -> dict[str, Any]:
     protocol = _mapping(value)
-    from privatelabbench.protocols import ID_PATTERN, VERSION_PATTERN
+    from privatelabbench.protocols import ID_PATTERN, VERSION_PATTERN, WITHDRAWN_PROTOCOLS
     if not re.fullmatch(ID_PATTERN, str(protocol.get("id", ""))) or not re.fullmatch(VERSION_PATTERN, str(protocol.get("version", ""))) or not re.fullmatch(r"[0-9a-f]{64}", str(protocol.get("sha256", ""))):
         raise ValueError("An exact, approved evaluation protocol identity is required")
+    if f"{protocol['id']}@{protocol['version']}" in WITHDRAWN_PROTOCOLS:
+        raise ValueError("Withdrawn protocol; re-evaluate with explicit ordered class labels")
     metrics = protocol.get("metrics")
     if not isinstance(metrics, list) or not metrics or any(metric not in METRICS for metric in metrics) or len(set(metrics)) != len(metrics) or protocol.get("primary_metric") not in metrics:
         raise ValueError("Invalid evaluation protocol metrics")

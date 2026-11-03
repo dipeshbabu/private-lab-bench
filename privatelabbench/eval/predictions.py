@@ -166,7 +166,9 @@ def _encode_binary_targets(
     *,
     class_labels: Sequence[str] | None = None,
 ) -> tuple[np.ndarray, tuple[str, ...]]:
-    labels = tuple(str(label) for label in class_labels) if class_labels else tuple(str(value) for value in pd.unique(values))
+    # A single score always denotes probability of the second ordered class.
+    # Row order must never change the meaning of that score.
+    labels = tuple(str(label) for label in class_labels) if class_labels else tuple(sorted({str(value) for value in values}))
     if len(labels) != 2:
         raise ValueError(f"binary classification requires exactly two class labels; found {len(labels)}")
     if len(labels) != len(set(labels)):
