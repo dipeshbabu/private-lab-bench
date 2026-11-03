@@ -47,4 +47,7 @@ pip install -e '.[docs]'
 mkdocs build
 ```
 
-CI verifies the site builds. The documentation source is public; hosted-site deployment remains separate from the package release.
+CI verifies the site builds. After a successful main-branch CI run, the
+Documentation deployment workflow builds that tested commit and publishes it to
+[GitHub Pages](https://dipeshbabu.github.io/private-lab-bench/). Pull requests do
+not deploy. Maintainers can redeploy main with the workflow's manual trigger.
