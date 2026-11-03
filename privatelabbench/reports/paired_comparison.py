@@ -25,6 +25,7 @@ def _sha256_file(path: str | Path) -> str:
 def _shareable_comparison(result: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "comparison_schema": result.get("schema_version"),
+        "protocol": result.get("protocol", {}),
         "task_type": result.get("task_type"),
         "class_labels": list(result.get("class_labels", [])),
         "sample_id_column": result.get("sample_id_column"),
@@ -61,6 +62,7 @@ def build_paired_comparison_artifact(
         "shareable": _shareable_comparison(result),
         "local": {
             "sharing": "local_only",
+            "protocol_definition": result.get("protocol_definition", {}),
             "inputs": {
                 "model_a": {"path": str(path_a), "sha256": _sha256_file(path_a)},
                 "model_b": {"path": str(path_b), "sha256": _sha256_file(path_b)},

@@ -41,10 +41,15 @@ def attach_integrity_metadata(payload: dict[str, Any], *, signing_secret: str | 
 def verify_report(path: str, *, signing_secret: str | None = None, trust_store: Mapping[str, Any] | None = None, require_trusted_signer: bool = False, expected_protocol_sha256: str | None = None) -> dict[str, Any]:
     report_path = Path(path)
     payload = json.loads(report_path.read_text(encoding="utf-8"))
+    return {**verify_payload(payload, signing_secret=signing_secret, trust_store=trust_store, require_trusted_signer=require_trusted_signer, expected_protocol_sha256=expected_protocol_sha256), "path": str(report_path)}
+
+
+def verify_payload(payload: Any, *, signing_secret: str | None = None, trust_store: Mapping[str, Any] | None = None, require_trusted_signer: bool = False, expected_protocol_sha256: str | None = None) -> dict[str, Any]:
+    """Verify the exact in-memory snapshot consumed by a downstream operation."""
     integrity = payload.get(INTEGRITY_FIELD) if isinstance(payload, dict) else None
     if not isinstance(integrity, dict):
         from privatelabbench.reports.trust import LIMITATIONS
-        return {"valid": False, "hash_valid": False, "signature_present": False, "signature_valid": None, "signer_trusted": False, "protocol_bound": False, "evidence_level": "invalid_integrity", "execution_verified": False, "science_valid": None, "limitations": list(LIMITATIONS), "reason": "missing_integrity_metadata", "path": str(report_path)}
+        return {"valid": False, "hash_valid": False, "signature_present": False, "signature_valid": None, "signer_trusted": False, "protocol_bound": False, "evidence_level": "invalid_integrity", "execution_verified": False, "science_valid": None, "limitations": list(LIMITATIONS), "reason": "missing_integrity_metadata"}
 
     expected_hash = integrity.get("payload_sha256")
     actual_hash = compute_payload_sha256(payload)
@@ -83,7 +88,6 @@ def verify_report(path: str, *, signing_secret: str | None = None, trust_store: 
         **trust,
         "valid": valid,
         "reason": reason,
-        "path": str(report_path),
         "payload_sha256": actual_hash,
         "expected_payload_sha256": expected_hash,
         "hash_valid": hash_valid,

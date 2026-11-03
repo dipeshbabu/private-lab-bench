@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -26,34 +27,36 @@ def compare_prediction_files(
     model_a_name: str | None,
     model_b_name: str | None,
     metric: str | None,
-    confidence_level: float,
-    resamples: int,
-    permutations: int,
-    seed: int,
-    min_samples: int,
-    practical_threshold: float,
+    confidence_level: float | None,
+    resamples: int | None,
+    permutations: int | None,
+    seed: int | None,
+    min_samples: int | None,
+    practical_threshold: float | None,
     noninferiority_margin: float | None,
-    include_slice_uncertainty: bool,
-    min_slice_size: int,
+    include_slice_uncertainty: bool | None,
+    min_slice_size: int | None,
     markdown_path: str,
     json_path: str,
     signing_secret: str | None = None,
     release_policy: Mapping[str, Any] | None = None,
+    protocol: str | None = None,
 ) -> dict[str, Any]:
     local_path = Path(json_path)
     local_path.with_name(f"{local_path.stem}.shareable{local_path.suffix}").unlink(missing_ok=True)
-    config = PairedComparisonConfig(
-        metric=metric,
-        confidence_level=confidence_level,
-        resamples=resamples,
-        permutations=permutations,
-        seed=seed,
-        min_samples=min_samples,
-        practical_threshold=practical_threshold,
-        noninferiority_margin=noninferiority_margin,
-        include_slice_uncertainty=include_slice_uncertainty,
-        min_slice_size=min_slice_size,
-    )
+    settings = {"metric": metric, "confidence_level": confidence_level, "resamples": resamples, "permutations": permutations, "seed": seed, "min_samples": min_samples, "practical_threshold": practical_threshold, "noninferiority_margin": noninferiority_margin, "include_slice_uncertainty": include_slice_uncertainty, "min_slice_size": min_slice_size}
+    definition = None
+    if protocol is not None:
+        from privatelabbench.protocols import _bind, apply_protocol, resolve_protocol
+        definition = resolve_protocol(protocol)
+        rules = definition.as_dict()
+        settings = _bind({key: value for key, value in settings.items() if value is not None}, rules["comparison"], "comparison")
+        bound_input = {key: value for key, value in {"task_type": task_type, "class_labels": list(class_labels) if class_labels else None, "slice_columns": list(slice_columns) if slice_columns is not None else None}.items() if value is not None}
+        bound = apply_protocol({"input": bound_input}, definition)["input"]
+        task_type, class_labels, slice_columns = bound["task_type"], bound["class_labels"], bound["slice_columns"]
+    else:
+        settings = {**asdict(PairedComparisonConfig()), **{key: value for key, value in settings.items() if value is not None}}
+    config = PairedComparisonConfig(**settings)
     result = compare_prediction_tables(
         path_a,
         path_b,
@@ -68,6 +71,9 @@ def compare_prediction_files(
         model_b_name=model_b_name,
         config=config,
     )
+    if definition is not None:
+        result["protocol"] = definition.identity()
+        result["protocol_definition"] = definition.as_dict()
     artifacts = write_paired_comparison_artifacts(
         json_path=json_path,
         markdown_path=markdown_path,

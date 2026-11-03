@@ -7,7 +7,6 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 import hashlib
 import json
-import re
 import math
 import os
 from pathlib import Path
@@ -95,7 +94,7 @@ def _statistics(value: Any) -> dict[str, Any]:
 
 def validate_policy(value: Any) -> dict[str, Any]:
     policy = dict(_mapping(value))
-    allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "include_input_schema", "include_quality_gate", "include_protocol", "public_benchmark", "slices", "reviewed_repeat", "review_reference"}
+    allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "include_input_schema", "include_quality_gate", "include_protocol", "public_benchmark", "public_sites", "public_models", "slices", "reviewed_repeat", "review_reference"}
     if set(policy) - allowed or policy.get("schema_version") != POLICY_SCHEMA:
         raise ValueError("Invalid release policy schema or unknown policy fields")
     _token(policy.get("id"))
@@ -123,7 +122,32 @@ def validate_policy(value: Any) -> dict[str, Any]:
         _token(item)
     if policy.get("reviewed_repeat"):
         _token(policy.get("review_reference"))
+    if "public_sites" in policy:
+        sites = policy["public_sites"]
+        if not isinstance(sites, list) or not sites or len(set(sites)) != len(sites):
+            raise ValueError("public_sites must explicitly list unique approved site labels")
+        for site in sites:
+            _token(site)
+    if "public_models" in policy:
+        from privatelabbench.aggregate import model_identity
+        models = policy["public_models"]
+        if not isinstance(models, list) or not models:
+            raise ValueError("public_models must explicitly list approved model identities")
+        approved_models = [model_identity(item) for item in models]
+        if len({(item['id'], item['revision']) for item in approved_models}) != len(models):
+            raise ValueError("public_models cannot contain duplicates")
     return policy
+
+
+def protocol_identity(value: Any) -> dict[str, Any]:
+    protocol = _mapping(value)
+    from privatelabbench.protocols import ID_PATTERN, VERSION_PATTERN
+    if not re.fullmatch(ID_PATTERN, str(protocol.get("id", ""))) or not re.fullmatch(VERSION_PATTERN, str(protocol.get("version", ""))) or not re.fullmatch(r"[0-9a-f]{64}", str(protocol.get("sha256", ""))):
+        raise ValueError("An exact, approved evaluation protocol identity is required")
+    metrics = protocol.get("metrics")
+    if not isinstance(metrics, list) or not metrics or any(metric not in METRICS for metric in metrics) or len(set(metrics)) != len(metrics) or protocol.get("primary_metric") not in metrics:
+        raise ValueError("Invalid evaluation protocol metrics")
+    return {key: protocol[key] for key in ("id", "version", "sha256", "metrics", "primary_metric")}
 
 
 def _slices(value: Any, policy: Mapping[str, Any], total: int) -> dict[str, Any]:
@@ -200,15 +224,7 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
         }
         identifier = "receipt_id"
         if policy.get("include_protocol") and evaluation.get("protocol"):
-            protocol = _mapping(evaluation["protocol"])
-            # The identity is opt-in metadata. Never export paths or the private rules.
-            from privatelabbench.protocols import ID_PATTERN, VERSION_PATTERN
-            if not re.fullmatch(ID_PATTERN, str(protocol.get("id", ""))) or not re.fullmatch(VERSION_PATTERN, str(protocol.get("version", ""))) or not re.fullmatch(r"[0-9a-f]{64}", str(protocol.get("sha256", ""))):
-                raise ValueError("Invalid evaluation protocol identity")
-            metrics = protocol.get("metrics")
-            if not isinstance(metrics, list) or not metrics or any(metric not in METRICS for metric in metrics) or len(set(metrics)) != len(metrics) or protocol.get("primary_metric") not in metrics:
-                raise ValueError("Invalid evaluation protocol metrics")
-            clean["evaluation"]["protocol"] = {key: protocol[key] for key in ("id", "version", "sha256", "metrics", "primary_metric")}
+            clean["evaluation"]["protocol"] = protocol_identity(evaluation["protocol"])
         if policy.get("include_quality_gate") and evaluation.get("quality_gate"):
             gate = _mapping(evaluation["quality_gate"])
             if gate.get("schema_version") != "quality-gate/v1" or gate.get("status") not in {"pass", "fail", "investigate"}:
@@ -235,7 +251,13 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
                 raise ValueError("Undefined selected metric")
         for key in ("paired_interval", "randomization_test", "decision"):
             clean[key] = _statistics(shared.get(key, {}))
+        if policy.get("include_protocol") and shared.get("protocol"):
+            clean["protocol"] = protocol_identity(shared["protocol"])
         identifier = "comparison_id"
+    elif schema == "cross-site-aggregate/v1":
+        from privatelabbench.aggregate import sanitize_aggregate
+        clean = sanitize_aggregate(shared, policy)
+        identifier = "aggregate_id"
     else:
         raise ValueError("Unsupported export schema")
     if not clean.get("evaluation", clean).get("metrics", clean.get("metric")):
