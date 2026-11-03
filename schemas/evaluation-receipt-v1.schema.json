@@ -5,6 +5,12 @@
   "type": "object",
   "required": ["schema_version", "receipt_id", "created_at", "scope", "shareable", "integrity"],
   "properties": {
+    "signer_statement": {
+      "type": "object",
+      "required": ["schema_version", "signer_id", "key_id", "evaluation_code", "provenance"],
+      "properties": {"schema_version": {"const": "signer-profile/v1"}, "signer_id": {"type": "string"}, "key_id": {"type": "string"}, "evaluation_code": {"type": "object"}, "provenance": {"const": "declared_by_signer"}, "protocol": {"type": "object"}, "model": {"type": "object"}},
+      "additionalProperties": false
+    },
     "schema_version": {"const": "evaluation-receipt/v1"},
     "receipt_id": {"type": "string", "minLength": 1},
     "created_at": {"type": ["string", "null"]},
