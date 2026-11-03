@@ -70,7 +70,7 @@ def verify_trust(payload: Mapping[str, Any], *, trust_store: Mapping[str, Any] |
     integrity = payload.get("integrity", {})
     algorithm = integrity.get("signature_algorithm")
     present = bool(integrity.get("signature"))
-    result = {"signature_present": present, "signature_valid": None, "signer_trusted": False, "protocol_bound": False, "protocol_recognized": False, "evidence_level": "integrity_only", "execution_verified": False, "science_valid": None, "limitations": list(LIMITATIONS), "trust_reason": "unsigned", "trust_requirements_met": not require_trusted_signer}
+    result = {"signature_present": present, "signature_valid": None, "signer_trusted": False, "protocol_bound": False, "protocol_recognized": False, "model_identity_bound": False, "evidence_level": "integrity_only", "execution_verified": False, "science_valid": None, "limitations": list(LIMITATIONS), "trust_reason": "unsigned", "trust_requirements_met": not require_trusted_signer}
     if trust_store is not None and (not isinstance(trust_store, Mapping) or trust_store.get("schema_version") != "receipt-trust-store/v1" or not isinstance(trust_store.get("keys"), Mapping)):
         return {**result, "trust_reason": "invalid_trust_store", "trust_requirements_met": False}
     if expected_protocol_sha256 is not None and (not isinstance(expected_protocol_sha256, str) or not DIGEST.fullmatch(expected_protocol_sha256)):

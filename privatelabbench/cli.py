@@ -355,6 +355,7 @@ def _print_basic_verification(result: dict[str, object]) -> int:
         print(f"Signature present: {result.get('signature_present')}")
         print(f"Signature valid: {result.get('signature_valid')}")
         print(f"Signer trusted: {result.get('signer_trusted')}")
+        print(f"Signer check: {result.get('trust_reason')}")
         print(f"Protocol bound: {result.get('protocol_bound')}")
         print(f"Evidence level: {result.get('evidence_level')}")
         print("Execution and scientific validity are not independently established.")

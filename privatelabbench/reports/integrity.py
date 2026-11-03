@@ -73,7 +73,7 @@ def verify_report(path: str, *, signing_secret: str | None = None, trust_store: 
     elif integrity.get("signature_algorithm") == "ed25519":
         signature_valid = trust["signature_valid"]
     if not hash_valid:
-        trust.update(evidence_level="invalid_integrity", signer_trusted=False, protocol_bound=False, protocol_recognized=False)
+        trust.update(evidence_level="invalid_integrity", signer_trusted=False, protocol_bound=False, protocol_recognized=False, model_identity_bound=False)
     valid = valid and signature_valid is not False and trust["trust_requirements_met"]
     if hash_valid and not trust["trust_requirements_met"]:
         reason = trust["trust_reason"]
