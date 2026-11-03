@@ -72,9 +72,16 @@ def add_simple_prediction_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--min-samples", type=int, default=None)
     parser.add_argument("--min-slice-size", type=int, default=None)
     parser.add_argument("--no-uncertainty", action="store_true")
+    parser.add_argument("--include-slice-uncertainty", action="store_true", default=None)
     parser.add_argument("--quality-policy", default=None)
     parser.add_argument("--release-policy", default=None)
     parser.add_argument("--output-dir", default="reports/evaluation")
+    parser.add_argument("--reference", default=None, help="Reference prediction table for cohort degradation diagnostics.")
+    parser.add_argument("--independent-cohorts", action="store_true", help="Declare independent observations within/between reference and current cohorts for unpaired delta intervals.")
+    parser.add_argument("--degradation-threshold", type=float, default=None, help="Practical degradation threshold in primary-metric units.")
+    parser.add_argument("--prevalence-threshold", type=float, default=0.1)
+    parser.add_argument("--numeric-metadata", action="append", default=None)
+    parser.add_argument("--categorical-metadata", action="append", default=None)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -296,10 +303,14 @@ def simple_evaluation_command(args: argparse.Namespace) -> int:
     try:
         if config_path.exists() and (args.command == "init" and not args.force or args.command == "evaluate" and not config_path.read_text(encoding="utf-8").startswith(generated_header)):
             raise ValueError("Config already exists; choose another --out/--output-dir, or use init --force to overwrite deliberately")
-        uncertainty = {key: value for key, value in {"resamples": args.resamples, "confidence_level": args.confidence_level, "seed": args.seed, "min_samples": args.min_samples}.items() if value is not None}
+        uncertainty = {key: value for key, value in {"resamples": args.resamples, "confidence_level": args.confidence_level, "seed": args.seed, "min_samples": args.min_samples, "include_slices": args.include_slice_uncertainty}.items() if value is not None}
         if args.no_uncertainty:
             uncertainty["enabled"] = False
         config = make_evaluation_config(source, output_dir=output, protocol=args.protocol, primary_metric=args.primary_metric, uncertainty=uncertainty, min_slice_size=args.min_slice_size, quality_policy=_read_release_policy(args.quality_policy) if args.quality_policy else None, release_policy=_read_release_policy(args.release_policy) if args.release_policy else None, target=args.target, prediction_column=args.prediction_column, prediction_columns=args.prediction_columns, sample_id_column=args.sample_id_column, task_type=args.task_type, class_labels=args.class_labels, slices=args.slice, metadata=args.metadata, baseline_column=args.baseline_column)
+        if args.reference:
+            config["diagnostics"] = {"reference_path": str(Path(args.reference).resolve()), "independent_cohorts": args.independent_cohorts, "prevalence_threshold": args.prevalence_threshold, "numeric_metadata": args.numeric_metadata or [], "categorical_metadata": args.categorical_metadata or [], "practical_thresholds": {config["evaluation"]["primary_metric"]: args.degradation_threshold} if args.degradation_threshold is not None else {}}
+        elif args.independent_cohorts or args.degradation_threshold is not None or args.numeric_metadata or args.categorical_metadata:
+            raise ValueError("Cohort diagnostic options require --reference REFERENCE.csv")
         config_path.parent.mkdir(parents=True, exist_ok=True)
         config_path.write_text(generated_header + yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
         if args.command == "init":

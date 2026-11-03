@@ -108,6 +108,8 @@ Paired comparisons report metric differences, bootstrap intervals, and a decisio
 
 Combine compatible shared receipts with `plb aggregate lab-a.shareable.json lab-b.shareable.json --model model@revision`. The [aggregation guide](docs/aggregation.md) covers site identities, signer verification, and the metrics that support pooled point estimates.
 
+Inspect cohort changes with `plb evaluate current.csv --reference reference.csv --slice site`. [Reference/current diagnostics](docs/degradation.md) report performance degradation, slice prevalence, and selected distribution changes, with explicit uncertainty and release controls.
+
 ## Inspect Evaluation Receipts
 
 `evaluation-receipt/v1` separates local context from aggregate information intended for exchange:

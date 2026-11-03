@@ -465,6 +465,30 @@ def run_config(config_path: str, *, protocol_override: str | None = None) -> dic
     discover_entrypoint_tasks()
     task = get_task(config.task_id)
     summary = task.runner(config)
+    if "diagnostics" in config.raw:
+        from privatelabbench.eval.degradation import diagnose_shift, render_degradation
+        from privatelabbench.reports.integrity import attach_integrity_metadata
+        if config.task_id not in {"predictions", "tabular"}:
+            raise ValueError("Reference/current diagnostics require a prediction-table task")
+        diagnostics = section(config, "diagnostics")
+        allowed = {"reference_path", "independent_cohorts", "practical_thresholds", "prevalence_threshold", "numeric_metadata", "categorical_metadata"}
+        if set(diagnostics) - allowed:
+            raise ValueError("Unknown reference/current diagnostic settings")
+        input_cfg = section(config, "input")
+        reference = _input_path(config, str(required(diagnostics, "reference_path", section_name="diagnostics")))
+        primary = section(config, "evaluation").get("primary_metric") or (config.protocol.as_dict()["primary_metric"] if config.protocol else None)
+        shift = diagnose_shift(reference, _input_path(config, str(input_cfg["path"])), target=input_cfg["target_column"], prediction_column=input_cfg.get("prediction_column"), prediction_columns=input_cfg.get("prediction_columns"), task_type=input_cfg.get("task_type"), class_labels=input_cfg.get("class_labels"), sample_id_column=input_cfg.get("sample_id_column", "sample_id"), slice_columns=input_cfg.get("slice_columns", []), min_slice_size=input_cfg.get("min_slice_size", 5), metric=primary, uncertainty_config=_uncertainty_config(config), **{key: value for key, value in diagnostics.items() if key != "reference_path"})
+        report_path = Path(summary["json_report"])
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        report["result"]["degradation_summary"] = shift["degradation_summary"]
+        report.setdefault("extra", {})["diagnostics_local"] = shift["local"]
+        report = attach_integrity_metadata(report, signing_secret=_signing_secret(config))
+        report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        summary["degradation_summary"] = shift["degradation_summary"]
+        _attach_report_identity(summary, report_path, {})
+        if summary.get("markdown_report"):
+            with Path(summary["markdown_report"]).open("a", encoding="utf-8") as handle:
+                handle.write("\n" + render_degradation(shift["degradation_summary"]))
     if "quality_gate" in config.raw:
         from privatelabbench.quality import evaluate_quality_gate
         from privatelabbench.reports.integrity import attach_integrity_metadata

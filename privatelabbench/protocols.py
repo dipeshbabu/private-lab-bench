@@ -203,6 +203,7 @@ def apply_protocol(payload: Mapping[str, Any], protocol: EvaluationProtocol) -> 
     """Bind scientific settings while retaining owner-controlled paths and release consent."""
     result = deepcopy(dict(payload))
     rules = protocol.as_dict()
+    result["evaluation"] = _bind(result.get("evaluation"), {"primary_metric": rules["primary_metric"]}, "evaluation")
     for key in ("task", "uncertainty", "privacy", "quality_gate"):
         result[key] = _bind(result.get(key), rules[key], key)
     if result["quality_gate"] is None:

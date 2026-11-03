@@ -162,6 +162,7 @@ def build_evaluation_receipt(
             "slices": dict(result.get("slice_metrics", {})) if isinstance(result.get("slice_metrics"), Mapping) else {},
             "quality_gate": result.get("quality_gate", {}),
             "protocol": extra.get("evaluation_protocol", {}),
+            "degradation_summary": result.get("degradation_summary", {}),
         },
         "privacy": _privacy_summary(report, result),
         "provenance": {"package": manifest.get("package", {}), "attestation_id": attestation.get("attestation_id")},
@@ -176,6 +177,7 @@ def build_evaluation_receipt(
         "baseline_metrics": result.get("baseline_metrics", {}),
         "quality_gate": result.get("quality_gate", {}),
         "protocol_definition": extra.get("protocol_definition", {}),
+        "diagnostics": extra.get("diagnostics_local", {}),
         "uncertainty": dict(result.get("uncertainty", {})) if isinstance(result.get("uncertainty"), Mapping) else {},
         "runner": manifest.get("runner", {}),
         "attestation": manifest.get("attestation", {}),
@@ -328,6 +330,9 @@ def render_receipt_markdown(receipt: Mapping[str, Any]) -> str:
         lines.extend(["", "### Slices"])
         for column, groups in slices.items():
             lines.append(f"- `{column}`: {len(groups)} group(s)")
+    if evaluation.get("degradation_summary", {}).get("schema_version") == "degradation-summary/v1":
+        from privatelabbench.eval.degradation import render_degradation
+        lines.append(render_degradation(evaluation["degradation_summary"]))
     lines.extend(["", "## Privacy and release", f"- Mechanism mode: {privacy.get('mechanism', {}).get('mode')}", f"- Release status: {privacy.get('release', {}).get('status', 'not_evaluated')}", f"- Privacy audits: {', '.join(privacy.get('audits', {}).keys()) or '(none)'}", "", "## Provenance", f"- Package: {provenance.get('package', {}).get('name')} {provenance.get('package', {}).get('version')}", f"- Attestation ID: {provenance.get('attestation_id')}", "", "## Artifact hashes"])
     artifacts = shareable.get("artifacts", [])
     if artifacts:

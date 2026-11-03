@@ -94,11 +94,11 @@ def _statistics(value: Any) -> dict[str, Any]:
 
 def validate_policy(value: Any) -> dict[str, Any]:
     policy = dict(_mapping(value))
-    allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "include_input_schema", "include_quality_gate", "include_protocol", "public_benchmark", "public_sites", "public_models", "slices", "reviewed_repeat", "review_reference"}
+    allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "include_input_schema", "include_quality_gate", "include_protocol", "include_degradation", "public_shift_features", "public_benchmark", "public_sites", "public_models", "slices", "reviewed_repeat", "review_reference"}
     if set(policy) - allowed or policy.get("schema_version") != POLICY_SCHEMA:
         raise ValueError("Invalid release policy schema or unknown policy fields")
     _token(policy.get("id"))
-    for key in ("enabled", "require_privacy_audit", "include_input_schema", "include_quality_gate", "include_protocol", "reviewed_repeat"):
+    for key in ("enabled", "require_privacy_audit", "include_input_schema", "include_quality_gate", "include_protocol", "include_degradation", "reviewed_repeat"):
         if key in policy and not isinstance(policy[key], bool):
             raise ValueError(f"{key} must be boolean")
     for key, default in (("min_samples", 20), ("min_cell_size", 5)):
@@ -128,6 +128,12 @@ def validate_policy(value: Any) -> dict[str, Any]:
             raise ValueError("public_sites must explicitly list unique approved site labels")
         for site in sites:
             _token(site)
+    if "public_shift_features" in policy:
+        features = policy["public_shift_features"]
+        if not isinstance(features, list) or len(set(features)) != len(features):
+            raise ValueError("public_shift_features must list unique approved feature aliases")
+        for feature in features:
+            _token(feature)
     if "public_models" in policy:
         from privatelabbench.aggregate import model_identity
         models = policy["public_models"]
@@ -232,6 +238,9 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
             if gate.get("schema_version") != "quality-gate/v1" or gate.get("status") not in {"pass", "fail", "investigate"}:
                 raise ValueError("Invalid quality gate summary")
             clean["evaluation"]["quality_gate"] = {"schema_version": "quality-gate/v1", "status": gate["status"]}
+        if policy.get("include_degradation") and evaluation.get("degradation_summary"):
+            from privatelabbench.eval.degradation import sanitize_degradation
+            clean["evaluation"]["degradation_summary"] = sanitize_degradation(evaluation["degradation_summary"], policy) if mode == "none" else {"status": "withheld_metric_basis_mismatch"}
     elif schema == "paired-comparison-artifact/v1":
         n = shared.get("n_samples")
         if isinstance(n, bool) or not isinstance(n, int) or n < policy["min_samples"]:
