@@ -110,6 +110,8 @@ Combine compatible shared receipts with `plb aggregate lab-a.shareable.json lab-
 
 Inspect cohort changes with `plb evaluate current.csv --reference reference.csv --slice site`. [Reference/current diagnostics](docs/degradation.md) report performance degradation, slice prevalence, and selected distribution changes, with explicit uncertainty and release controls.
 
+For repeated or nested observations, declare a [sampling design](docs/sampling_design.md) to resample independent clusters and keep paired models aligned. Optional slice-test families record dependence assumptions and multiplicity adjustments.
+
 ## Inspect Evaluation Receipts
 
 `evaluation-receipt/v1` separates local context from aggregate information intended for exchange:

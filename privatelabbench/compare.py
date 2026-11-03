@@ -41,18 +41,23 @@ def compare_prediction_files(
     signing_secret: str | None = None,
     release_policy: Mapping[str, Any] | None = None,
     protocol: str | None = None,
+    sampling_design: Any = None,
 ) -> dict[str, Any]:
     local_path = Path(json_path)
     local_path.with_name(f"{local_path.stem}.shareable{local_path.suffix}").unlink(missing_ok=True)
     settings = {"metric": metric, "confidence_level": confidence_level, "resamples": resamples, "permutations": permutations, "seed": seed, "min_samples": min_samples, "practical_threshold": practical_threshold, "noninferiority_margin": noninferiority_margin, "include_slice_uncertainty": include_slice_uncertainty, "min_slice_size": min_slice_size}
     definition = None
+    from privatelabbench.eval.sampling import sampling_design as parse_design
+    design = parse_design(sampling_design)
     if protocol is not None:
         from privatelabbench.protocols import _bind, apply_protocol, resolve_protocol
         definition = resolve_protocol(protocol)
         rules = definition.as_dict()
         settings = _bind({key: value for key, value in settings.items() if value is not None}, rules["comparison"], "comparison")
         bound_input = {key: value for key, value in {"task_type": task_type, "class_labels": list(class_labels) if class_labels else None, "slice_columns": list(slice_columns) if slice_columns is not None else None}.items() if value is not None}
-        bound = apply_protocol({"input": bound_input}, definition)["input"]
+        bound_config = apply_protocol({"input": bound_input, **({"sampling_design": design.as_dict()} if design else {})}, definition)
+        bound = bound_config["input"]
+        design = parse_design(bound_config.get("sampling_design"))
         task_type, class_labels, slice_columns = bound["task_type"], bound["class_labels"], bound["slice_columns"]
     else:
         settings = {**asdict(PairedComparisonConfig()), **{key: value for key, value in settings.items() if value is not None}}
@@ -70,6 +75,7 @@ def compare_prediction_files(
         model_a_name=model_a_name,
         model_b_name=model_b_name,
         config=config,
+        sampling_design=design,
     )
     if definition is not None:
         result["protocol"] = definition.identity()

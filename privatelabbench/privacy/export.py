@@ -20,10 +20,11 @@ POLICY_SCHEMA = "release-policy/v1"
 METRICS = frozenset({"mae", "rmse", "r2", "accuracy", "f1", "auroc", "macro_f1", "weighted_f1", "log_loss", "macro_auroc_ovr"})
 TOKEN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.@+-]{0,127}\Z")
 STATUSES = frozenset({"evaluated", "undefined_point_estimate", "insufficient_valid_resamples", "skipped_min_samples", "skipped_min_slice_size", "unavailable", "disabled", "inconclusive", "insufficient_evidence", "a_noninferior", "noninferiority_not_established", "withheld_metric_basis_mismatch"})
+STATUSES = STATUSES | frozenset({"skipped_min_independent_units", "skipped_min_units_per_stratum", "not_supported_missing_cluster_columns", "not_supported_missing_cluster_ids", "not_supported_nonconstant_cluster_strata", "not_supported_crossed_clusters", "not_supported_resource_limit", "not_supported_nested_permutation", "exchangeability_not_declared", "insufficient_valid_permutations", "withheld_small_independent_unit_count", "metric_undefined"})
 STAT_ENUMS = {
     "status": STATUSES,
-    "method": {"percentile_bootstrap", "paired_percentile_bootstrap", "paired_randomization_swap"},
-    "sampling": {"iid_rows", "stratified_by_target"},
+    "method": {"percentile_bootstrap", "paired_percentile_bootstrap", "paired_randomization_swap", "cluster_percentile_bootstrap", "hierarchical_percentile_bootstrap", "paired_cluster_percentile_bootstrap", "paired_hierarchical_percentile_bootstrap", "paired_cluster_randomization_swap"},
+    "sampling": {"iid_rows", "stratified_by_target", "independent_clusters", "nested_clusters"},
     "metric_basis": {"clean_metrics", "reported_metrics"},
     "released_metric_basis": {"reported_metrics"},
     "point_estimate": {"a_above_threshold", "b_above_threshold", "below_practical_threshold"},
@@ -72,7 +73,7 @@ def _metrics(value: Any) -> dict[str, Any]:
 def _statistics(value: Any) -> dict[str, Any]:
     """Allowlisted scalar uncertainty/decision fields; never copy plugin dictionaries."""
     strings = {"status", "method", "sampling", "metric_basis", "released_metric_basis", "point_estimate", "confidence_interval"}
-    numbers = {"estimate", "lower", "upper", "valid_resamples", "resamples", "seed", "min_samples", "n_samples", "confidence_level", "permutations", "p_value", "practical_threshold", "margin"}
+    numbers = {"estimate", "lower", "upper", "valid_resamples", "resamples", "seed", "min_samples", "n_samples", "n_independent_units", "confidence_level", "permutations", "valid_permutations", "p_value", "practical_threshold", "margin"}
     output = {}
     for key, item in _mapping(value).items():
         if key in strings:
@@ -92,13 +93,22 @@ def _statistics(value: Any) -> dict[str, Any]:
     return output
 
 
+def _release_statistics(value: Any, policy: Mapping[str, Any]) -> dict[str, Any]:
+    result = _statistics(value)
+    if "n_independent_units" in result:
+        count = result["n_independent_units"]
+        if type(count) is not int or count < policy["min_cell_size"]:
+            return {"status": "withheld_small_independent_unit_count", **{key: result[key] for key in ("method", "sampling", "metric_basis") if key in result}}
+    return result
+
+
 def validate_policy(value: Any) -> dict[str, Any]:
     policy = dict(_mapping(value))
-    allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "include_input_schema", "include_quality_gate", "include_protocol", "include_degradation", "public_shift_features", "public_benchmark", "public_sites", "public_models", "slices", "reviewed_repeat", "review_reference"}
+    allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "include_input_schema", "include_quality_gate", "include_protocol", "include_degradation", "include_slice_inference", "include_multiplicity", "public_shift_features", "public_benchmark", "public_sites", "public_models", "slices", "reviewed_repeat", "review_reference"}
     if set(policy) - allowed or policy.get("schema_version") != POLICY_SCHEMA:
         raise ValueError("Invalid release policy schema or unknown policy fields")
     _token(policy.get("id"))
-    for key in ("enabled", "require_privacy_audit", "include_input_schema", "include_quality_gate", "include_protocol", "include_degradation", "reviewed_repeat"):
+    for key in ("enabled", "require_privacy_audit", "include_input_schema", "include_quality_gate", "include_protocol", "include_degradation", "include_slice_inference", "include_multiplicity", "reviewed_repeat"):
         if key in policy and not isinstance(policy[key], bool):
             raise ValueError(f"{key} must be boolean")
     for key, default in (("min_samples", 20), ("min_cell_size", 5)):
@@ -158,20 +168,52 @@ def protocol_identity(value: Any) -> dict[str, Any]:
     return {key: protocol[key] for key in ("id", "version", "sha256", "metrics", "primary_metric")}
 
 
-def _slices(value: Any, policy: Mapping[str, Any], total: int) -> dict[str, Any]:
+def _slice_multiplicity(value: Any, policy: Mapping[str, Any]) -> tuple[dict[Any, Any], dict[str, Any]]:
+    if not policy.get("include_multiplicity"):
+        return {}, {}
+    from privatelabbench.eval.sampling import MultiplicityPolicy, adjust_pvalues
+    entries = [(column, label, entry) for column, groups in _mapping(value).items() for label, entry in _mapping(groups).items() if _mapping(entry).get("multiplicity")]
+    if not entries:
+        return {}, {}
+    first = entries[0][2]["multiplicity"]
+    selected = MultiplicityPolicy.from_dict({key: first[key] for key in ("schema_version", "method", "family", "alpha", "dependence")})
+    approved = {(column, label) for column, labels in policy.get("slices", {}).items() for label in labels}
+    probabilities = []
+    for column, label, entry in entries:
+        declared = entry["multiplicity"]
+        if any(declared.get(key) != item for key, item in selected.as_dict().items()):
+            raise ValueError("Inconsistent slice test-family declarations")
+        test = _mapping(entry.get("randomization_test", {}))
+        n_units = test.get("n_independent_units")
+        if (column, label) not in approved or type(entry.get("n")) is not int or entry["n"] < policy["min_cell_size"] or n_units is not None and (type(n_units) is not int or n_units < policy["min_cell_size"]):
+            return {}, {}
+        safe = _release_statistics(test, policy)
+        probabilities.append(safe.get("p_value") if safe.get("status") == "evaluated" else None)
+    corrected = adjust_pvalues(probabilities, selected)
+    output = {(column, label): {**selected.as_dict(), "raw_p_value": raw, "adjusted_p_value": adjusted, "reject": adjusted <= selected.alpha if adjusted is not None else None, "status": "evaluated" if adjusted is not None else "not_testable"} for (column, label, entry), raw, adjusted in zip(entries, probabilities, corrected)}
+    metadata = {**selected.as_dict(), "n_tests": len(entries), "n_usable_tests": sum(p is not None for p in probabilities), "n_missing_tests": sum(p is None for p in probabilities), "status": "evaluated" if any(p is not None for p in probabilities) else "not_testable"}
+    return output, metadata
+
+
+def _slices(value: Any, policy: Mapping[str, Any], total: int, *, inference: Any = None) -> dict[str, Any]:
     result = {}
+    adjusted, _ = inference if inference is not None else _slice_multiplicity(value, policy)
     for column, approved_labels in policy.get("slices", {}).items():
-        groups = _mapping(_mapping(value).get(column, {}))
+        groups = {label: entry for label, entry in _mapping(_mapping(value).get(column, {})).items() if not (isinstance(entry, Mapping) and entry.get("n") == 0 and entry.get("status") == "missing_prespecified_slice")}
         # Withhold the whole partition if a complement could reveal a small cell.
         if not groups or set(groups) != set(approved_labels):
             continue
         if any(not isinstance(entry, Mapping) or isinstance(entry.get("n"), bool) or not isinstance(entry.get("n"), int) or entry["n"] < policy["min_cell_size"] for entry in groups.values()):
+            continue
+        if any("n_independent_units" in entry and (type(entry["n_independent_units"]) is not int or entry["n_independent_units"] < policy["min_cell_size"]) for entry in groups.values()):
             continue
         if sum(entry["n"] for entry in groups.values()) != total:
             continue
         result[column] = {}
         for label, entry in groups.items():
             clean = {"n": entry["n"]}
+            if "n_independent_units" in entry:
+                clean["n_independent_units"] = entry["n_independent_units"]
             if "metrics" in entry:
                 clean["metrics"] = _metrics(entry["metrics"])
             for key in ("metric_a", "metric_b", "improvement"):
@@ -181,6 +223,14 @@ def _slices(value: Any, policy: Mapping[str, Any], total: int) -> dict[str, Any]
                 if entry["status"] not in STATUSES:
                     raise ValueError("Unknown slice status")
                 clean["status"] = entry["status"]
+            if policy.get("include_slice_inference"):
+                for key in ("paired_interval", "randomization_test", "uncertainty"):
+                    if key in entry:
+                        clean[key] = _release_statistics(entry[key], policy)
+                if entry.get("inference_role") in {"prespecified_critical", "exploratory"}:
+                    clean["inference_role"] = entry["inference_role"]
+            if (column, label) in adjusted:
+                clean["multiplicity"] = adjusted[column, label]
             result[column][label] = clean
     return result
 
@@ -216,7 +266,10 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
         mode = mechanism.get("mode", "none")
         if mode not in {"none", "metric_perturbation"}:
             raise ValueError("Unsupported release mechanism")
-        uncertainty = _statistics(evaluation.get("uncertainty", {}))
+        uncertainty = _release_statistics(evaluation.get("uncertainty", {}), policy)
+        independent_units = _mapping(evaluation.get("uncertainty", {})).get("n_independent_units")
+        if "n_independent_units" in _mapping(evaluation.get("uncertainty", {})) and (type(independent_units) is not int or independent_units < max(policy["min_samples"], policy["min_cell_size"])):
+            raise ValueError("Independent-unit count is below release thresholds")
         if mode != "none" and uncertainty.get("metric_basis") == "clean_metrics":
             uncertainty = {"status": "withheld_metric_basis_mismatch", "metric_basis": "clean_metrics", "released_metric_basis": "reported_metrics"}
         task_type = evaluation.get("task_type")
@@ -245,6 +298,9 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
         n = shared.get("n_samples")
         if isinstance(n, bool) or not isinstance(n, int) or n < policy["min_samples"]:
             raise ValueError("Sample count below release threshold")
+        independent_units = _mapping(shared.get("paired_interval", {})).get("n_independent_units")
+        if "n_independent_units" in _mapping(shared.get("paired_interval", {})) and (type(independent_units) is not int or independent_units < max(policy["min_samples"], policy["min_cell_size"])):
+            raise ValueError("Independent-unit count is below release thresholds")
         metric = shared.get("metric")
         if metric not in METRICS:
             raise ValueError("Unsupported comparison metric")
@@ -261,7 +317,10 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
             if clean[key]["selected_metric"] is None:
                 raise ValueError("Undefined selected metric")
         for key in ("paired_interval", "randomization_test", "decision"):
-            clean[key] = _statistics(shared.get(key, {}))
+            clean[key] = _release_statistics(shared.get(key, {}), policy)
+        _, multiplicity = _slice_multiplicity(shared.get("slices", {}), policy)
+        if multiplicity and clean["slices"]:
+            clean["multiplicity"] = multiplicity
         if policy.get("include_protocol") and shared.get("protocol"):
             clean["protocol"] = protocol_identity(shared["protocol"])
         identifier = "comparison_id"

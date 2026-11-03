@@ -26,6 +26,7 @@ def _shareable_comparison(result: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "comparison_schema": result.get("schema_version"),
         "protocol": result.get("protocol", {}),
+        "multiplicity": result.get("multiplicity", {}),
         "task_type": result.get("task_type"),
         "class_labels": list(result.get("class_labels", [])),
         "sample_id_column": result.get("sample_id_column"),
@@ -63,6 +64,7 @@ def build_paired_comparison_artifact(
         "local": {
             "sharing": "local_only",
             "protocol_definition": result.get("protocol_definition", {}),
+            "sampling_design": result.get("sampling_design"),
             "inputs": {
                 "model_a": {"path": str(path_a), "sha256": _sha256_file(path_a)},
                 "model_b": {"path": str(path_b), "sha256": _sha256_file(path_b)},
@@ -115,6 +117,8 @@ def render_paired_comparison_markdown(artifact: Mapping[str, Any]) -> str:
         lines.append(
             f"- Improvement interval: [{float(interval['lower']):.6f}, {float(interval['upper']):.6f}]"
         )
+    if "n_independent_units" in interval:
+        lines.append(f"- Independent units: {interval['n_independent_units']}")
     lines.extend(
         [
             "",
@@ -156,19 +160,28 @@ def render_paired_comparison_markdown(artifact: Mapping[str, Any]) -> str:
                         f"  - paired CI: [{float(slice_interval['lower']):.6f}, "
                         f"{float(slice_interval['upper']):.6f}]"
                     )
+                test = entry.get("randomization_test", {})
+                if test.get("p_value") is not None:
+                    lines.append(f"  - Unadjusted prediction-swap p-value: {test['p_value']:.6g}")
+                corrected = entry.get("multiplicity", {})
+                if corrected:
+                    lines.append(f"  - {corrected['method']} ({corrected['family']}): adjusted p={corrected.get('adjusted_p_value')}; status={corrected['status']}")
 
     lines.extend(
         [
             "",
             "## Interpretation",
             "Positive `improvement_a_over_b` always means Model A is better under the selected metric direction.",
-            "The paired bootstrap uses the same resampled sample IDs for both models. The randomization test swaps model predictions within matched samples under the exchangeability null.",
+            "The paired bootstrap uses the same declared resampling for both models. Cluster designs retain related observations and swap entire prediction vectors only under a declared cluster exchangeability null; row designs swap within matched samples.",
             "The practical threshold is user-defined and is distinct from the randomization-test p-value.",
             "",
             "## Sharing boundary",
             "This Markdown is rendered from the independently verifiable `shareable` section only. Prediction-table paths, file hashes, sample IDs, targets, predictions, and row-level metadata are not included.",
         ]
     )
+    if result.get("multiplicity"):
+        family = result["multiplicity"]
+        lines.extend(["", "## Slice test family", f"- Method: {family['method']}; family: {family['family']}", f"- Tests: {family['n_tests']}; usable: {family['n_usable_tests']}; missing: {family['n_missing_tests']}", "- Adjusted p-values require valid tests and the declared dependence assumptions; they do not establish causality."])
     return "\n".join(lines) + "\n"
 
 

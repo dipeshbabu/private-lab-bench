@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 import math
-from typing import Iterator
+from typing import Any, Iterator
 
 import numpy as np
 
@@ -191,10 +191,17 @@ def bootstrap_metric_intervals(
     y_true: np.ndarray,
     predictions: np.ndarray,
     config: BootstrapConfig,
+    sampling_design: Any = None,
+    sampling_metadata: Any = None,
 ) -> dict[str, object]:
     """Estimate aggregate metric uncertainty without returning row-level values."""
 
     config.validate()
+    if sampling_design is not None:
+        from privatelabbench.eval.sampling import metric_intervals, sampling_design as parse_design
+        if sampling_metadata is None or len(sampling_metadata) != len(y_true):
+            raise ValueError("Sampling metadata must align with every evaluated observation")
+        return metric_intervals(y_true, predictions, task_type=task_type, config=config, design=parse_design(sampling_design), metadata=sampling_metadata)
     if not config.enabled:
         return {}
 

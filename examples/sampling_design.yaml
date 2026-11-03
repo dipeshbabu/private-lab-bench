@@ -1,0 +1,18 @@
+schema_version: sampling-design/v1
+unit: patient
+method: cluster_bootstrap
+cluster_columns: [patient_id]
+sampling_level: patient_id
+min_independent_units: 20
+strata_column: null
+resample_rows_within_leaf: false
+max_resample_rows: 2000000
+exchangeability: model_vectors_within_clusters
+critical_slices: []
+# Optional paired slice tests. Single-table runs do not invent hypothesis tests.
+multiplicity:
+  schema_version: multiplicity/v1
+  method: benjamini_yekutieli
+  family: exploratory_slices
+  alpha: 0.05
+  dependence: arbitrary
