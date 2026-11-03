@@ -69,7 +69,9 @@ def test_privacy_risk_gate_blocks_excessive_attack_signal():
             "member_advantage": 0.42,
             "attack_auc": 0.91,
         },
-        PrivacyRiskPolicy(max_level="moderate", max_member_advantage=0.35, max_attack_auc=0.85),
+        PrivacyRiskPolicy(
+            max_level="moderate", max_member_advantage=0.35, max_attack_auc=0.85
+        ),
     )
 
     assert gate["status"] == "fail"

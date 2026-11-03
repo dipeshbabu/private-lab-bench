@@ -10,7 +10,6 @@ from privatelabbench.config import load_config, section
 from privatelabbench.core.registry import discover_entrypoint_tasks, get_task
 from privatelabbench.runner import ensure_builtin_tasks_registered
 
-
 PACK_SCHEMA_VERSION = "benchmark-pack/v1"
 DEFAULT_PACK_ROOT = Path(__file__).resolve().parent / "data" / "benchmark_packs"
 
@@ -69,12 +68,18 @@ def load_benchmark_pack(path: str | Path) -> BenchmarkPack:
     root = Path(path)
     manifest_path = root / "pack.yaml" if root.is_dir() else root
     if not manifest_path.exists():
-        raise FileNotFoundError(f"benchmark pack manifest does not exist: {manifest_path}")
+        raise FileNotFoundError(
+            f"benchmark pack manifest does not exist: {manifest_path}"
+        )
     payload = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
-        raise ValueError(f"benchmark pack manifest must be a YAML mapping: {manifest_path}")
+        raise ValueError(
+            f"benchmark pack manifest must be a YAML mapping: {manifest_path}"
+        )
     if payload.get("schema_version") != PACK_SCHEMA_VERSION:
-        raise ValueError(f"unsupported benchmark pack schema {payload.get('schema_version')!r}; expected {PACK_SCHEMA_VERSION}")
+        raise ValueError(
+            f"unsupported benchmark pack schema {payload.get('schema_version')!r}; expected {PACK_SCHEMA_VERSION}"
+        )
 
     pack_root = manifest_path.parent
     files = payload.get("files")
@@ -117,7 +122,9 @@ def validate_benchmark_pack(pack: BenchmarkPack) -> None:
 
     config = load_config(str(pack.config_path))
     if config.task_id != pack.task:
-        raise ValueError(f"pack task '{pack.task}' does not match config task '{config.task_id}'")
+        raise ValueError(
+            f"pack task '{pack.task}' does not match config task '{config.task_id}'"
+        )
     benchmark = section(config, "benchmark")
     if str(benchmark.get("id", "")) != pack.id:
         raise ValueError("pack id must match config benchmark.id")
@@ -135,7 +142,9 @@ def validate_benchmark_pack(pack: BenchmarkPack) -> None:
         raise ValueError("pack files.predictions must match the config input.path")
 
 
-def discover_benchmark_packs(root: str | Path | None = None) -> tuple[BenchmarkPack, ...]:
+def discover_benchmark_packs(
+    root: str | Path | None = None,
+) -> tuple[BenchmarkPack, ...]:
     pack_root = Path(root) if root is not None else DEFAULT_PACK_ROOT
     if not pack_root.exists():
         return ()
@@ -161,11 +170,15 @@ def get_benchmark_pack(ref_or_id: str, root: str | Path | None = None) -> Benchm
         return by_id[0]
     if len(by_id) > 1:
         versions = ", ".join(pack.ref for pack in by_id)
-        raise ValueError(f"benchmark pack id '{query}' has multiple versions; choose one of: {versions}")
+        raise ValueError(
+            f"benchmark pack id '{query}' has multiple versions; choose one of: {versions}"
+        )
     raise KeyError(f"unknown benchmark pack: {query}")
 
 
-def run_benchmark_pack(ref_or_id: str, root: str | Path | None = None) -> dict[str, Any]:
+def run_benchmark_pack(
+    ref_or_id: str, root: str | Path | None = None
+) -> dict[str, Any]:
     pack = get_benchmark_pack(ref_or_id, root)
     from privatelabbench.runner import run_config
 

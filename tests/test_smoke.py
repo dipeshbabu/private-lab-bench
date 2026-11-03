@@ -41,4 +41,5 @@ def test_cli_parser_contains_community_core_commands() -> None:
 
 def test_package_imports() -> None:
     import privatelabbench
+
     assert privatelabbench is not None

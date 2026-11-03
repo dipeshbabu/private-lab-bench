@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from abc import ABC, abstractmethod
 from hashlib import sha256
 from io import BytesIO
-import json
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -396,8 +396,8 @@ def evaluate_scored(
 ):
     """Opt-in reuse of normal evaluation and its central release boundary."""
     from privatelabbench.evaluate import make_evaluation_config
-    from privatelabbench.runner import run_config
     from privatelabbench.protocols import resolve_protocol
+    from privatelabbench.runner import run_config
 
     definition = resolve_protocol(protocol)
     if (

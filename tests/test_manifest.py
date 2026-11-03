@@ -72,7 +72,11 @@ def test_run_manifest_detects_tampered_artifact(tmp_path):
 
     write_run_manifest(
         manifest_path,
-        summary={"project": "demo", "workflow": "predictions", "run_id": report["run_id"]},
+        summary={
+            "project": "demo",
+            "workflow": "predictions",
+            "run_id": report["run_id"],
+        },
         config_path=config_path,
         json_report_path=report_path,
         audit_log_path=audit_path,

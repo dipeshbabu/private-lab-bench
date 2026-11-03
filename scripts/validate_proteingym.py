@@ -1,12 +1,12 @@
 """Opt-in real DMS parity; no protein model weights or remote model code are loaded."""
 
 import argparse
-from hashlib import sha256
-from importlib.metadata import version
 import importlib.util
-import json, sys
-from pathlib import Path
+import json
 import re
+import sys
+from importlib.metadata import version
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -15,14 +15,14 @@ from Bio.Align import substitution_matrices
 from privatelabbench.core.local_io import atomic_write_csv
 from privatelabbench.core.public_data import download_verified
 from privatelabbench.integrations.proteingym import (
+    ARCHIVE_SHA256,
     ASSAYS,
     REFERENCE_COMMIT,
-    REFERENCE_SHA256,
-    ARCHIVE_SHA256,
     REFERENCE_FILE,
+    REFERENCE_SHA256,
     download_assays,
-    load_assay,
     evaluate_proteingym,
+    load_assay,
 )
 from privatelabbench.privacy.export import atomic_write_json
 from privatelabbench.reports.receipt import verify_receipt

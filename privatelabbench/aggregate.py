@@ -142,7 +142,9 @@ def aggregate_receipts(
     if len(paths) < 2:
         raise ValueError("Supply at least two shareable receipts")
     labels = (
-        list(sites) if sites is not None else [f"site-{i+1}" for i in range(len(paths))]
+        list(sites)
+        if sites is not None
+        else [f"site-{i + 1}" for i in range(len(paths))]
     )
     if len(labels) != len(paths) or any(
         not isinstance(label, str) or not label for label in labels
@@ -189,7 +191,9 @@ def aggregate_receipts(
             require_trusted_signer=require_trusted_signer,
         )
         if not check["valid"]:
-            raise ValueError(f"Input {index+1} failed verification: {check['reason']}")
+            raise ValueError(
+                f"Input {index + 1} failed verification: {check['reason']}"
+            )
         digest = check["payload_sha256"]
         identifier = payload.get(
             "receipt_id" if schema == "evaluation-receipt/v1" else "comparison_id"
@@ -229,15 +233,30 @@ def aggregate_receipts(
         validation_model = None
         if require_external_validation:
             from privatelabbench.external_validation import SCHEMA, public_approval
+
             validation = evaluation.get("external_validation", {})
             if validation.get("schema_version") != SCHEMA:
-                raise ValueError("Every input must contain an approved external-validation profile")
-            approved = public_approval({key: validation[key] for key in ("model", "dataset", "evaluator_relationship")})
-            validation_model = {key: approved["model"][key] for key in ("id", "revision")}
+                raise ValueError(
+                    "Every input must contain an approved external-validation profile"
+                )
+            approved = public_approval(
+                {
+                    key: validation[key]
+                    for key in ("model", "dataset", "evaluator_relationship")
+                }
+            )
+            validation_model = {
+                key: approved["model"][key] for key in ("id", "revision")
+            }
             model_key = tuple(validation_model.values())
             model_digest = approved["model"]["artifact_sha256"]
-            if model_key in validation_digests and validation_digests[model_key] != model_digest:
-                raise ValueError("The same external-validation model revision has conflicting artifact digests")
+            if (
+                model_key in validation_digests
+                and validation_digests[model_key] != model_digest
+            ):
+                raise ValueError(
+                    "The same external-validation model revision has conflicting artifact digests"
+                )
             validation_digests[model_key] = model_digest
         chosen_metric = metric or protocol["primary_metric"]
         if chosen_metric not in protocol["metrics"]:
@@ -308,7 +327,9 @@ def aggregate_receipts(
                 )
             model = declared or claimed
             if validation_model is not None and model != validation_model:
-                raise ValueError("Declared aggregation model differs from the external-validation model")
+                raise ValueError(
+                    "Declared aggregation model differs from the external-validation model"
+                )
             count = _count(evaluation.get("sample_counts", {}).get("n_samples"))
             estimate = _finite(
                 evaluation.get("metrics", {}).get(chosen_metric), "selected metric"

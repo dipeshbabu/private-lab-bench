@@ -3,23 +3,22 @@
 from __future__ import annotations
 
 import argparse
-from importlib.metadata import version, PackageNotFoundError
 import json
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 
 from privatelabbench.integrations.tdc import (
     ARCHIVE_ID,
     ARCHIVE_SHA256,
     SOURCE_URL,
     TASKS,
+    _write_csv,
     download_benchmarks,
     evaluate_tdc,
     load_benchmark,
     partition_table,
-    _write_csv,
 )
 from privatelabbench.privacy.export import atomic_write_json
 from privatelabbench.reports.receipt import verify_receipt
@@ -52,9 +51,9 @@ def validate(
     download: bool,
     strategy: str,
 ):
+    from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
     from tdc import Evaluator
     from tdc.benchmark_group import admet_group
-    from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 
     if download:
         download_benchmarks(cache)

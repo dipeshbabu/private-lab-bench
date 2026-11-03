@@ -346,6 +346,7 @@ def test_audited_pipeline_scores_exact_eligible_rows_and_keeps_protected_evidenc
     tmp_path, monkeypatch, capsys
 ):
     import yaml
+
     from privatelabbench.reports.receipt import verify_receipt
 
     current = run_table(tmp_path, "current")
@@ -410,6 +411,7 @@ def test_failed_audit_stops_before_scoring_and_local_debugging_cannot_publish(
     tmp_path, monkeypatch
 ):
     import yaml
+
     from privatelabbench.quality import evaluate_quality_gate
 
     current = run_table(tmp_path, "current")
@@ -468,6 +470,7 @@ def test_unknown_training_evidence_cannot_satisfy_quality_or_strict_release(
     tmp_path, monkeypatch
 ):
     import yaml
+
     from privatelabbench.quality import evaluate_quality_gate
 
     current = run_table(tmp_path, "current")
@@ -616,6 +619,7 @@ def test_paired_comparison_applies_the_same_eligibility_and_binds_both_audits(
     tmp_path, monkeypatch
 ):
     import yaml
+
     from privatelabbench.reports.integrity import verify_report
 
     current = run_table(tmp_path, "candidate")
@@ -686,8 +690,9 @@ def test_protocol_design_is_immutable_and_qc_does_not_copy_data_into_config(
     tmp_path, monkeypatch
 ):
     import yaml
-    from privatelabbench.protocols import EvaluationProtocol, resolve_protocol
+
     from privatelabbench.config import load_config
+    from privatelabbench.protocols import EvaluationProtocol, resolve_protocol
 
     rules = resolve_protocol("plb://generic/regression@1.0.0").as_dict()
     original_hash = resolve_protocol("plb://generic/regression@1.0.0").sha256
@@ -712,6 +717,7 @@ def test_public_audit_summary_suppresses_small_cells_and_failed_evidence_cannot_
     tmp_path,
 ):
     from copy import deepcopy
+
     from privatelabbench.design_audit import sanitize_design_audit
     from privatelabbench.privacy.export import check_release
 
@@ -752,8 +758,9 @@ def test_artifact_summary_protocol_and_quality_schemas_match_runtime(tmp_path):
     import yaml
     from jsonschema import Draft202012Validator
     from referencing import Registry, Resource
-    from privatelabbench.protocols import EvaluationProtocol, resolve_protocol
+
     from privatelabbench.design_audit import sanitize_design_audit
+    from privatelabbench.protocols import EvaluationProtocol, resolve_protocol
 
     current = run_table(tmp_path, "current")
     training = csv(

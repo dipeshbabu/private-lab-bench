@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 import math
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -74,7 +74,7 @@ def _samples(y, p, *, task_type, names, config, rng, plan=None):
             resamples=config.resamples,
             rng=rng,
         )
-    if task_type == "regression" and set(names) <= {"mae","rmse","r2"}:
+    if task_type == "regression" and set(names) <= {"mae", "rmse", "r2"}:
         return _regression_bootstrap_values(y, p, resamples=config.resamples, rng=rng)
     return _generic_bootstrap_values(
         y,
@@ -103,7 +103,7 @@ def _changes(
     metadata_reference=None,
     metadata_current=None,
 ):
-    from privatelabbench.eval.sampling import plan_sampling, ResampleLimit
+    from privatelabbench.eval.sampling import ResampleLimit, plan_sampling
 
     plan_a = (
         plan_sampling(metadata_reference, sampling_design) if sampling_design else None
@@ -169,7 +169,9 @@ def _changes(
             else (
                 "degraded"
                 if degradation > threshold
-                else "improved" if degradation < -threshold else "within_threshold"
+                else "improved"
+                if degradation < -threshold
+                else "within_threshold"
             )
         )
         interval = {"status": status, "lower": None, "upper": None}
@@ -300,12 +302,15 @@ def diagnose_shift(
             "Declare boolean independent_cohorts and prevalence_threshold between zero and one"
         )
     thresholds = _thresholds(practical_thresholds or {})
-    if metric_names is None and metric == "spearman": metric_names = ["spearman"]
+    if metric_names is None and metric == "spearman":
+        metric_names = ["spearman"]
     config = uncertainty_config or BootstrapConfig(enabled=True)
     config.validate()
     from privatelabbench.eval.sampling import (
-        sampling_design as parse_design,
         plan_sampling,
+    )
+    from privatelabbench.eval.sampling import (
+        sampling_design as parse_design,
     )
 
     design = parse_design(sampling_design)
@@ -322,8 +327,16 @@ def diagnose_shift(
         sample_id_column: "string",
         **({column: "string" for column in design.metadata_columns} if design else {}),
     }
-    if evaluation_group: dtypes[evaluation_group["column"]]="string"
-    frames = [reference_frame if reference_frame is not None else pd.read_csv(reference_path, dtype=dtypes), current_frame if current_frame is not None else pd.read_csv(current_path, dtype=dtypes)]
+    if evaluation_group:
+        dtypes[evaluation_group["column"]] = "string"
+    frames = [
+        reference_frame
+        if reference_frame is not None
+        else pd.read_csv(reference_path, dtype=dtypes),
+        current_frame
+        if current_frame is not None
+        else pd.read_csv(current_path, dtype=dtypes),
+    ]
     bindings = prediction_bindings(
         reference_path,
         frame=frames[0],
@@ -443,8 +456,9 @@ def diagnose_shift(
                 "status": status,
                 "metrics": {},
             }
-            i_a, i_b = np.flatnonzero(normalized_a == label), np.flatnonzero(
-                normalized_b == label
+            i_a, i_b = (
+                np.flatnonzero(normalized_a == label),
+                np.flatnonzero(normalized_b == label),
             )
             if design:
                 entry["n_independent_units_reference"] = plan_sampling(
@@ -455,8 +469,9 @@ def diagnose_shift(
                 ).n_units
             if status == "evaluated":
                 seed_offset += 1
-                i_a, i_b = np.flatnonzero(normalized_a == label), np.flatnonzero(
-                    normalized_b == label
+                i_a, i_b = (
+                    np.flatnonzero(normalized_a == label),
+                    np.flatnonzero(normalized_b == label),
                 )
                 entry["metrics"] = _changes(
                     a["metrics"],
@@ -498,7 +513,7 @@ def diagnose_shift(
     }
     for index, column in enumerate(predictions):
         distributions[
-            "prediction" if len(predictions) == 1 else f"prediction-{index+1}"
+            "prediction" if len(predictions) == 1 else f"prediction-{index + 1}"
         ] = _numeric_distribution(frames[0][column], frames[1][column])
     if len(set(numeric_metadata) | set(categorical_metadata)) != len(
         numeric_metadata
@@ -582,8 +597,8 @@ def sanitize_degradation(
     value: Mapping[str, Any], policy: Mapping[str, Any]
 ) -> dict[str, Any]:
     """Approve both cohort sizes and complete slice partitions before publication."""
-    from privatelabbench.privacy.export import _mapping, _number, _statistics
     from privatelabbench.aggregate import _count
+    from privatelabbench.privacy.export import _mapping, _number, _statistics
 
     summary = _mapping(value)
     if (
@@ -724,7 +739,9 @@ def sanitize_degradation(
                 else (
                     "degraded"
                     if degradation > threshold
-                    else "improved" if degradation < -threshold else "within_threshold"
+                    else "improved"
+                    if degradation < -threshold
+                    else "within_threshold"
                 )
             ),
             "interval": {
@@ -897,8 +914,11 @@ def render_degradation(summary: Mapping[str, Any]) -> str:
         "| Metric | Reference | Current | Degradation | Relative | Delta interval | Status |",
         "| --- | ---: | ---: | ---: | ---: | --- | --- |",
     ]
+
+    def text(value):
+        return f"{value:.6g}" if value is not None else "undefined"
+
     for name, entry in summary["overall"].items():
-        text = lambda value: f"{value:.6g}" if value is not None else "undefined"
         interval = entry["interval"]
         interval_text = (
             f"[{interval['lower']:.6g}, {interval['upper']:.6g}]"

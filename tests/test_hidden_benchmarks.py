@@ -1,6 +1,5 @@
-from copy import deepcopy
-from hashlib import sha256
 import json
+from hashlib import sha256
 from pathlib import Path
 
 import numpy as np
@@ -10,10 +9,10 @@ import yaml
 
 from privatelabbench.cli import main
 from privatelabbench.hidden_benchmarks import (
+    benchmark_template,
+    evaluate_benchmark,
     load_benchmark_spec,
     prepare_submission,
-    evaluate_benchmark,
-    benchmark_template,
 )
 from privatelabbench.leaderboards import build_leaderboard, rank_rows
 from privatelabbench.privacy.export import check_release
@@ -118,7 +117,7 @@ def evaluate(owner, index=0, **options):
         owner["spec_path"],
         owner["predictions"][index],
         owner["root"] / f"result-{index}",
-        submission_id=f"sub-{chr(97+index)}",
+        submission_id=f"sub-{chr(97 + index)}",
         model=owner["models"][index],
         **options,
     )
@@ -452,6 +451,7 @@ def test_owner_and_submission_sources_are_preserved(owner):
 def test_schema_definitions_cover_actual_owner_receipts_and_leaderboards(owner):
     from jsonschema import Draft202012Validator
     from referencing import Registry, Resource
+
     import privatelabbench.hidden_benchmarks as module
     from privatelabbench.reports.integrity import attach_integrity_metadata
 
@@ -528,11 +528,11 @@ def test_leaderboard_cli_uses_only_verified_receipts_and_clears_failed_export(
 def test_ordered_label_codes_remain_consistent_for_baselines_profiles_and_pairs(
     tmp_path,
 ):
-    from privatelabbench.runner import run_config
     from privatelabbench.eval.paired_comparison import (
-        compare_prediction_tables,
         PairedComparisonConfig,
+        compare_prediction_tables,
     )
+    from privatelabbench.runner import run_config
 
     table = tmp_path / "label-codes.csv"
     labels = ["02", "01"] * 20

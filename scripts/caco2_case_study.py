@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-import argparse, base64, json
+import argparse
+import base64
+import json
 from hashlib import sha256
 from importlib.metadata import version
 from pathlib import Path
@@ -11,16 +13,16 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from privatelabbench.compare import compare_prediction_files
 from privatelabbench.core.local_io import atomic_write_csv
 from privatelabbench.design_audit import EvaluationDesign
-from privatelabbench.eval.sampling import SamplingDesign
-from privatelabbench.protocols import EvaluationProtocol, resolve_protocol
-from privatelabbench.runner import run_config
-from privatelabbench.compare import compare_prediction_files
 from privatelabbench.eval.paired_comparison import PairedComparisonConfig
+from privatelabbench.eval.sampling import SamplingDesign
 from privatelabbench.privacy.export import atomic_write_json
+from privatelabbench.protocols import EvaluationProtocol, resolve_protocol
 from privatelabbench.reports.integrity import verify_payload
 from privatelabbench.reports.trust import sign_artifact
+from privatelabbench.runner import run_config
 
 PROXY_OFFSET = 0.8
 LOGP_THRESHOLD = 3.0
@@ -276,8 +278,8 @@ def evaluate_case(
     if not compared_public.exists():
         raise ValueError("Paired aggregate publication blocked; inspect local audit")
     (public / "proxy-paired.json").write_bytes(compared_public.read_bytes())
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
     key = Ed25519PrivateKey.generate()
     key_path = private / "example-signing-key.pem"
@@ -363,9 +365,9 @@ def evaluate_case(
         "",
         "| Evaluation | MAE | Quality |",
         "| --- | ---: | --- |",
-        f"| Original held-out candidate | {original['metrics']['mae']:.6f} | {original.get('quality_gate',{}).get('status')} |",
-        f"| Synthetic proxy candidate | {proxy['metrics']['mae']:.6f} | {proxy.get('quality_gate',{}).get('status')} |",
-        f"| Synthetic proxy training mean | {mean['metrics']['mae']:.6f} | {mean.get('quality_gate',{}).get('status')} |",
+        f"| Original held-out candidate | {original['metrics']['mae']:.6f} | {original.get('quality_gate', {}).get('status')} |",
+        f"| Synthetic proxy candidate | {proxy['metrics']['mae']:.6f} | {proxy.get('quality_gate', {}).get('status')} |",
+        f"| Synthetic proxy training mean | {mean['metrics']['mae']:.6f} | {mean.get('quality_gate', {}).get('status')} |",
         "",
         f"Paired improvement of candidate over baseline: {paired['improvement_a_over_b']:.6f}. Model A is the forest reference; Model B is the training-mean reference. Practical threshold: 0.02.",
         "",
@@ -395,17 +397,18 @@ def evaluate_case(
 
 
 def prepare_tdc(cache, *, download=False):
-    from tdc import Evaluator
-    from tdc.benchmark_group import admet_group
     from rdkit import Chem
     from rdkit.Chem import Crippen
     from sklearn.ensemble import RandomForestRegressor
-    from scripts.validate_tdc_admet import fingerprints
+    from tdc import Evaluator
+    from tdc.benchmark_group import admet_group
+
     from privatelabbench.integrations.tdc import (
         download_benchmarks,
         load_benchmark,
         partition_table,
     )
+    from scripts.validate_tdc_admet import fingerprints
 
     if download:
         download_benchmarks(cache)

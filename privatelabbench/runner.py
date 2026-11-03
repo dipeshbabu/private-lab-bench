@@ -1,23 +1,34 @@
 from __future__ import annotations
 
-from dataclasses import replace
 import json
 import os
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 from privatelabbench.adapters.sklearn_adapter import build_molecule_adapter
 from privatelabbench.audit import write_audit_event
 from privatelabbench.config import RunnerConfig, load_config, required, section
-from privatelabbench.core.registry import discover_entrypoint_tasks, get_task, has_task, register_task
+from privatelabbench.core.registry import (
+    discover_entrypoint_tasks,
+    get_task,
+    has_task,
+    register_task,
+)
 from privatelabbench.eval.metrics import summarize_metrics
-from privatelabbench.eval.predictions import evaluate_prediction_csv, evaluate_prediction_table
+from privatelabbench.eval.predictions import (
+    evaluate_prediction_csv,
+    evaluate_prediction_table,
+)
 from privatelabbench.eval.uncertainty import BootstrapConfig
 from privatelabbench.federated.evaluator import evaluate_federated_directory
 from privatelabbench.identity import benchmark_metadata, runner_metadata
-from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
+from privatelabbench.privacy.dp import PrivacyConfig, privacy_summary, privatize_metrics
 from privatelabbench.privacy.policy import PrivacyRiskPolicy, evaluate_privacy_gate
-from privatelabbench.privacy.release import AggregateReleasePolicy, evaluate_aggregate_release
+from privatelabbench.privacy.release import (
+    AggregateReleasePolicy,
+    evaluate_aggregate_release,
+)
 from privatelabbench.reports.json import write_json_report
 from privatelabbench.reports.manifest import sha256_file, write_run_manifest
 from privatelabbench.reports.markdown import (
@@ -84,7 +95,9 @@ def _audit_path(config: RunnerConfig) -> str:
 
 
 def _manifest_path(config: RunnerConfig) -> str:
-    return _report_path(config, "manifest", f"reports/{config.project}_{config.workflow}_manifest.json")
+    return _report_path(
+        config, "manifest", f"reports/{config.project}_{config.workflow}_manifest.json"
+    )
 
 
 def _write_audit(config: RunnerConfig, summary: dict[str, Any]) -> str:
@@ -139,11 +152,18 @@ def _selected_metric_names(config: RunnerConfig):
     if config.protocol is not None:
         return config.protocol.as_dict()["metrics"]
     evaluation = section(config, "evaluation")
-    return evaluation.get("metrics", ["spearman"] if evaluation.get("primary_metric") == "spearman" else None)
+    return evaluation.get(
+        "metrics",
+        ["spearman"] if evaluation.get("primary_metric") == "spearman" else None,
+    )
 
 
 def _evaluation_group(config: RunnerConfig):
-    return config.protocol.as_dict().get("evaluation_group") if config.protocol is not None else None
+    return (
+        config.protocol.as_dict().get("evaluation_group")
+        if config.protocol is not None
+        else None
+    )
 
 
 def _baseline_prediction_metrics(
@@ -159,9 +179,17 @@ def _baseline_prediction_metrics(
     baseline_column = input_cfg.get("baseline_prediction_column")
     if not baseline_column:
         return None, None
-    if str(task_type or "").lower() == "multiclass" or input_cfg.get("prediction_columns"):
-        raise ValueError("baseline_prediction_column currently supports regression and binary classification only")
-    evaluator = evaluate_prediction_table if config.prepared_input is not None else evaluate_prediction_csv
+    if str(task_type or "").lower() == "multiclass" or input_cfg.get(
+        "prediction_columns"
+    ):
+        raise ValueError(
+            "baseline_prediction_column currently supports regression and binary classification only"
+        )
+    evaluator = (
+        evaluate_prediction_table
+        if config.prepared_input is not None
+        else evaluate_prediction_csv
+    )
     source = config.prepared_input if config.prepared_input is not None else path
     baseline = evaluator(
         source,
@@ -180,7 +208,9 @@ def _baseline_prediction_metrics(
     return str(baseline_column), baseline.metrics
 
 
-def _attach_report_identity(summary: dict[str, Any], json_path: Path, identity: dict[str, Any]) -> dict[str, Any]:
+def _attach_report_identity(
+    summary: dict[str, Any], json_path: Path, identity: dict[str, Any]
+) -> dict[str, Any]:
     report = json.loads(json_path.read_text(encoding="utf-8"))
     integrity = report.get("integrity", {}) if isinstance(report, dict) else {}
     summary.update(identity)
@@ -195,15 +225,27 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     path = _input_path(config, str(required(input_cfg, "path", section_name="input")))
     target = str(required(input_cfg, "target_column", section_name="input"))
     prediction_column = input_cfg.get("prediction_column")
-    prediction_columns = _string_list(input_cfg.get("prediction_columns"), key="input.prediction_columns")
+    prediction_columns = _string_list(
+        input_cfg.get("prediction_columns"), key="input.prediction_columns"
+    )
     if prediction_column is None and not prediction_columns:
-        raise ValueError("Missing required config value: input.prediction_column or input.prediction_columns")
+        raise ValueError(
+            "Missing required config value: input.prediction_column or input.prediction_columns"
+        )
     task_type = input_cfg.get("task_type")
     sample_id_column_value = input_cfg.get("sample_id_column", "sample_id")
-    sample_id_column = str(sample_id_column_value) if sample_id_column_value not in (None, "") else None
+    sample_id_column = (
+        str(sample_id_column_value)
+        if sample_id_column_value not in (None, "")
+        else None
+    )
     require_sample_id = bool(input_cfg.get("require_sample_id", False))
-    metadata_columns = _string_list(input_cfg.get("metadata_columns"), key="input.metadata_columns")
-    slice_columns = _string_list(input_cfg.get("slice_columns"), key="input.slice_columns")
+    metadata_columns = _string_list(
+        input_cfg.get("metadata_columns"), key="input.metadata_columns"
+    )
+    slice_columns = _string_list(
+        input_cfg.get("slice_columns"), key="input.slice_columns"
+    )
     class_labels = _string_list(input_cfg.get("class_labels"), key="input.class_labels")
     min_slice_size = int(input_cfg.get("min_slice_size", 2))
     split_column = input_cfg.get("split_column")
@@ -212,6 +254,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     submission_context = {}
     if "benchmark_submission" in config.raw:
         from privatelabbench.hidden_benchmarks import submission_identity
+
         submission_context = submission_identity(config.raw["benchmark_submission"])
     baseline_prediction_column, baseline_metrics = _baseline_prediction_metrics(
         config,
@@ -228,13 +271,19 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     if validation is not None:
         identity["external_validation"] = validation
 
-    evaluator = evaluate_prediction_table if config.prepared_input is not None else evaluate_prediction_csv
+    evaluator = (
+        evaluate_prediction_table
+        if config.prepared_input is not None
+        else evaluate_prediction_csv
+    )
     source = config.prepared_input if config.prepared_input is not None else path
     result = evaluator(
         source,
         **({"dataset_path": path} if config.prepared_input is not None else {}),
         target=target,
-        prediction_column=str(prediction_column) if prediction_column is not None else None,
+        prediction_column=str(prediction_column)
+        if prediction_column is not None
+        else None,
         prediction_columns=prediction_columns or None,
         task_type=str(task_type) if task_type else None,
         sample_id_column=sample_id_column,
@@ -251,7 +300,9 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     )
     clean_metrics = result.metrics
     reported_metrics = privatize_metrics(clean_metrics, privacy_config)
-    privacy_gate = evaluate_privacy_gate(result.privacy_risk, _privacy_risk_policy(config))
+    privacy_gate = evaluate_privacy_gate(
+        result.privacy_risk, _privacy_risk_policy(config)
+    )
 
     json_path = write_json_report(
         _report_path(config, "json", f"reports/{config.project}_prediction_eval.json"),
@@ -296,7 +347,9 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
         signing_secret=_signing_secret(config),
     )
     markdown_path = write_prediction_markdown_report(
-        _report_path(config, "markdown", f"reports/{config.project}_prediction_eval.md"),
+        _report_path(
+            config, "markdown", f"reports/{config.project}_prediction_eval.md"
+        ),
         result=result,
         clean_metrics=clean_metrics,
         private_metrics=reported_metrics,
@@ -325,7 +378,9 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     if result.privacy_risk:
         summary["privacy_risk_level"] = result.privacy_risk.get("risk_level")
         summary["privacy_attack_auc"] = result.privacy_risk.get("attack_auc")
-        summary["privacy_member_advantage"] = result.privacy_risk.get("member_advantage")
+        summary["privacy_member_advantage"] = result.privacy_risk.get(
+            "member_advantage"
+        )
         summary["split_column"] = result.split_column
     summary["privacy_gate_status"] = privacy_gate["status"]
     summary["privacy_gate_publishable"] = privacy_gate["publishable"]
@@ -344,12 +399,16 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
     privacy_config = _privacy_config(config)
     identity = _identity_metadata(config)
 
-    dataset = load_molecule_csv(path, target=target, smiles_column=smiles_column, task_type=task_type)
+    dataset = load_molecule_csv(
+        path, target=target, smiles_column=smiles_column, task_type=task_type
+    )
     adapter = build_molecule_adapter(model_cfg)
     result = adapter.evaluate(dataset, test_size=test_size, seed=seed)
     clean_metrics = dict(result["metrics"])
     reported_metrics = privatize_metrics(clean_metrics, privacy_config)
-    privacy_gate = evaluate_privacy_gate(result.get("privacy_risk"), _privacy_risk_policy(config))
+    privacy_gate = evaluate_privacy_gate(
+        result.get("privacy_risk"), _privacy_risk_policy(config)
+    )
 
     markdown_path = write_markdown_report(
         _report_path(config, "markdown", f"reports/{config.project}_molecule_eval.md"),
@@ -410,7 +469,9 @@ def run_molecule_workflow(config: RunnerConfig) -> dict[str, Any]:
 
 def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
     input_cfg = section(config, "input")
-    client_dir = _input_path(config, str(required(input_cfg, "client_dir", section_name="input")))
+    client_dir = _input_path(
+        config, str(required(input_cfg, "client_dir", section_name="input"))
+    )
     target = str(required(input_cfg, "target_column", section_name="input"))
     smiles_column = str(input_cfg.get("smiles_column", "smiles"))
     task_type = input_cfg.get("task_type")
@@ -481,54 +542,123 @@ def run_federated_workflow(config: RunnerConfig) -> dict[str, Any]:
 
 def ensure_builtin_tasks_registered() -> None:
     builtins = (
-        ("predictions", run_prediction_workflow, "Evaluate a local table of targets and externally generated predictions."),
-        ("tabular", run_prediction_workflow, "Domain-neutral tabular prediction evaluation using the prediction-table interface."),
-        ("molecules", run_molecule_workflow, "Evaluate the built-in molecular property baseline and diagnostics."),
-        ("multi-site", run_federated_workflow, "Evaluate multiple local lab/site CSVs and aggregate metrics."),
-        ("federated", run_federated_workflow, "Legacy alias for the multi-site evaluation task."),
+        (
+            "predictions",
+            run_prediction_workflow,
+            "Evaluate a local table of targets and externally generated predictions.",
+        ),
+        (
+            "tabular",
+            run_prediction_workflow,
+            "Domain-neutral tabular prediction evaluation using the prediction-table interface.",
+        ),
+        (
+            "molecules",
+            run_molecule_workflow,
+            "Evaluate the built-in molecular property baseline and diagnostics.",
+        ),
+        (
+            "multi-site",
+            run_federated_workflow,
+            "Evaluate multiple local lab/site CSVs and aggregate metrics.",
+        ),
+        (
+            "federated",
+            run_federated_workflow,
+            "Legacy alias for the multi-site evaluation task.",
+        ),
     )
     for task_id, task_runner, description in builtins:
         if not has_task(task_id):
             register_task(task_id, task_runner, description=description)
 
 
-def _prepare_design_audit(config: RunnerConfig, path: str, *, reference_cohort: bool = False):
-    from privatelabbench.design_audit import EvaluationDesign, DesignAuditFailure, prepare_evaluation
+def _prepare_design_audit(
+    config: RunnerConfig, path: str, *, reference_cohort: bool = False
+):
+    from privatelabbench.design_audit import (
+        DesignAuditFailure,
+        EvaluationDesign,
+        prepare_evaluation,
+    )
     from privatelabbench.eval.sampling import sampling_design
     from privatelabbench.privacy.export import atomic_write_json
+
     rules = EvaluationDesign.from_dict(config.raw["evaluation_design"])
     options = section(config, "design_audit")
-    if set(options)-{"training_reference", "reference_complete", "failure_mode"} or options.get("failure_mode", "stop") not in {"stop", "local_only"}:
+    if set(options) - {
+        "training_reference",
+        "reference_complete",
+        "failure_mode",
+    } or options.get("failure_mode", "stop") not in {"stop", "local_only"}:
         raise ValueError("Unsupported design_audit options or failure_mode")
-    reference = _input_path(config, str(options["training_reference"])) if options.get("training_reference") else None
+    reference = (
+        _input_path(config, str(options["training_reference"]))
+        if options.get("training_reference")
+        else None
+    )
     manifest = Path(_manifest_path(config))
     stem = manifest.stem.removesuffix("_manifest")
-    audit_path = manifest.with_name(f"{stem}_{'reference_' if reference_cohort else ''}design_audit.json")
-    protected = {Path(path).resolve(), *([Path(reference).resolve()] if reference else []), *([Path(config.config_path).resolve()] if config.config_path else [])}
+    audit_path = manifest.with_name(
+        f"{stem}_{'reference_' if reference_cohort else ''}design_audit.json"
+    )
+    protected = {
+        Path(path).resolve(),
+        *([Path(reference).resolve()] if reference else []),
+        *([Path(config.config_path).resolve()] if config.config_path else []),
+    }
     if audit_path.resolve() in protected:
         raise ValueError("Design-audit output must be separate from every input")
     audit_path.unlink(missing_ok=True)
     design = sampling_design(config.raw.get("sampling_design"))
-    identifiers=tuple(design.metadata_columns) if design else ()
-    group=_evaluation_group(config)
-    if group: identifiers=(*identifiers,group["column"])
-    prepared = prepare_evaluation(path, rules, training_reference=reference, reference_complete=options.get("reference_complete", False), additional_identifier_columns=identifiers)
+    identifiers = tuple(design.metadata_columns) if design else ()
+    group = _evaluation_group(config)
+    if group:
+        identifiers = (*identifiers, group["column"])
+    prepared = prepare_evaluation(
+        path,
+        rules,
+        training_reference=reference,
+        reference_complete=options.get("reference_complete", False),
+        additional_identifier_columns=identifiers,
+    )
     atomic_write_json(audit_path, prepared.artifact)
-    if prepared.artifact["audit"]["status"] == "fail" and options.get("failure_mode", "stop") == "stop":
-        raise DesignAuditFailure(f"Evaluation design failed before scoring; inspect local audit: {audit_path}")
+    if (
+        prepared.artifact["audit"]["status"] == "fail"
+        and options.get("failure_mode", "stop") == "stop"
+    ):
+        raise DesignAuditFailure(
+            f"Evaluation design failed before scoring; inspect local audit: {audit_path}"
+        )
     input_cfg = section(config, "input")
-    required_columns = [input_cfg["target_column"], *(input_cfg.get("prediction_columns") or [input_cfg.get("prediction_column")]), *([input_cfg["baseline_prediction_column"]] if input_cfg.get("baseline_prediction_column") else []), *([input_cfg["split_column"]] if input_cfg.get("split_column") else [])]
-    if any(column is None or column not in prepared.frame for column in required_columns):
-        raise ValueError("The declared evaluation table is missing target/prediction columns")
+    required_columns = [
+        input_cfg["target_column"],
+        *(input_cfg.get("prediction_columns") or [input_cfg.get("prediction_column")]),
+        *(
+            [input_cfg["baseline_prediction_column"]]
+            if input_cfg.get("baseline_prediction_column")
+            else []
+        ),
+        *([input_cfg["split_column"]] if input_cfg.get("split_column") else []),
+    ]
+    if any(
+        column is None or column not in prepared.frame for column in required_columns
+    ):
+        raise ValueError(
+            "The declared evaluation table is missing target/prediction columns"
+        )
     if prepared.frame[required_columns].isna().any().any():
-        raise ValueError("Declared eligibility leaves missing targets/predictions; repair data or declare exclusions before scoring")
+        raise ValueError(
+            "Declared eligibility leaves missing targets/predictions; repair data or declare exclusions before scoring"
+        )
     record = {"path": str(audit_path), "artifact": prepared.artifact}
     return prepared, record
 
 
 def _attach_design_audits(config: RunnerConfig, summary: dict[str, Any]) -> None:
-    from privatelabbench.reports.integrity import attach_integrity_metadata
     from privatelabbench.design_audit import render_design_audit
+    from privatelabbench.reports.integrity import attach_integrity_metadata
+
     report_path = Path(summary["json_report"])
     report = json.loads(report_path.read_text(encoding="utf-8"))
     for index, record in enumerate(config.design_audits):
@@ -537,12 +667,29 @@ def _attach_design_audits(config: RunnerConfig, summary: dict[str, Any]) -> None
         summary[key] = record["artifact"]["audit"]
         if summary.get("markdown_report"):
             with Path(summary["markdown_report"]).open("a", encoding="utf-8") as handle:
-                handle.write("\n" + render_design_audit(record["artifact"]["audit"], heading="Reference-cohort design audit" if index else "Evaluation-design audit"))
-    failed = any(record["artifact"]["audit"]["status"] == "fail" for record in config.design_audits)
-    report["result"]["design_release_gate"] = {"status": "fail" if failed else "pass", "publishable": not failed, "scope": "supported_violation_gate_only"}
+                handle.write(
+                    "\n"
+                    + render_design_audit(
+                        record["artifact"]["audit"],
+                        heading="Reference-cohort design audit"
+                        if index
+                        else "Evaluation-design audit",
+                    )
+                )
+    failed = any(
+        record["artifact"]["audit"]["status"] == "fail"
+        for record in config.design_audits
+    )
+    report["result"]["design_release_gate"] = {
+        "status": "fail" if failed else "pass",
+        "publishable": not failed,
+        "scope": "supported_violation_gate_only",
+    }
     report.setdefault("extra", {})["design_audits_local"] = list(config.design_audits)
     report = attach_integrity_metadata(report, signing_secret=_signing_secret(config))
-    report_path.write_text(json.dumps(report, indent=2, sort_keys=True)+"\n", encoding="utf-8")
+    report_path.write_text(
+        json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     _attach_report_identity(summary, report_path, {})
 
 
@@ -601,52 +748,114 @@ def _validate_run_paths(config: RunnerConfig) -> None:
     validate_output_paths(inputs, outputs)
 
 
-def run_config(config_path: str, *, protocol_override: str | None = None) -> dict[str, Any]:
+def run_config(
+    config_path: str, *, protocol_override: str | None = None
+) -> dict[str, Any]:
     config = load_config(config_path, protocol_override=protocol_override)
     _validate_run_paths(config)
     # Invalidate a previous export before any evaluation or plugin can fail.
     from privatelabbench.reports.manifest import _receipt_output_paths
-    _, previous_shareable, previous_markdown = _receipt_output_paths(Path(_manifest_path(config)))
+
+    _, previous_shareable, previous_markdown = _receipt_output_paths(
+        Path(_manifest_path(config))
+    )
     previous_shareable.unlink(missing_ok=True)
     previous_markdown.unlink(missing_ok=True)
     ensure_builtin_tasks_registered()
     discover_entrypoint_tasks()
     task = get_task(config.task_id)
-    if config.raw.get("sampling_design") is not None and task.source == "builtin" and config.task_id not in {"predictions", "tabular"}:
-        raise ValueError("Declared sampling designs currently require a prediction-table task")
+    if (
+        config.raw.get("sampling_design") is not None
+        and task.source == "builtin"
+        and config.task_id not in {"predictions", "tabular"}
+    ):
+        raise ValueError(
+            "Declared sampling designs currently require a prediction-table task"
+        )
     if config.raw.get("evaluation_design") is not None:
         if config.task_id not in {"predictions", "tabular"}:
-            raise ValueError("Evaluation-design filtering currently requires a prediction-table task")
-        prepared, record = _prepare_design_audit(config, _input_path(config, str(section(config, "input")["path"])))
+            raise ValueError(
+                "Evaluation-design filtering currently requires a prediction-table task"
+            )
+        prepared, record = _prepare_design_audit(
+            config, _input_path(config, str(section(config, "input")["path"]))
+        )
         config = replace(config, prepared_input=prepared.frame, design_audits=(record,))
     if "external_validation" in config.raw:
         from privatelabbench.external_validation import prepare_validation
-        frame, context = prepare_validation(config, _input_path(config, str(section(config, "input")["path"])))
+
+        frame, context = prepare_validation(
+            config, _input_path(config, str(section(config, "input")["path"]))
+        )
         config = replace(config, prepared_input=frame, validation_context=context)
     summary = task.runner(config)
     if "diagnostics" in config.raw:
         from privatelabbench.eval.degradation import diagnose_shift, render_degradation
         from privatelabbench.reports.integrity import attach_integrity_metadata
+
         if config.task_id not in {"predictions", "tabular"}:
-            raise ValueError("Reference/current diagnostics require a prediction-table task")
+            raise ValueError(
+                "Reference/current diagnostics require a prediction-table task"
+            )
         diagnostics = section(config, "diagnostics")
-        allowed = {"reference_path", "independent_cohorts", "practical_thresholds", "prevalence_threshold", "numeric_metadata", "categorical_metadata"}
+        allowed = {
+            "reference_path",
+            "independent_cohorts",
+            "practical_thresholds",
+            "prevalence_threshold",
+            "numeric_metadata",
+            "categorical_metadata",
+        }
         if set(diagnostics) - allowed:
             raise ValueError("Unknown reference/current diagnostic settings")
         input_cfg = section(config, "input")
-        reference = _input_path(config, str(required(diagnostics, "reference_path", section_name="diagnostics")))
+        reference = _input_path(
+            config,
+            str(required(diagnostics, "reference_path", section_name="diagnostics")),
+        )
         prepared_reference = None
         if config.raw.get("evaluation_design") is not None:
-            prepared_reference, record = _prepare_design_audit(config, reference, reference_cohort=True)
+            prepared_reference, record = _prepare_design_audit(
+                config, reference, reference_cohort=True
+            )
             config = replace(config, design_audits=(*config.design_audits, record))
-        primary = section(config, "evaluation").get("primary_metric") or (config.protocol.as_dict()["primary_metric"] if config.protocol else None)
-        shift = diagnose_shift(reference, _input_path(config, str(input_cfg["path"])), target=input_cfg["target_column"], prediction_column=input_cfg.get("prediction_column"), prediction_columns=input_cfg.get("prediction_columns"), task_type=input_cfg.get("task_type"), class_labels=input_cfg.get("class_labels"), sample_id_column=input_cfg.get("sample_id_column", "sample_id"), slice_columns=input_cfg.get("slice_columns", []), min_slice_size=input_cfg.get("min_slice_size", 5), metric=primary, uncertainty_config=_uncertainty_config(config), sampling_design=config.raw.get("sampling_design"), current_frame=config.prepared_input, reference_frame=prepared_reference.frame if prepared_reference else None, metric_names=_selected_metric_names(config), evaluation_group=_evaluation_group(config), **{key: value for key, value in diagnostics.items() if key != "reference_path"})
+        primary = section(config, "evaluation").get("primary_metric") or (
+            config.protocol.as_dict()["primary_metric"] if config.protocol else None
+        )
+        shift = diagnose_shift(
+            reference,
+            _input_path(config, str(input_cfg["path"])),
+            target=input_cfg["target_column"],
+            prediction_column=input_cfg.get("prediction_column"),
+            prediction_columns=input_cfg.get("prediction_columns"),
+            task_type=input_cfg.get("task_type"),
+            class_labels=input_cfg.get("class_labels"),
+            sample_id_column=input_cfg.get("sample_id_column", "sample_id"),
+            slice_columns=input_cfg.get("slice_columns", []),
+            min_slice_size=input_cfg.get("min_slice_size", 5),
+            metric=primary,
+            uncertainty_config=_uncertainty_config(config),
+            sampling_design=config.raw.get("sampling_design"),
+            current_frame=config.prepared_input,
+            reference_frame=prepared_reference.frame if prepared_reference else None,
+            metric_names=_selected_metric_names(config),
+            evaluation_group=_evaluation_group(config),
+            **{
+                key: value
+                for key, value in diagnostics.items()
+                if key != "reference_path"
+            },
+        )
         report_path = Path(summary["json_report"])
         report = json.loads(report_path.read_text(encoding="utf-8"))
         report["result"]["degradation_summary"] = shift["degradation_summary"]
         report.setdefault("extra", {})["diagnostics_local"] = shift["local"]
-        report = attach_integrity_metadata(report, signing_secret=_signing_secret(config))
-        report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        report = attach_integrity_metadata(
+            report, signing_secret=_signing_secret(config)
+        )
+        report_path.write_text(
+            json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
         summary["degradation_summary"] = shift["degradation_summary"]
         _attach_report_identity(summary, report_path, {})
         if summary.get("markdown_report"):
@@ -657,20 +866,33 @@ def run_config(config_path: str, *, protocol_override: str | None = None) -> dic
     if "quality_gate" in config.raw:
         from privatelabbench.quality import evaluate_quality_gate
         from privatelabbench.reports.integrity import attach_integrity_metadata
+
         report_path = Path(summary["json_report"])
         report = json.loads(report_path.read_text(encoding="utf-8"))
         gate = evaluate_quality_gate(report, config.raw["quality_gate"])
         report["result"]["quality_gate"] = gate
-        report = attach_integrity_metadata(report, signing_secret=_signing_secret(config))
-        report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        report = attach_integrity_metadata(
+            report, signing_secret=_signing_secret(config)
+        )
+        report_path.write_text(
+            json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
         summary["quality_gate"] = gate
         _attach_report_identity(summary, report_path, {})
         if summary.get("markdown_report"):
             markdown = Path(summary["markdown_report"])
-            counts = {status: sum(rule["status"] == status for rule in gate["rules"]) for status in ("pass", "fail", "investigate")}
+            counts = {
+                status: sum(rule["status"] == status for rule in gate["rules"])
+                for status in ("pass", "fail", "investigate")
+            }
             with markdown.open("a", encoding="utf-8") as handle:
-                handle.write(f"\n## Model-quality gate\n\nStatus: `{gate['status']}`; metric basis: `{gate['metric_basis']}`.\n\n")
-                handle.write("; ".join(f"{status}: {count}" for status, count in counts.items()) + ".\n")
+                handle.write(
+                    f"\n## Model-quality gate\n\nStatus: `{gate['status']}`; metric basis: `{gate['metric_basis']}`.\n\n"
+                )
+                handle.write(
+                    "; ".join(f"{status}: {count}" for status, count in counts.items())
+                    + ".\n"
+                )
     summary["task"] = config.task_id
     summary["workflow"] = config.workflow
     summary["audit_log"] = _write_audit(config, summary)
@@ -692,13 +914,17 @@ def print_run_summary(summary: dict[str, Any]) -> None:
     print("PrivateLabBench local evaluation")
     if "evaluation_protocol" in summary:
         protocol = summary["evaluation_protocol"]
-        print(f"Protocol: {protocol['id']}@{protocol['version']} (sha256:{protocol['sha256']})")
+        print(
+            f"Protocol: {protocol['id']}@{protocol['version']} (sha256:{protocol['sha256']})"
+        )
     if "quality_gate" in summary:
         print(f"Quality gate: {summary['quality_gate']['status']}")
     print(f"Project: {summary['project']}")
     print(f"Task: {summary.get('task', summary.get('workflow'))}")
     if "benchmark_id" in summary:
-        print(f"Benchmark: {summary['benchmark_id']}@{summary.get('benchmark_version', 'local')}")
+        print(
+            f"Benchmark: {summary['benchmark_id']}@{summary.get('benchmark_version', 'local')}"
+        )
     if "run_id" in summary:
         print(f"Run ID: {summary['run_id']}")
     if "task_type" in summary:
@@ -724,9 +950,13 @@ def print_run_summary(summary: dict[str, Any]) -> None:
             f"({uncertainty.get('status')})"
         )
     if "aggregate_clean_metrics" in summary:
-        print(f"Aggregate clean metrics: {summarize_metrics(summary['aggregate_clean_metrics'])}")
+        print(
+            f"Aggregate clean metrics: {summarize_metrics(summary['aggregate_clean_metrics'])}"
+        )
     if "aggregate_reported_metrics" in summary:
-        print(f"Aggregate reported metrics: {summarize_metrics(summary['aggregate_reported_metrics'])}")
+        print(
+            f"Aggregate reported metrics: {summarize_metrics(summary['aggregate_reported_metrics'])}"
+        )
     if "privacy_risk_level" in summary:
         print(
             "Privacy attack risk: "

@@ -37,7 +37,9 @@ class RDKitMorganFingerprintAdapter:
             mol = Chem.MolFromSmiles(smi)
             if mol is None:
                 raise ValueError(f"RDKit could not parse SMILES value: {smi!r}")
-            fp = AllChem.GetMorganFingerprintAsBitVect(mol, self.radius, nBits=self.n_bits)
+            fp = AllChem.GetMorganFingerprintAsBitVect(
+                mol, self.radius, nBits=self.n_bits
+            )
             arr = np.zeros((self.n_bits,), dtype=np.float32)
             DataStructs.ConvertToNumpyArray(fp, arr)
             rows.append(arr)

@@ -1,10 +1,13 @@
 """Pinned DMS substitution assays and receipt-native, assay-level Spearman scores."""
 
+import json
+import os
+import tempfile
+import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from hashlib import sha256
 from io import BytesIO
-import json, os, re, tempfile, zipfile
 from pathlib import Path
 from uuid import uuid4
 
@@ -362,8 +365,8 @@ def evaluate_proteingym(
     prediction_column="prediction",
     release_policy_path=None,
 ):
-    from privatelabbench.runner import run_config
     from privatelabbench.privacy.export import publish_shareable_artifact
+    from privatelabbench.runner import run_config
 
     output = Path(output_dir).resolve()
     result_path, public, markdown = (

@@ -1,23 +1,21 @@
 """Synthetic assay contracts; actual public-data evidence is generated separately."""
 
+import json
 from hashlib import sha256
 from io import BytesIO
-import json
 from pathlib import Path
-import sys
 
 import numpy as np
 import pandas as pd
 import pytest
 import yaml
-from scipy.stats import spearmanr
 
 from privatelabbench.cli import main
+from privatelabbench.core.public_data import download_verified
 from privatelabbench.integrations import proteingym as pg
 from privatelabbench.privacy.export import check_release
 from privatelabbench.reports.integrity import verify_payload
 from privatelabbench.reports.receipt import verify_receipt
-from privatelabbench.core.public_data import download_verified
 
 MODEL = {"id": "synthetic-model", "revision": "v1"}
 
@@ -36,7 +34,7 @@ def assays(tmp_path, monkeypatch):
     metadata = []
     tables = []
     for name, protein, function, taxon, n, direction in definitions:
-        mutants = [f"A{index+1}V" for index in range(n)]
+        mutants = [f"A{index + 1}V" for index in range(n)]
         targets = np.arange(n, dtype=float) + 0.125
         frame = pd.DataFrame(
             {
@@ -316,6 +314,7 @@ def test_verified_download_preserves_conflicting_files_and_never_commits_bad_byt
 
 def test_result_schema_and_private_single_assay_protocol(assays, monkeypatch):
     from jsonschema import Draft202012Validator
+
     from privatelabbench.reports.integrity import attach_integrity_metadata
 
     result = evaluate(assays)

@@ -72,7 +72,9 @@ audit:
 
     summary = run_config(str(config_path))
     report = json.loads(json_path.read_text(encoding="utf-8"))
-    receipt = json.loads((tmp_path / "eval_receipt.shareable.json").read_text(encoding="utf-8"))
+    receipt = json.loads(
+        (tmp_path / "eval_receipt.shareable.json").read_text(encoding="utf-8")
+    )
 
     assert report["privacy"]["configured_mode"] == "metric_perturbation"
     assert report["privacy"]["mechanism"] == "metric_perturbation"

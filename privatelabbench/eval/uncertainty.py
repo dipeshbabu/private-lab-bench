@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
 import math
+from dataclasses import dataclass, replace
 from typing import Any, Iterator
 
 import numpy as np
 
-from privatelabbench.eval.metrics import classification_metrics, multiclass_metrics, regression_metrics
-
+from privatelabbench.eval.metrics import (
+    classification_metrics,
+    multiclass_metrics,
+    regression_metrics,
+)
 
 UNCERTAINTY_SCHEMA_VERSION = "uncertainty/v1"
 
@@ -50,11 +53,17 @@ class BootstrapConfig:
         }
 
 
-def _metrics_for_task(task_type: str, y_true: np.ndarray, predictions: np.ndarray, metric_names=None) -> dict[str, float]:
+def _metrics_for_task(
+    task_type: str, y_true: np.ndarray, predictions: np.ndarray, metric_names=None
+) -> dict[str, float]:
     if task_type == "regression":
-        return regression_metrics(y_true.astype(float), predictions.astype(float), metric_names=metric_names)
+        return regression_metrics(
+            y_true.astype(float), predictions.astype(float), metric_names=metric_names
+        )
     if task_type == "classification":
-        return classification_metrics(y_true.astype(int), predictions.astype(float), metric_names=metric_names)
+        return classification_metrics(
+            y_true.astype(int), predictions.astype(float), metric_names=metric_names
+        )
     if task_type == "multiclass":
         return multiclass_metrics(
             y_true.astype(int),
@@ -115,7 +124,9 @@ def _regression_bootstrap_values(
         sampled_pred = y_pred[indices]
         residual = sampled_true - sampled_pred
         values["mae"][cursor : cursor + size] = np.mean(np.abs(residual), axis=1)
-        values["rmse"][cursor : cursor + size] = np.sqrt(np.mean(residual * residual, axis=1))
+        values["rmse"][cursor : cursor + size] = np.sqrt(
+            np.mean(residual * residual, axis=1)
+        )
         centered = sampled_true - np.mean(sampled_true, axis=1, keepdims=True)
         denominator = np.sum(centered * centered, axis=1)
         numerator = np.sum(residual * residual, axis=1)
@@ -141,7 +152,12 @@ def _generic_bootstrap_values(
         _resample_indices(y_true, task_type=task_type, resamples=resamples, rng=rng)
     ):
         sample_predictions = predictions[sample_indices]
-        sample_metrics = _metrics_for_task(task_type, y_true[sample_indices], sample_predictions,metric_names=metric_names)
+        sample_metrics = _metrics_for_task(
+            task_type,
+            y_true[sample_indices],
+            sample_predictions,
+            metric_names=metric_names,
+        )
         for name in metric_names:
             value = float(sample_metrics.get(name, float("nan")))
             if math.isfinite(value):
@@ -158,7 +174,9 @@ def _interval_entry(
 ) -> dict[str, object]:
     finite = values[np.isfinite(values)]
     minimum_valid = max(20, math.ceil(requested_resamples * 0.8))
-    estimate_value: float | None = float(estimate) if math.isfinite(float(estimate)) else None
+    estimate_value: float | None = (
+        float(estimate) if math.isfinite(float(estimate)) else None
+    )
     if estimate_value is None:
         return {
             "estimate": None,
@@ -200,10 +218,22 @@ def bootstrap_metric_intervals(
 
     config.validate()
     if sampling_design is not None:
-        from privatelabbench.eval.sampling import metric_intervals, sampling_design as parse_design
+        from privatelabbench.eval.sampling import metric_intervals
+        from privatelabbench.eval.sampling import sampling_design as parse_design
+
         if sampling_metadata is None or len(sampling_metadata) != len(y_true):
-            raise ValueError("Sampling metadata must align with every evaluated observation")
-        return metric_intervals(y_true, predictions, task_type=task_type, config=config, design=parse_design(sampling_design), metadata=sampling_metadata,metric_names=metric_names)
+            raise ValueError(
+                "Sampling metadata must align with every evaluated observation"
+            )
+        return metric_intervals(
+            y_true,
+            predictions,
+            task_type=task_type,
+            config=config,
+            design=parse_design(sampling_design),
+            metadata=sampling_metadata,
+            metric_names=metric_names,
+        )
     if not config.enabled:
         return {}
 
@@ -218,10 +248,12 @@ def bootstrap_metric_intervals(
     if n_samples < config.min_samples:
         return {**metadata, "status": "skipped_min_samples", "metrics": {}}
 
-    point_metrics = _metrics_for_task(task_type, y_true, predictions,metric_names=metric_names)
+    point_metrics = _metrics_for_task(
+        task_type, y_true, predictions, metric_names=metric_names
+    )
     metric_names = tuple(point_metrics)
     rng = np.random.default_rng(config.seed)
-    if task_type == "regression" and set(metric_names) <= {"mae","rmse","r2"}:
+    if task_type == "regression" and set(metric_names) <= {"mae", "rmse", "r2"}:
         bootstrap_values = _regression_bootstrap_values(
             y_true.astype(float),
             predictions.astype(float),
@@ -247,5 +279,9 @@ def bootstrap_metric_intervals(
         )
         for name in metric_names
     }
-    overall_status = "evaluated" if any(entry["status"] == "evaluated" for entry in intervals.values()) else "unavailable"
+    overall_status = (
+        "evaluated"
+        if any(entry["status"] == "evaluated" for entry in intervals.values())
+        else "unavailable"
+    )
     return {**metadata, "status": overall_status, "metrics": intervals}

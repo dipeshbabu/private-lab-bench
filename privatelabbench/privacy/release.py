@@ -17,10 +17,14 @@ class AggregateReleasePolicy:
         return cls(
             min_clients=int(value.get("min_clients", 1)),
             min_total_samples=(
-                int(value["min_total_samples"]) if value.get("min_total_samples") is not None else None
+                int(value["min_total_samples"])
+                if value.get("min_total_samples") is not None
+                else None
             ),
             min_client_samples=(
-                int(value["min_client_samples"]) if value.get("min_client_samples") is not None else None
+                int(value["min_client_samples"])
+                if value.get("min_client_samples") is not None
+                else None
             ),
         )
 
@@ -38,10 +42,15 @@ def evaluate_aggregate_release(
         raise ValueError("privacy.aggregate_policy.min_clients must be at least 1.")
     if n_clients < policy.min_clients:
         violations.append("min_clients_not_met")
-    if policy.min_total_samples is not None and total_samples < policy.min_total_samples:
+    if (
+        policy.min_total_samples is not None
+        and total_samples < policy.min_total_samples
+    ):
         violations.append("min_total_samples_not_met")
     if policy.min_client_samples is not None:
-        small_clients = sum(1 for count in client_sample_counts if count < policy.min_client_samples)
+        small_clients = sum(
+            1 for count in client_sample_counts if count < policy.min_client_samples
+        )
         if small_clients:
             violations.append("min_client_samples_not_met")
 
@@ -56,7 +65,9 @@ def evaluate_aggregate_release(
         "observed": {
             "n_clients": n_clients,
             "total_samples": total_samples,
-            "min_client_samples": min(client_sample_counts) if client_sample_counts else 0,
+            "min_client_samples": min(client_sample_counts)
+            if client_sample_counts
+            else 0,
         },
         "violations": violations,
     }

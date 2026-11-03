@@ -1,5 +1,5 @@
-from copy import deepcopy
 import json
+from copy import deepcopy
 from pathlib import Path
 from uuid import uuid4
 
@@ -272,6 +272,7 @@ def test_trusted_signatures_required_and_single_snapshot_verification(tmp_path):
 
 def test_pinned_model_claims_can_supply_identity_without_manual_override(tmp_path):
     import base64
+
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     from cryptography.hazmat.primitives.serialization import (
         Encoding,
@@ -279,6 +280,7 @@ def test_pinned_model_claims_can_supply_identity_without_manual_override(tmp_pat
         PrivateFormat,
         PublicFormat,
     )
+
     from privatelabbench.reports.trust import sign_artifact
 
     key = Ed25519PrivateKey.generate()
@@ -341,7 +343,7 @@ def test_protocol_bound_paired_artifacts_preserve_within_site_evidence(
             path = tmp_path / f"{site}-{model}.csv"
             path.write_text(
                 "sample_id,target,prediction\n"
-                + "".join(f"{i},{i},{i+error}\n" for i in range(24))
+                + "".join(f"{i},{i},{i + error}\n" for i in range(24))
             )
             paths.append(path)
         output = tmp_path / f"{site}.json"

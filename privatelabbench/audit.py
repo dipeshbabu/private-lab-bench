@@ -7,7 +7,9 @@ from typing import Any, Mapping
 from uuid import uuid4
 
 
-def write_audit_event(path: str, *, event_type: str, payload: Mapping[str, Any]) -> Path:
+def write_audit_event(
+    path: str, *, event_type: str, payload: Mapping[str, Any]
+) -> Path:
     audit_path = Path(path)
     audit_path.parent.mkdir(parents=True, exist_ok=True)
     event = {

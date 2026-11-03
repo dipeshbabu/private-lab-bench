@@ -1,15 +1,15 @@
 """Explicitly synthetic cache contracts; real upstream parity has an opt-in script."""
 
+import gzip
+import json
+import sys
 from dataclasses import replace
 from hashlib import sha256
-import gzip, json
 from pathlib import Path
-import sys
 
 import numpy as np
 import pandas as pd
 import pytest
-import yaml
 
 from privatelabbench.integrations import matbench
 from privatelabbench.privacy.export import check_release
@@ -50,7 +50,7 @@ def snapshot(tmp_path, monkeypatch, request):
     body = gzip.compress(json.dumps(data).encode(), mtime=0)
     (root / task.filename).write_bytes(body)
     prefix = task.name.replace("matbench", "mb").replace("_", "-")
-    ids = [f"{prefix}-{index+1:03d}" for index in range(n)]
+    ids = [f"{prefix}-{index + 1:03d}" for index in range(n)]
     folds = {}
     for fold in range(5):
         folds[f"fold_{fold}"] = {
@@ -218,8 +218,9 @@ def test_cached_scoring_imports_no_optional_structure_framework(snapshot, monkey
 
 def test_fixed_predictions_match_the_pinned_upstream_evaluator(snapshot):
     pytest.importorskip("matbench")
-    from matbench.data_ops import score_array
     import inspect
+
+    from matbench.data_ops import score_array
 
     assert (
         sha256(Path(inspect.getsourcefile(score_array)).read_bytes()).hexdigest()
@@ -248,6 +249,7 @@ def test_unknown_tasks_do_not_receive_substituted_metrics(tmp_path):
 
 def test_result_schema_and_private_unit_contract(snapshot):
     from jsonschema import Draft202012Validator
+
     from privatelabbench.reports.integrity import attach_integrity_metadata
 
     result = evaluate(snapshot)

@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import gzip
+import json
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from hashlib import sha256
 from io import BytesIO
-import gzip, json
 from pathlib import Path
 from uuid import uuid4
-from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
@@ -17,8 +18,8 @@ import yaml
 from privatelabbench.core.local_io import atomic_write_csv
 from privatelabbench.core.public_data import download_verified as _download
 from privatelabbench.privacy.export import (
-    atomic_write_json,
     _mapping,
+    atomic_write_json,
     protocol_identity,
 )
 from privatelabbench.protocols import resolve_protocol
@@ -55,7 +56,7 @@ class MatbenchTask:
 
     @property
     def protocol(self):
-        return f"plb://matbench/{self.name.removeprefix('matbench_').replace('_','-')}@1.0.0"
+        return f"plb://matbench/{self.name.removeprefix('matbench_').replace('_', '-')}@1.0.0"
 
     @property
     def filename(self):
@@ -167,7 +168,7 @@ def load_snapshot(root, dataset):
         targets = targets.astype(int)
     prefix = task.name.replace("matbench", "mb").replace("_", "-")
     ids = [
-        f"{prefix}-{index+1:0{len(str(task.n_samples))}d}" for index in data["index"]
+        f"{prefix}-{index + 1:0{len(str(task.n_samples))}d}" for index in data["index"]
     ]
     labels = pd.DataFrame({"sample_id": ids, "target": targets}).set_index(
         "sample_id", drop=False
@@ -291,8 +292,8 @@ def evaluate_matbench(
     prediction_column="prediction",
     release_policy_path=None,
 ):
-    from privatelabbench.runner import run_config
     from privatelabbench.privacy.export import publish_shareable_artifact
+    from privatelabbench.runner import run_config
 
     output = Path(output_dir).resolve()
     result_path = output / "matbench_result.json"

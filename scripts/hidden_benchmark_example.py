@@ -1,15 +1,15 @@
 """Synthetic owner workflow; no real hidden data or independent researcher claim."""
 
-from hashlib import sha256
 import argparse
 import json
+from hashlib import sha256
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import yaml
 
-from privatelabbench.hidden_benchmarks import evaluate_benchmark, benchmark_template
+from privatelabbench.hidden_benchmarks import benchmark_template, evaluate_benchmark
 from privatelabbench.leaderboards import build_leaderboard, render_leaderboard
 from privatelabbench.privacy.export import atomic_write_json, publish_shareable_artifact
 from privatelabbench.protocols import EvaluationProtocol, resolve_protocol
@@ -147,7 +147,7 @@ def run(output, mode="owner-only"):
             spec_path,
             scored["predictions"],
             result_dir,
-            submission_id=f"sub-{chr(97+index)}",
+            submission_id=f"sub-{chr(97 + index)}",
             model=models[index],
             scoring_provenance=scored["provenance"] if mode == "owner-only" else None,
         )

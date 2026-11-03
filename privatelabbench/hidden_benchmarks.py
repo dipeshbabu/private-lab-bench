@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+import json
+import re
 from dataclasses import dataclass
 from hashlib import sha256
 from io import BytesIO
-import json
 from pathlib import Path
-import re
-from typing import Any, Mapping
+from typing import Mapping
 
 import numpy as np
 import pandas as pd
@@ -23,8 +23,8 @@ from privatelabbench.privacy.export import (
     validate_policy,
 )
 from privatelabbench.protocols import (
-    EvaluationProtocol,
     VERSION_PATTERN,
+    EvaluationProtocol,
     resolve_protocol,
 )
 
@@ -584,7 +584,7 @@ def benchmark_command(args):
             scoring_provenance=args.scoring_provenance,
         )
         output = Path(args.output_dir).resolve()
-        print(f"Local owner receipt: {output/'evaluation_receipt.json'}")
+        print(f"Local owner receipt: {output / 'evaluation_receipt.json'}")
         public = output / "evaluation_receipt.shareable.json"
         print(
             f"Approved aggregate receipt: {public}"

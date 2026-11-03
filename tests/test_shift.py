@@ -1,5 +1,5 @@
-from copy import deepcopy
 import json
+from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
@@ -8,11 +8,11 @@ import pytest
 import yaml
 
 from privatelabbench.cli import main
+from privatelabbench.eval.degradation import diagnose_shift, sanitize_degradation
 from privatelabbench.eval.predictions import (
     evaluate_prediction_csv,
     evaluate_prediction_table,
 )
-from privatelabbench.eval.degradation import diagnose_shift, sanitize_degradation
 from privatelabbench.eval.uncertainty import BootstrapConfig
 from privatelabbench.privacy.export import check_release
 from privatelabbench.reports.receipt import verify_receipt
@@ -236,8 +236,9 @@ def test_seed_reproducibility_and_missing_values_are_not_silently_excluded(tmp_p
 def test_run_receipts_carry_scoped_diagnostics_and_public_metadata_is_approved(
     tmp_path, monkeypatch, capsys
 ):
-    a, b = cohort(tmp_path, "reference"), cohort(
-        tmp_path, "current", errors=(0.4, 0.5), offset=10
+    a, b = (
+        cohort(tmp_path, "reference"),
+        cohort(tmp_path, "current", errors=(0.4, 0.5), offset=10),
     )
     release_path = tmp_path / "release.yaml"
     release_path.write_text(yaml.safe_dump(policy()))

@@ -1,8 +1,9 @@
 """Opt-in real Matbench five-fold parity against the pinned upstream package."""
 
 import argparse
+import json
+import os
 from importlib.metadata import version
-import json, os
 from pathlib import Path
 
 import numpy as np
@@ -10,21 +11,22 @@ import pandas as pd
 
 from privatelabbench.core.local_io import atomic_write_csv
 from privatelabbench.integrations.matbench import (
-    TASKS,
+    FOLDS_SHA256,
     REFERENCE_COMMIT,
     REFERENCE_SCORER_SHA256,
-    FOLDS_SHA256,
+    TASKS,
     download_benchmark,
-    load_snapshot,
     evaluate_matbench,
+    load_snapshot,
 )
 from privatelabbench.privacy.export import atomic_write_json
 from privatelabbench.reports.receipt import verify_receipt
 
 
 def validate(cache, output, datasets, strategies, download=False):
-    from hashlib import sha256
     import inspect
+    from hashlib import sha256
+
     from matbench.bench import MatbenchBenchmark
     from matbench.data_ops import score_array
 

@@ -1,8 +1,7 @@
-from copy import deepcopy
-from hashlib import sha256
 import json
-from pathlib import Path
 import shutil
+from hashlib import sha256
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -11,7 +10,7 @@ import yaml
 
 from privatelabbench.cli import main
 from privatelabbench.reports.receipt import verify_receipt
-from privatelabbench.scoring import score_local, LinearJSONAdapter, validate_manifest
+from privatelabbench.scoring import LinearJSONAdapter, score_local, validate_manifest
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples/trusted_scoring"
 UNITS = {"molecular_weight": "g/mol", "logp": "dimensionless"}
@@ -388,6 +387,7 @@ def test_changed_predictions_cannot_claim_scoring_provenance(fixture):
 def test_reference_manifest_schema(fixture):
     from jsonschema import Draft202012Validator
     from referencing import Registry, Resource
+
     import privatelabbench.scoring as scoring
 
     folder, _ = fixture

@@ -1,10 +1,10 @@
 """Atomic, digest-checked downloads for explicitly requested public reference assets."""
 
-from hashlib import sha256
 import os
-from pathlib import Path
 import re
 import tempfile
+from hashlib import sha256
+from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 

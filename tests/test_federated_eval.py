@@ -1,4 +1,7 @@
-from privatelabbench.federated.evaluator import discover_client_csvs, evaluate_federated_directory
+from privatelabbench.federated.evaluator import (
+    discover_client_csvs,
+    evaluate_federated_directory,
+)
 from privatelabbench.privacy.dp import PrivacyConfig
 
 

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from hashlib import sha256
 from io import BytesIO
-import re
 from typing import Any, Mapping
 from urllib.parse import urlsplit
 
@@ -120,6 +120,7 @@ def prepare_validation(config, path):
     profile = validate_profile(config.raw["external_validation"])
     if config.prepared_input is None:
         from pathlib import Path
+
         from privatelabbench.eval.sampling import sampling_design
 
         content = Path(path).read_bytes()
@@ -136,8 +137,9 @@ def prepare_validation(config, path):
         }
         if inputs.get("class_labels"):
             dtype[inputs["target_column"]] = "string"
-        group=config.protocol.as_dict().get("evaluation_group")
-        if group: dtype[group["column"]]="string"
+        group = config.protocol.as_dict().get("evaluation_group")
+        if group:
+            dtype[group["column"]] = "string"
         frame = pd.read_csv(BytesIO(content), dtype=dtype)
         basis = "input_file_bytes"
     else:

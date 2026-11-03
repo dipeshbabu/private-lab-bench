@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
 import math
 import re
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Mapping
 from uuid import uuid4
 
 from privatelabbench.aggregate import model_identity
@@ -109,7 +109,9 @@ def _change(reference, current, metric, threshold):
         else (
             "degradation"
             if degradation > threshold
-            else "improvement" if degradation < -threshold else "within_threshold"
+            else "improvement"
+            if degradation < -threshold
+            else "within_threshold"
         )
     )
     uncertainty = (
@@ -242,7 +244,9 @@ def _summarize(records, metric, reference, threshold, prevalence_threshold, crit
                         "presence": (
                             "both"
                             if before and after
-                            else "new" if after else "missing"
+                            else "new"
+                            if after
+                            else "missing"
                         ),
                         "prevalence_change": current_prevalence - prior_prevalence,
                         "material_prevalence_change": abs(
@@ -450,8 +454,9 @@ def sanitize_trend(value, policy):
     from privatelabbench.privacy.export import _mapping
 
     shared = _mapping(value)
-    series, model = model_identity(shared.get("series", {})), model_identity(
-        shared.get("model", {})
+    series, model = (
+        model_identity(shared.get("series", {})),
+        model_identity(shared.get("model", {})),
     )
     if series != model_identity(policy.get("public_series", {})) or model not in [
         model_identity(item) for item in policy.get("public_models", [])
@@ -488,8 +493,9 @@ def sanitize_trend(value, policy):
     ):
         raise ValueError("Approved times must be unique and chronological")
     reference = shared.get("reference_index")
-    threshold, prevalence = _finite(shared.get("practical_threshold")), _finite(
-        shared.get("prevalence_threshold")
+    threshold, prevalence = (
+        _finite(shared.get("practical_threshold")),
+        _finite(shared.get("prevalence_threshold")),
     )
     if (
         type(reference) is not int
@@ -693,9 +699,10 @@ def trend_command(args):
     import yaml
 
     output = Path(args.out).resolve()
-    public, markdown = output.with_name(
-        output.stem + ".shareable.json"
-    ), output.with_suffix(".md")
+    public, markdown = (
+        output.with_name(output.stem + ".shareable.json"),
+        output.with_suffix(".md"),
+    )
     protected = {
         Path(path).resolve()
         for path in [

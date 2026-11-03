@@ -9,11 +9,16 @@ import pytest
 
 from privatelabbench.cli import build_parser
 from privatelabbench.compare import compare_prediction_files
-from privatelabbench.eval.paired_comparison import PairedComparisonConfig, compare_prediction_tables
+from privatelabbench.eval.paired_comparison import (
+    PairedComparisonConfig,
+    compare_prediction_tables,
+)
 from privatelabbench.reports.integrity import verify_report
 
 
-def _write_regression_pair(tmp_path: Path, *, reordered_b: bool = True) -> tuple[Path, Path]:
+def _write_regression_pair(
+    tmp_path: Path, *, reordered_b: bool = True
+) -> tuple[Path, Path]:
     n = 40
     target = np.linspace(-1.0, 1.0, n)
     sign = np.where(np.arange(n) % 2 == 0, 1.0, -1.0)
@@ -78,7 +83,9 @@ def test_r2_paired_bootstrap_has_valid_resamples(tmp_path):
         str(path_b),
         target="target",
         task_type="regression",
-        config=PairedComparisonConfig(metric="r2", resamples=100, permutations=0, min_samples=20),
+        config=PairedComparisonConfig(
+            metric="r2", resamples=100, permutations=0, min_samples=20
+        ),
     )
     assert result["direction"] == "higher_is_better"
     assert result["paired_interval"]["status"] == "evaluated"
@@ -95,7 +102,9 @@ def test_exact_tie_is_not_declared_model_a_superior(tmp_path):
         str(path_b),
         target="target",
         task_type="regression",
-        config=PairedComparisonConfig(metric="mae", resamples=100, permutations=100, min_samples=20),
+        config=PairedComparisonConfig(
+            metric="mae", resamples=100, permutations=100, min_samples=20
+        ),
     )
     assert result["improvement_a_over_b"] == pytest.approx(0.0)
     assert result["paired_interval"]["lower"] == pytest.approx(0.0)
@@ -126,7 +135,9 @@ def test_binary_auroc_comparison_uses_paired_stratified_bootstrap(tmp_path):
         target="target",
         task_type="classification",
         class_labels=["negative", "positive"],
-        config=PairedComparisonConfig(metric="auroc", resamples=100, permutations=100, min_samples=20),
+        config=PairedComparisonConfig(
+            metric="auroc", resamples=100, permutations=100, min_samples=20
+        ),
     )
     assert result["direction"] == "higher_is_better"
     assert result["model_a"]["selected_metric"] > result["model_b"]["selected_metric"]
@@ -161,7 +172,9 @@ def test_multiclass_log_loss_comparison(tmp_path):
         prediction_columns=["p_alpha", "p_beta", "p_gamma"],
         task_type="multiclass",
         class_labels=labels,
-        config=PairedComparisonConfig(metric="log_loss", resamples=100, permutations=100, min_samples=20),
+        config=PairedComparisonConfig(
+            metric="log_loss", resamples=100, permutations=100, min_samples=20
+        ),
     )
     assert result["direction"] == "lower_is_better"
     assert result["improvement_a_over_b"] > 0
@@ -174,7 +187,9 @@ def test_mismatched_ids_are_rejected_without_silent_inner_join(tmp_path):
     b.loc[0, "sample_id"] = "only-in-b"
     b.to_csv(path_b, index=False)
     with pytest.raises(ValueError, match="exactly the same sample IDs"):
-        compare_prediction_tables(str(path_a), str(path_b), target="target", task_type="regression")
+        compare_prediction_tables(
+            str(path_a), str(path_b), target="target", task_type="regression"
+        )
 
 
 def test_target_mismatch_is_rejected(tmp_path):
@@ -183,7 +198,9 @@ def test_target_mismatch_is_rejected(tmp_path):
     b.loc[3, "target"] += 1.0
     b.to_csv(path_b, index=False)
     with pytest.raises(ValueError, match="Targets disagree"):
-        compare_prediction_tables(str(path_a), str(path_b), target="target", task_type="regression")
+        compare_prediction_tables(
+            str(path_a), str(path_b), target="target", task_type="regression"
+        )
 
 
 def test_slice_metadata_mismatch_is_rejected(tmp_path):
@@ -193,7 +210,11 @@ def test_slice_metadata_mismatch_is_rejected(tmp_path):
     b.to_csv(path_b, index=False)
     with pytest.raises(ValueError, match="Slice metadata column 'site' disagrees"):
         compare_prediction_tables(
-            str(path_a), str(path_b), target="target", task_type="regression", slice_columns=["site"]
+            str(path_a),
+            str(path_b),
+            target="target",
+            task_type="regression",
+            slice_columns=["site"],
         )
 
 
@@ -202,8 +223,12 @@ def test_noninferiority_decision_uses_paired_interval(tmp_path):
     target = np.linspace(0.0, 1.0, n)
     sign = np.where(np.arange(n) % 2 == 0, 1.0, -1.0)
     ids = [f"n{i}" for i in range(n)]
-    a = pd.DataFrame({"sample_id": ids, "target": target, "prediction": target + 0.06 * sign})
-    b = pd.DataFrame({"sample_id": ids, "target": target, "prediction": target + 0.05 * sign})
+    a = pd.DataFrame(
+        {"sample_id": ids, "target": target, "prediction": target + 0.06 * sign}
+    )
+    b = pd.DataFrame(
+        {"sample_id": ids, "target": target, "prediction": target + 0.05 * sign}
+    )
     path_a, path_b = tmp_path / "a.csv", tmp_path / "b.csv"
     a.to_csv(path_a, index=False)
     b.to_csv(path_b, index=False)
@@ -252,7 +277,13 @@ def test_comparison_artifacts_are_verifiable_and_shareable_boundary_is_clean(tmp
         min_slice_size=5,
         markdown_path=str(report),
         json_path=str(json_report),
-        release_policy={"schema_version": "release-policy/v1", "id": "synthetic-pair", "enabled": True, "min_samples": 20, "require_privacy_audit": False},
+        release_policy={
+            "schema_version": "release-policy/v1",
+            "id": "synthetic-pair",
+            "enabled": True,
+            "min_samples": 20,
+            "require_privacy_audit": False,
+        },
     )
     local = json.loads(json_report.read_text(encoding="utf-8"))
     shareable_path = Path(result["shareable_json_report"])
@@ -267,7 +298,10 @@ def test_comparison_artifacts_are_verifiable_and_shareable_boundary_is_clean(tmp
     assert str(path_b) not in serialized
     assert "s000" not in serialized
     assert verify_report(str(shareable_path))["valid"] is True
-    assert "Positive `improvement_a_over_b` always means Model A is better" in report.read_text(encoding="utf-8")
+    assert (
+        "Positive `improvement_a_over_b` always means Model A is better"
+        in report.read_text(encoding="utf-8")
+    )
 
 
 def test_legacy_compare_cli_shape_remains_supported():

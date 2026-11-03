@@ -6,11 +6,14 @@ from typing import Any, Sequence
 import numpy as np
 import pandas as pd
 
-from privatelabbench.eval.metrics import classification_metrics, multiclass_metrics, regression_metrics
+from privatelabbench.eval.metrics import (
+    classification_metrics,
+    multiclass_metrics,
+    regression_metrics,
+)
 from privatelabbench.eval.uncertainty import BootstrapConfig, bootstrap_metric_intervals
 from privatelabbench.privacy.attacks import membership_inference_risk
 from privatelabbench.tasks.molecules import infer_task_type
-
 
 SUPPORTED_PREDICTION_TASK_TYPES = {"regression", "classification", "multiclass"}
 
@@ -72,18 +75,41 @@ def _summary(values: np.ndarray, prefix: str) -> dict[str, float]:
 def validate_evaluation_group(frame: pd.DataFrame, group: Any) -> None:
     if group is None:
         return
-    if not isinstance(group,dict) or set(group)!={"column","max_groups"} or not isinstance(group["column"],str) or type(group["max_groups"]) is not int or group["max_groups"]!=1:
+    if (
+        not isinstance(group, dict)
+        or set(group) != {"column", "max_groups"}
+        or not isinstance(group["column"], str)
+        or type(group["max_groups"]) is not int
+        or group["max_groups"] != 1
+    ):
         raise ValueError("Unsupported protocol evaluation-group declaration")
-    column=group["column"]
-    if column not in frame or frame.empty or frame[column].isna().any() or frame[column].nunique(dropna=False)!=1:
-        raise ValueError("The protocol requires exactly one nonmissing evaluation group; evaluate assays separately")
+    column = group["column"]
+    if (
+        column not in frame
+        or frame.empty
+        or frame[column].isna().any()
+        or frame[column].nunique(dropna=False) != 1
+    ):
+        raise ValueError(
+            "The protocol requires exactly one nonmissing evaluation group; evaluate assays separately"
+        )
 
 
 def _normalize_split_value(value: Any) -> str:
     normalized = str(value).strip().lower()
     if normalized in {"train", "training", "member", "members", "in", "1", "true"}:
         return "train"
-    if normalized in {"test", "holdout", "validation", "val", "nonmember", "nonmembers", "out", "0", "false"}:
+    if normalized in {
+        "test",
+        "holdout",
+        "validation",
+        "val",
+        "nonmember",
+        "nonmembers",
+        "out",
+        "0",
+        "false",
+    }:
         return "test"
     raise ValueError(
         "split_column values must identify train/member rows and test/nonmember rows. "
@@ -91,7 +117,9 @@ def _normalize_split_value(value: Any) -> str:
     )
 
 
-def _normalize_string_list(value: Sequence[str] | None, *, label: str) -> tuple[str, ...]:
+def _normalize_string_list(
+    value: Sequence[str] | None, *, label: str
+) -> tuple[str, ...]:
     if value is None:
         return ()
     out = tuple(str(item).strip() for item in value)
@@ -110,12 +138,16 @@ def _resolve_prediction_columns(
     columns = _normalize_string_list(prediction_columns, label="prediction_columns")
     single = str(prediction_column).strip() if prediction_column is not None else ""
     if single and columns:
-        raise ValueError("Use either prediction_column or prediction_columns, not both.")
+        raise ValueError(
+            "Use either prediction_column or prediction_columns, not both."
+        )
     if single:
         return (single,)
     if columns:
         return columns
-    raise ValueError("A prediction table requires prediction_column or prediction_columns.")
+    raise ValueError(
+        "A prediction table requires prediction_column or prediction_columns."
+    )
 
 
 def _infer_or_validate_task_type(
@@ -135,11 +167,17 @@ def _infer_or_validate_task_type(
             unique = pd.unique(target_values)
             normalized = "classification" if len(unique) == 2 else "multiclass"
     if normalized not in SUPPORTED_PREDICTION_TASK_TYPES:
-        raise ValueError("task_type must be one of: regression, classification, multiclass")
+        raise ValueError(
+            "task_type must be one of: regression, classification, multiclass"
+        )
     if normalized == "multiclass" and len(prediction_columns) < 2:
-        raise ValueError("multiclass evaluation requires prediction_columns with at least two probability columns")
+        raise ValueError(
+            "multiclass evaluation requires prediction_columns with at least two probability columns"
+        )
     if normalized != "multiclass" and len(prediction_columns) != 1:
-        raise ValueError(f"{normalized} evaluation requires exactly one prediction column")
+        raise ValueError(
+            f"{normalized} evaluation requires exactly one prediction column"
+        )
     return normalized
 
 
@@ -151,7 +189,9 @@ def _validate_sample_ids(
 ) -> tuple[str | None, str]:
     if not sample_id_column:
         if require_sample_id:
-            raise ValueError("sample_id_column is required for reproducible prediction-table evaluation")
+            raise ValueError(
+                "sample_id_column is required for reproducible prediction-table evaluation"
+            )
         return None, "not_configured"
     if sample_id_column not in df.columns:
         if require_sample_id:
@@ -162,7 +202,9 @@ def _validate_sample_ids(
         return sample_id_column, "missing"
     values = df[sample_id_column]
     if values.isna().any() or values.astype(str).str.strip().eq("").any():
-        raise ValueError(f"sample id column '{sample_id_column}' contains missing/empty values")
+        raise ValueError(
+            f"sample id column '{sample_id_column}' contains missing/empty values"
+        )
     if values.duplicated().any():
         duplicates = values[values.duplicated()].astype(str).head(3).tolist()
         raise ValueError(
@@ -178,15 +220,23 @@ def _encode_binary_targets(
 ) -> tuple[np.ndarray, tuple[str, ...]]:
     # A single score always denotes probability of the second ordered class.
     # Row order must never change the meaning of that score.
-    labels = tuple(str(label) for label in class_labels) if class_labels else tuple(sorted({str(value) for value in values}))
+    labels = (
+        tuple(str(label) for label in class_labels)
+        if class_labels
+        else tuple(sorted({str(value) for value in values}))
+    )
     if len(labels) != 2:
-        raise ValueError(f"binary classification requires exactly two class labels; found {len(labels)}")
+        raise ValueError(
+            f"binary classification requires exactly two class labels; found {len(labels)}"
+        )
     if len(labels) != len(set(labels)):
         raise ValueError("class_labels must be unique")
     mapping = {label: index for index, label in enumerate(labels)}
     unknown = sorted({str(value) for value in values if str(value) not in mapping})
     if unknown:
-        raise ValueError(f"Target contains class label(s) not present in class_labels: {', '.join(unknown)}")
+        raise ValueError(
+            f"Target contains class label(s) not present in class_labels: {', '.join(unknown)}"
+        )
     encoded = np.array([mapping[str(value)] for value in values], dtype=int)
     return encoded, labels
 
@@ -213,7 +263,9 @@ def _encode_multiclass_targets(
     mapping = {label: index for index, label in enumerate(labels)}
     unknown = sorted({str(value) for value in values if str(value) not in mapping})
     if unknown:
-        raise ValueError(f"Target contains class label(s) not present in class_labels: {', '.join(unknown)}")
+        raise ValueError(
+            f"Target contains class label(s) not present in class_labels: {', '.join(unknown)}"
+        )
     encoded = np.array([mapping[str(value)] for value in values], dtype=int)
     return encoded, labels
 
@@ -222,7 +274,9 @@ def _validate_multiclass_probabilities(probabilities: np.ndarray) -> None:
     if not np.all(np.isfinite(probabilities)):
         raise ValueError("multiclass prediction columns contain non-finite values")
     if np.any(probabilities < 0.0) or np.any(probabilities > 1.0):
-        raise ValueError("multiclass prediction columns must contain probabilities between 0 and 1")
+        raise ValueError(
+            "multiclass prediction columns must contain probabilities between 0 and 1"
+        )
     row_sums = probabilities.sum(axis=1)
     if not np.allclose(row_sums, 1.0, atol=1e-4):
         bad = float(row_sums[np.argmax(np.abs(row_sums - 1.0))])
@@ -240,9 +294,17 @@ def _metrics_for_task(
     metric_names=None,
 ) -> dict[str, float]:
     if task_type == "regression":
-        return regression_metrics(y_true.astype(float), prediction_values.astype(float),metric_names=metric_names)
+        return regression_metrics(
+            y_true.astype(float),
+            prediction_values.astype(float),
+            metric_names=metric_names,
+        )
     if task_type == "classification":
-        return classification_metrics(y_true.astype(int), prediction_values.astype(float),metric_names=metric_names)
+        return classification_metrics(
+            y_true.astype(int),
+            prediction_values.astype(float),
+            metric_names=metric_names,
+        )
     return multiclass_metrics(
         y_true.astype(int),
         prediction_values.astype(float),
@@ -269,13 +331,18 @@ def _slice_metrics(
     slice_counter = 0
     for column in slice_columns:
         column_results: dict[str, dict[str, object]] = {}
-        for value, indices in df.groupby(column, dropna=False, sort=True).indices.items():
+        for value, indices in df.groupby(
+            column, dropna=False, sort=True
+        ).indices.items():
             index_array = np.asarray(indices, dtype=int)
             key = "<NA>" if pd.isna(value) else str(value)
             entry: dict[str, object] = {"n": int(len(index_array))}
             if sampling_design:
                 from privatelabbench.eval.sampling import plan_sampling
-                entry["n_independent_units"] = plan_sampling(df.iloc[index_array], sampling_design).n_units
+
+                entry["n_independent_units"] = plan_sampling(
+                    df.iloc[index_array], sampling_design
+                ).n_units
             if len(index_array) < min_slice_size:
                 entry["status"] = "skipped_min_slice_size"
             else:
@@ -286,7 +353,11 @@ def _slice_metrics(
                     prediction_values=prediction_values[index_array],
                     metric_names=metric_names,
                 )
-                if uncertainty_config and uncertainty_config.enabled and uncertainty_config.include_slices:
+                if (
+                    uncertainty_config
+                    and uncertainty_config.enabled
+                    and uncertainty_config.include_slices
+                ):
                     slice_counter += 1
                     entry["uncertainty"] = bootstrap_metric_intervals(
                         task_type=task_type,
@@ -322,13 +393,35 @@ def evaluate_prediction_csv(
     evaluation_group=None,
 ) -> PredictionEvaluation:
     from privatelabbench.eval.sampling import sampling_design as parse_design
+
     design = parse_design(sampling_design)
     return evaluate_prediction_table(
-        pd.read_csv(path, dtype={**({sample_id_column: "string"} if sample_id_column else {}), **({target: "string"} if class_labels else {}), **({evaluation_group["column"]:"string"} if evaluation_group else {}), **({column: "string" for column in design.metadata_columns} if design else {})}), dataset_path=str(path), target=target,
-        prediction_column=prediction_column, prediction_columns=prediction_columns,
-        task_type=task_type, sample_id_column=sample_id_column, require_sample_id=require_sample_id,
-        metadata_columns=metadata_columns, slice_columns=slice_columns, min_slice_size=min_slice_size,
-        class_labels=class_labels, split_column=split_column, uncertainty_config=uncertainty_config,
+        pd.read_csv(
+            path,
+            dtype={
+                **({sample_id_column: "string"} if sample_id_column else {}),
+                **({target: "string"} if class_labels else {}),
+                **({evaluation_group["column"]: "string"} if evaluation_group else {}),
+                **(
+                    {column: "string" for column in design.metadata_columns}
+                    if design
+                    else {}
+                ),
+            },
+        ),
+        dataset_path=str(path),
+        target=target,
+        prediction_column=prediction_column,
+        prediction_columns=prediction_columns,
+        task_type=task_type,
+        sample_id_column=sample_id_column,
+        require_sample_id=require_sample_id,
+        metadata_columns=metadata_columns,
+        slice_columns=slice_columns,
+        min_slice_size=min_slice_size,
+        class_labels=class_labels,
+        split_column=split_column,
+        uncertainty_config=uncertainty_config,
         sampling_design=design,
         metric_names=metric_names,
         evaluation_group=evaluation_group,
@@ -357,18 +450,30 @@ def evaluate_prediction_table(
 ) -> PredictionEvaluation:
     path = dataset_path
     if not isinstance(df, pd.DataFrame) or df.columns.duplicated().any():
-        raise ValueError("Prediction table must be a DataFrame with unique column names")
-    validate_evaluation_group(df,evaluation_group)
+        raise ValueError(
+            "Prediction table must be a DataFrame with unique column names"
+        )
+    validate_evaluation_group(df, evaluation_group)
     from privatelabbench.eval.sampling import sampling_design as parse_design
+
     design = parse_design(sampling_design)
     prediction_cols = _resolve_prediction_columns(
         prediction_column=prediction_column,
         prediction_columns=prediction_columns,
     )
-    configured_metadata = _normalize_string_list(metadata_columns, label="metadata_columns")
+    configured_metadata = _normalize_string_list(
+        metadata_columns, label="metadata_columns"
+    )
     configured_slices = _normalize_string_list(slice_columns, label="slice_columns")
     if design:
-        configured_slices = tuple(dict.fromkeys([*configured_slices, *[column for column, value in design.critical_slices]]))
+        configured_slices = tuple(
+            dict.fromkeys(
+                [
+                    *configured_slices,
+                    *[column for column, value in design.critical_slices],
+                ]
+            )
+        )
 
     required = {target, *prediction_cols, *configured_metadata, *configured_slices}
     if split_column:
@@ -390,10 +495,14 @@ def evaluate_prediction_table(
     if split_column:
         selected_for_dropna.append(split_column)
     if design and df[selected_for_dropna].isna().any().any():
-        raise ValueError("Sampling designs require complete targets/predictions; declare exclusions before evaluation")
+        raise ValueError(
+            "Sampling designs require complete targets/predictions; declare exclusions before evaluation"
+        )
     df = df.dropna(subset=selected_for_dropna).reset_index(drop=True)
     if df.empty:
-        raise ValueError("No valid rows found after dropping missing targets or predictions.")
+        raise ValueError(
+            "No valid rows found after dropping missing targets or predictions."
+        )
 
     raw_targets = df[target].to_numpy()
     resolved_task_type = _infer_or_validate_task_type(
@@ -408,22 +517,36 @@ def evaluate_prediction_table(
             y_true = df[target].astype(float).to_numpy()
             prediction_values = df[prediction_cols[0]].astype(float).to_numpy()
         except ValueError as exc:
-            raise ValueError("Regression target and prediction columns must be numeric.") from exc
-        metrics = regression_metrics(y_true, prediction_values,metric_names=metric_names)
+            raise ValueError(
+                "Regression target and prediction columns must be numeric."
+            ) from exc
+        metrics = regression_metrics(
+            y_true, prediction_values, metric_names=metric_names
+        )
         prediction_summary = {
             **_summary(y_true, "target"),
             **_summary(prediction_values, "prediction"),
-            **({"mean_absolute_prediction_error":metrics["mae"]} if "mae" in metrics else {}),
+            **(
+                {"mean_absolute_prediction_error": metrics["mae"]}
+                if "mae" in metrics
+                else {}
+            ),
         }
     elif resolved_task_type == "classification":
         y_true, labels = _encode_binary_targets(raw_targets, class_labels=class_labels)
         try:
             prediction_values = df[prediction_cols[0]].astype(float).to_numpy()
         except ValueError as exc:
-            raise ValueError("Binary classification prediction column must contain numeric probabilities.") from exc
+            raise ValueError(
+                "Binary classification prediction column must contain numeric probabilities."
+            ) from exc
         if np.any(prediction_values < 0.0) or np.any(prediction_values > 1.0):
-            raise ValueError("Binary classification prediction probabilities must be between 0 and 1.")
-        metrics = classification_metrics(y_true, prediction_values,metric_names=metric_names)
+            raise ValueError(
+                "Binary classification prediction probabilities must be between 0 and 1."
+            )
+        metrics = classification_metrics(
+            y_true, prediction_values, metric_names=metric_names
+        )
         prediction_summary = {
             **_summary(prediction_values, "prediction"),
             "positive_rate": float(np.mean(y_true)),
@@ -432,7 +555,9 @@ def evaluate_prediction_table(
         try:
             probabilities = df[list(prediction_cols)].astype(float).to_numpy()
         except ValueError as exc:
-            raise ValueError("Multiclass prediction columns must contain numeric probabilities.") from exc
+            raise ValueError(
+                "Multiclass prediction columns must contain numeric probabilities."
+            ) from exc
         _validate_multiclass_probabilities(probabilities)
         y_true, labels = _encode_multiclass_targets(
             raw_targets,
@@ -457,15 +582,19 @@ def evaluate_prediction_table(
         }
 
     resolved_uncertainty = uncertainty_config or BootstrapConfig(enabled=False)
-    uncertainty = bootstrap_metric_intervals(
-        task_type=resolved_task_type,
-        y_true=y_true,
-        predictions=prediction_values,
-        config=resolved_uncertainty,
-        sampling_design=design,
-        sampling_metadata=df,
-        metric_names=metric_names,
-    ) if resolved_uncertainty.enabled or design else {}
+    uncertainty = (
+        bootstrap_metric_intervals(
+            task_type=resolved_task_type,
+            y_true=y_true,
+            predictions=prediction_values,
+            config=resolved_uncertainty,
+            sampling_design=design,
+            sampling_metadata=df,
+            metric_names=metric_names,
+        )
+        if resolved_uncertainty.enabled or design
+        else {}
+    )
 
     inferred_metadata = tuple(
         str(column)

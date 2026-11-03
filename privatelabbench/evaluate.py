@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import csv
-from dataclasses import asdict
 import math
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -13,8 +13,8 @@ import pandas as pd
 
 from privatelabbench.eval.metrics import METRIC_DIRECTIONS
 from privatelabbench.eval.uncertainty import BootstrapConfig
-from privatelabbench.protocols import TASK_METRICS, apply_protocol, resolve_protocol
 from privatelabbench.privacy.export import validate_policy
+from privatelabbench.protocols import TASK_METRICS, apply_protocol, resolve_protocol
 from privatelabbench.quality import validate_quality_policy
 
 
@@ -241,7 +241,9 @@ def make_evaluation_config(
     audit_value = (
         evaluation_design
         if evaluation_design is not None
-        else definition.as_dict().get("evaluation_design") if definition else None
+        else definition.as_dict().get("evaluation_design")
+        if definition
+        else None
     )
     audit_design = (
         EvaluationDesign.from_dict(audit_value) if audit_value is not None else None
@@ -272,7 +274,9 @@ def make_evaluation_config(
     design = parse_design(
         sampling_design
         if sampling_design is not None
-        else definition.as_dict().get("sampling_design") if definition else None
+        else definition.as_dict().get("sampling_design")
+        if definition
+        else None
     )
     if design:
         bindings["metadata"] = list(

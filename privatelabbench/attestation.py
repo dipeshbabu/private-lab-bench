@@ -9,7 +9,6 @@ from typing import Any
 
 from privatelabbench import __version__
 
-
 CODE_REVISION_ENV = "PRIVATELABBENCH_CODE_REVISION"
 RUNNER_IMAGE_DIGEST_ENV = "PRIVATELABBENCH_RUNNER_IMAGE_DIGEST"
 ATTESTATION_ID_ENV = "PRIVATELABBENCH_ATTESTATION_ID"
@@ -47,5 +46,8 @@ def collect_runner_attestation() -> dict[str, Any]:
         claim["runner_image_digest"] = image_digest
 
     canonical = json.dumps(claim, sort_keys=True, separators=(",", ":"))
-    claim["attestation_id"] = os.getenv(ATTESTATION_ID_ENV) or hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    claim["attestation_id"] = (
+        os.getenv(ATTESTATION_ID_ENV)
+        or hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    )
     return claim

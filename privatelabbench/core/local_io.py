@@ -1,8 +1,8 @@
 """Atomic local tables; public artifacts must use the release boundary separately."""
 
 import os
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
 
 def validate_output_paths(inputs, outputs):
