@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Optional OpenDP bounded-mean backend with upstream clipping, floating-point sensitivity bounds, Laplace sampling, and an explicit shared budget. Its release object excludes exact means and private inputs.
+
+### Fixed
+
+- Reject nonfinite privacy budgets and spends; remove absolute comparison slack that could exceed very small budgets.
+
 ## v0.1.2 — 2026-11-03
 
 ### Fixed

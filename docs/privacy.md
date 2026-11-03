@@ -171,18 +171,59 @@ The built-in bounded-mean mechanism is a small reference implementation using Nu
 
 For high-assurance deployment where numerical details and end-to-end transformations must be inside a vetted privacy proof, use a specialized DP system such as **OpenDP** rather than treating this reference implementation as the final production backend.
 
-## OpenDP integration decision
+## Optional OpenDP backend
 
-OpenDP's architecture matches the direction of the formal API:
+This API is available on the development branch and will ship in the next feature
+release. Until then, use a source install as described in [installation](install.md).
 
-- transformations establish domains/metrics and query sensitivity;
-- measurements such as Laplace consume a sensitivity-aware input space;
-- compositor/context APIs track cumulative privacy loss;
-- bounded public information is part of the query definition.
+Install the optional backend with `pip install 'private-lab-bench[opendp]'`.
+It supports a bounded column mean with **public, fixed sample size and replace-one
+row adjacency**. One row must represent one individual's bounded contribution.
+It does not provide person-level privacy for repeated measurements without an
+appropriate contribution-bounding transformation.
 
-PrivateLabBench does **not** make OpenDP a mandatory dependency yet. The current community core first stabilizes task/query contracts and keeps the default install light. A future optional backend can translate supported bounded queries into OpenDP measurements and composition without changing the public receipt or task schemas.
+```python
+from privatelabbench.privacy import OpenDPBoundedMean, PrivacyBudget
 
-This is deliberately different from wrapping arbitrary already-computed metrics with OpenDP noise: a DP library cannot recover a valid sensitivity proof that the caller never specified.
+# Choose these values from public policy, before inspecting the private data.
+budget = PrivacyBudget(epsilon_limit=1.0)
+query = OpenDPBoundedMean(
+    name="public-normalized-score", lower=0.0, upper=1.0,
+    public_size=3, epsilon=0.5,
+)
+result = query.release([0.1, 0.5, 1.2], budget=budget)
+print(result.as_dict())  # noisy value and public query/backend metadata only
+# Reuse this SAME budget for another release about the protected population.
+```
+
+The complete chain uses OpenDP's clamp, mean, and Laplace constructors. It checks
+the upstream privacy map at symmetric distance **2**, corresponding to replacing
+one row. Calibration uses the upstream numerical sensitivity bound, including
+floating-point effects. OpenDP supplies the randomness; this API has no seed and
+does not fall back to NumPy if the optional dependency is missing.
+
+The ledger rejects nonfinite spends and compares declared budgets without
+absolute slack. A spend is charged before sampling, including when sampling
+fails. This ledger is **in memory and sequential**: retain it for every query on
+the population. Applications must provide durable accounting and synchronization
+across restarts, processes, exports, and other systems. Starting a new ledger does
+not reset a population's actual privacy loss.
+
+The result excludes exact means, rows, IDs, file paths, and input hashes. Bounds,
+size, query names, epsilon, the choice of queries, and the decision to publish must
+all be public and independent of private values. Keep validation errors and local
+diagnostics private. Publishing exact evaluation receipts beside a DP mean can
+invalidate the intended protection; this API does not convert existing reports
+or release policies into an end-to-end DP pipeline.
+
+The supported backend line is OpenDP 0.16. Its constructors currently require the
+upstream `contrib` feature, which this backend explicitly enables. OpenDP's
+[mean guide](https://docs.opendp.org/en/v0.16.0/api/user-guide/transformations/aggregation-mean.html)
+and [Laplace proof](https://docs.opendp.org/en/v0.16.0/proofs/rust/src/measurements/noise/distribution/laplace/make_laplace.pdf)
+describe the primitives and their assumptions. Use this specialized backend for
+its numerical mechanisms and checked maps; this wrapper has not received an
+independent privacy/security audit, and enabling an upstream feature does not
+certify the surrounding application.
 
 ## 4. Privacy attacks are empirical audits, not guarantees
 
