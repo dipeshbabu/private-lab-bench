@@ -1,4 +1,5 @@
 schema_version: public-release-audit/v1
+require_reviewed_author_emails: true
 
 examples:
   - path: examples/labs/lab_a.csv

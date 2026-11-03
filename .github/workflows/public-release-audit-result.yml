@@ -33,13 +33,18 @@ jobs:
             const previous = issue.body || '';
             const cleaned = previous.replace(/\n?<!-- public-release-audit-result -->[\s\S]*$/m, '').trimEnd();
             const success = conclusion === 'success';
+            const manuallyReviewed = previous.includes('<!-- public-release-manual-review-complete -->');
+            const issueState = success && manuallyReviewed && issue.state === 'closed' ? 'closed' : 'open';
+            const reviewSummary = manuallyReviewed
+              ? 'The maintainer completed the manual privacy review. A failed audit reopens the issue; a successful audit preserves a completed review.'
+              : 'Issue #9 remains open for the manual release/privacy review.';
             const resultBlock = success
-              ? `${marker}\n\n## Automated main-branch audit result\n\n- [x] Full-history repository policy audit passed.\n- [x] Gitleaks full-history scan passed.\n- [x] TruffleHog history scan passed.\n- [x] Audit commit: \`${sha}\`.\n\nWorkflow: ${url}\n\nThe automated audit is green. Issue #9 intentionally remains open for the final manual release review, including historical author-email privacy exposure and the decision on whether any history rewrite is warranted. Repository visibility is still unchanged.`
+              ? `${marker}\n\n## Automated main-branch audit result\n\n- [x] Full-history repository policy audit passed.\n- [x] Gitleaks full-history scan passed.\n- [x] TruffleHog history scan passed.\n- [x] Audit commit: \`${sha}\`.\n\nWorkflow: ${url}\n\nThe automated audit is green. ${reviewSummary} Repository visibility is still unchanged.`
               : `${marker}\n\n## Automated main-branch audit result\n\n**Audit status: ${conclusion}.** Issue remains open.\n\nAudit commit: \`${sha}\`\n\nWorkflow: ${url}\n\nDo not make the repository public until the failing audit is resolved and a subsequent full-history run passes.`;
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number,
               body: `${cleaned}\n\n${resultBlock}\n`,
-              state: 'open',
+              state: issueState,
             });

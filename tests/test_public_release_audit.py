@@ -13,6 +13,36 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "audit" / "public_release_manifest.yaml"
 
 
+def test_history_audit_blocks_unreviewed_email_metadata(monkeypatch):
+    from scripts import public_release_audit as audit
+    def fake_git(*args):
+        if args[0] == "rev-list":
+            return "2\n" if "--count" in args else "root\n"
+        if "--format=%ae%n%ce" in args:
+            return "noreply@github.com\nsynthetic-author@example.invalid\n"
+        return ""
+    monkeypatch.setattr(audit, "_git", fake_git)
+    failures, info = [], {}
+    audit.check_git_history({"require_reviewed_author_emails": True, "allowed_author_emails": ["noreply@github.com"]}, failures, info)
+    assert failures and info["git_history"]["author_email_privacy_review_required"]
+    assert "synthetic-author@example.invalid" not in str(info)
+
+
+def test_history_audit_respects_explicitly_reviewed_author_exceptions(monkeypatch):
+    from scripts import public_release_audit as audit
+    def fake_git(*args):
+        if args[0] == "rev-list":
+            return "1\n" if "--count" in args else "root\n"
+        if "--format=%ae%n%ce" in args:
+            return "synthetic-author@example.invalid\n"
+        return ""
+    monkeypatch.setattr(audit, "_git", fake_git)
+    failures, info = [], {}
+    audit.check_git_history({"require_reviewed_author_emails": True, "allowed_author_emails": ["synthetic-author@example.invalid"]}, failures, info)
+    assert failures == []
+    assert info["git_history"]["non_noreply_email_count"] == 0
+
+
 def _dep_name(spec: str) -> str:
     return re.split(r"[<>=!~;\[]", spec, maxsplit=1)[0].strip()
 
