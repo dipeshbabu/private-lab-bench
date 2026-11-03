@@ -50,7 +50,7 @@ signing = ["cryptography>=41.0"]
 rdkit = ["rdkit>=2023.9.1"]
 tdc = [
   "PyTDC==0.4.1",
-  "numpy>=1.26.4,<2",
+  "numpy>=1.26.4,<3",
   "pandas>=2.1.4,<3",
   "huggingface-hub>=0.20.3,<0.26",
   "setuptools>=77,<81",
