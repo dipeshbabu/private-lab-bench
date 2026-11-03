@@ -13,6 +13,7 @@ from privatelabbench.eval.metrics import (
     multiclass_metrics,
     regression_metrics,
 )
+from privatelabbench.eval.slices import iter_slice_groups
 from privatelabbench.tasks.molecules import infer_task_type
 
 PAIRED_COMPARISON_SCHEMA_VERSION = "paired-comparison/v1"
@@ -207,6 +208,13 @@ def _load_aligned_tables(
     prediction_cols = _prediction_columns(
         prediction_column=prediction_column,
         prediction_columns=prediction_columns,
+    )
+    from privatelabbench.eval.predictions import validate_prediction_roles
+
+    validate_prediction_roles(
+        target=target,
+        prediction_columns=prediction_cols,
+        sample_id_column=sample_id_column,
     )
     slices = tuple(str(column) for column in (slice_columns or ()))
     if len(set(slices)) != len(slices):
@@ -730,11 +738,7 @@ def _slice_results(
     slice_seed = 0
     for column in slice_columns or ():
         groups: dict[str, dict[str, object]] = {}
-        for value, indices in data.metadata.groupby(
-            column, dropna=False, sort=True
-        ).indices.items():
-            idx = np.asarray(indices, dtype=int)
-            key = "<NA>" if pd.isna(value) else str(value)
+        for key, idx in iter_slice_groups(data.metadata, column):
             entry: dict[str, object] = {"n": int(len(idx))}
             if sampling_design:
                 from privatelabbench.eval.sampling import plan_sampling

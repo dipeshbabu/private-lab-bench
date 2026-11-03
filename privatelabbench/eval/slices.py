@@ -1,6 +1,22 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
+
+
+def iter_slice_groups(frame: pd.DataFrame, column: str):
+    """Reject ambiguous string keys rather than overwriting a scientific group."""
+    seen = set()
+    for value, indices in frame.groupby(
+        column, dropna=False, sort=True
+    ).indices.items():
+        label = "<NA>" if pd.isna(value) else str(value)
+        if label in seen:
+            raise ValueError(
+                f"Column {column!r} has ambiguous slice labels; use distinct category names"
+            )
+        seen.add(label)
+        yield label, np.asarray(indices, dtype=int)
 
 
 def regression_error_slices(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:

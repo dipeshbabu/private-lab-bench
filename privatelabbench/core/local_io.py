@@ -5,6 +5,20 @@ import tempfile
 from pathlib import Path
 
 
+def resolve_input_path(value, *, config_path=None):
+    """Prefer configuration-local inputs, retaining the legacy cwd fallback."""
+    candidate = Path(value)
+    if candidate.is_absolute():
+        return candidate
+    relative = (
+        Path(config_path).resolve().parent / candidate if config_path else candidate
+    )
+    if relative.exists():
+        return relative
+    cwd_relative = Path.cwd() / candidate
+    return cwd_relative if cwd_relative.exists() else relative
+
+
 def validate_output_paths(inputs, outputs):
     """Reject input/output and output/output aliases before modifying any file."""
     paths, files = set(), set()

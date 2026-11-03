@@ -68,19 +68,9 @@ def _report_path(config: RunnerConfig, key: str, default: str) -> str:
 
 
 def _input_path(config: RunnerConfig, value: str) -> str:
-    candidate = Path(value)
-    if candidate.is_absolute():
-        return str(candidate)
-    if config.config_path:
-        config_relative = Path(config.config_path).parent / candidate
-        if config_relative.exists():
-            return str(config_relative)
-    cwd_relative = Path.cwd() / candidate
-    if cwd_relative.exists():
-        return str(cwd_relative)
-    if config.config_path:
-        return str(Path(config.config_path).parent / candidate)
-    return str(candidate)
+    from privatelabbench.core.local_io import resolve_input_path
+
+    return str(resolve_input_path(value, config_path=config.config_path))
 
 
 def _signing_secret(config: RunnerConfig) -> str | None:

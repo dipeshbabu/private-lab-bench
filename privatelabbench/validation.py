@@ -31,13 +31,9 @@ class ConfigValidationResult:
 
 
 def _resolve_path(path: str | os.PathLike[str], *, config_path: Path) -> Path:
-    candidate = Path(path)
-    if candidate.is_absolute():
-        return candidate
-    repo_relative = Path.cwd() / candidate
-    if repo_relative.exists():
-        return repo_relative
-    return config_path.parent / candidate
+    from privatelabbench.core.local_io import resolve_input_path
+
+    return resolve_input_path(path, config_path=config_path)
 
 
 def _resolve_output_path(path: str | os.PathLike[str]) -> Path:
