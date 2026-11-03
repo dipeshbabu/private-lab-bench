@@ -125,6 +125,20 @@ jobs:
       - name: Test split audits and chemical adapters
         run: pytest -q tests/test_design_audit.py tests/test_molecule_eval.py tests/test_adapters_and_compare.py tests/test_benchmark_packs.py
 
+  tdc-adapter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install optional TDC reference environment
+        run: pip install -e '.[dev,tdc]'
+      - name: Check adapter contracts and upstream metric agreement
+        run: pytest -q tests/test_tdc_integration.py
+
   docs:
     runs-on: ubuntu-latest
     steps:

@@ -107,6 +107,20 @@ def build_parser() -> argparse.ArgumentParser:
     audit_design.add_argument("--protocol", required=True, help="Local evaluation-design/v1 YAML, or an evaluation protocol containing evaluation_design.")
     audit_design.add_argument("--out", default="reports/design_audit.json")
 
+    tdc_prepare = sub.add_parser("tdc-prepare", help="Verify an official TDC cache and create a fixed-test prediction template.")
+    tdc_prepare.add_argument("--dataset", required=True)
+    tdc_prepare.add_argument("--cache-dir", default="outputs/tdc")
+    tdc_prepare.add_argument("--download", action="store_true", help="Explicitly fetch the public ADMET benchmark group through the optional TDC loader.")
+    tdc_prepare.add_argument("--out", required=True)
+    tdc_evaluate = sub.add_parser("tdc-evaluate", help="Evaluate external predictions on a pinned official TDC test set.")
+    tdc_evaluate.add_argument("predictions")
+    tdc_evaluate.add_argument("--dataset", required=True)
+    tdc_evaluate.add_argument("--cache-dir", default="outputs/tdc")
+    tdc_evaluate.add_argument("--prediction-column", default="prediction")
+    tdc_evaluate.add_argument("--upstream-test-order", action="store_true", help="Explicitly declare upstream test-row order when predictions have no generated IDs.")
+    tdc_evaluate.add_argument("--release-policy", default=None)
+    tdc_evaluate.add_argument("--output-dir", default="reports/tdc")
+
     run = sub.add_parser("run", help="Run a local evaluation task from a YAML config file.")
     run.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
     run.add_argument("--protocol", default=None, help="Exact plb://namespace/name@version or local protocol YAML.")
@@ -365,6 +379,24 @@ def simple_evaluation_command(args: argparse.Namespace) -> int:
         print(f"Evaluation rejected: {exc}")
         from privatelabbench.design_audit import DesignAuditFailure
         return 1 if isinstance(exc, DesignAuditFailure) else 2
+
+
+def tdc_command(args: argparse.Namespace) -> int:
+    from privatelabbench.integrations.tdc import prepare_template, evaluate_tdc
+    try:
+        if args.command == "tdc-prepare":
+            result = prepare_template(args.cache_dir, args.dataset, args.out, download=args.download)
+            print(f"TDC {result['dataset']}: {result['n_test']} fixed test records; metric {result['metric']}")
+            print(f"Prediction template: {result['template']}\nProtocol: {result['protocol']}")
+        else:
+            summary = evaluate_tdc(args.cache_dir, args.dataset, args.predictions, args.output_dir, prediction_column=args.prediction_column, upstream_test_order=args.upstream_test_order, release_policy_path=args.release_policy)
+            print_run_summary(summary)
+            print(f"Official TDC primary metric: {summary['tdc']['metric']}")
+            _print_receipt_paths(summary)
+        return 0
+    except (ValueError, TypeError, KeyError, OSError, yaml.YAMLError) as exc:
+        print(f"TDC workflow rejected: {exc}")
+        return 2
 
 
 def audit_design_command(args: argparse.Namespace) -> int:
@@ -809,6 +841,8 @@ def main() -> int:
         return simple_evaluation_command(args)
     if args.command == "audit-design":
         return audit_design_command(args)
+    if args.command in {"tdc-prepare", "tdc-evaluate"}:
+        return tdc_command(args)
     if args.command == "run":
         return run_from_config(args)
     if args.command in {"list-protocols", "show-protocol"}:
