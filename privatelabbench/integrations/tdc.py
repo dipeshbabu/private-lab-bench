@@ -54,6 +54,38 @@ TASKS = {
         "4a9183cf40c01881c6cfdeee7b68fed6dbe31348081099a323b9b76351a1dae0",
         "959e448d2b8927d65ede864838c2eee5b2075d4c01ca544aeec4c90d663b4ccb",
     ),
+    "ames": TDCTask(
+        "ames",
+        "classification",
+        "auroc",
+        "roc-auc",
+        "8b3add847978ec60685541e07696c837f116b7cb245d44f86eb8f4f69da8e44d",
+        "d87e29ad1f188d6ee4fcdd5c3c3aa4ba15e4fec657553353d0d951ad8df02d3f",
+    ),
+    "herg": TDCTask(
+        "herg",
+        "classification",
+        "auroc",
+        "roc-auc",
+        "22fc4c4b6079f72b392cf2ae675d99c6927a6351377ee50c4f9f98c586a3f206",
+        "14277bd932dce885e2f7a8d706effb455816f983e05b230f4f1c9590eb6c4248",
+    ),
+    "lipophilicity_astrazeneca": TDCTask(
+        "lipophilicity_astrazeneca",
+        "regression",
+        "mae",
+        "mae",
+        "a54636f85cf31eb4c914ea15e2c3a15364b0b8b51986262ea229203637e08f31",
+        "69f3870c9b6f2cec79a992a31d59d2e940962f7e2c4b27dabaed1fe1e767e2d8",
+    ),
+    "solubility_aqsoldb": TDCTask(
+        "solubility_aqsoldb",
+        "regression",
+        "mae",
+        "mae",
+        "adbee092423fe0cb0f4219520f2f93730b6ba5bb1d0ef8dd7764c2d32b3393b9",
+        "18cd02deec4e06c611a6e7e38fb44a1731bc0c0a96bc5d4ded098ff29da645fe",
+    ),
 }
 
 
@@ -62,7 +94,7 @@ def get_task(name: str) -> TDCTask:
         return TASKS[name.strip().lower()]
     except KeyError as exc:
         raise ValueError(
-            "Supported TDC subset: caco2_wang (MAE), pgp_broccatelli (AUROC); unsupported official metrics are never replaced with generic ones"
+            f"Supported TDC subset: {', '.join(TASKS)}; unsupported official metrics are never replaced with generic ones"
         ) from exc
 
 

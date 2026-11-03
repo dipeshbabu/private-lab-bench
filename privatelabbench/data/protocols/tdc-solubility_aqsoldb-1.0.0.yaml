@@ -1,0 +1,57 @@
+artifact_versions:
+  comparison: paired-comparison-artifact/v1
+  receipt: evaluation-receipt/v1
+  report: '0.2'
+  uncertainty: uncertainty/v1
+comparison:
+  confidence_level: 0.95
+  include_slice_uncertainty: false
+  metric: mae
+  min_samples: 20
+  min_slice_size: 5
+  noninferiority_margin: null
+  permutations: 1000
+  practical_threshold: 0.0
+  resamples: 1000
+  seed: 13
+id: plb://tdc/admet/solubility-aqsoldb
+input_schema:
+  class_labels: []
+  require_sample_id: true
+  schema_version: prediction-table/v1
+metrics:
+- mae
+primary_metric: mae
+privacy:
+  epsilon: 8.0
+  mode: none
+  seed: 13
+  sensitivity: 1.0
+quality_gate: null
+release:
+  enabled: false
+  id: tdc-solubility-aqsoldb-v1
+  include_protocol: false
+  min_cell_size: 5
+  min_samples: 20
+  require_privacy_audit: false
+  schema_version: release-policy/v1
+schema_version: evaluation-protocol/v1
+slices:
+  required: []
+  optional:
+  - site
+  - assay
+  - batch
+  min_size: 5
+task: predictions
+task_type: regression
+uncertainty:
+  confidence_level: 0.95
+  enabled: false
+  include_slices: false
+  method: percentile_bootstrap
+  min_samples: 20
+  resamples: 1000
+  seed: 13
+version: 1.0.0

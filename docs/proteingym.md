@@ -1,6 +1,6 @@
 # ProteinGym DMS substitution evaluation
 
-Evaluate mutation-effect scores within each assay, then summarize the selected assays using ProteinGym's protein/function weighting. This integration supports seven pinned assays from the public v1.3 substitution archive. It does not pool mutations from unrelated assays or present a subset as the full 217-assay leaderboard.
+Evaluate mutation-effect scores within each assay, then summarize the selected assays using ProteinGym's protein/function weighting. This integration supports ten pinned assays from the public v1.3 substitution archive. It does not pool mutations from unrelated assays or present a subset as the full 217-assay leaderboard.
 
 The [pinned upstream reference](https://github.com/OATML-Markslab/ProteinGym/blob/144fe22b07dfaeec2b366f2346203a9838a55b4c/reference_files/DMS_substitutions.csv) supplies assay IDs, UniProt IDs, functional categories, taxa, and expected variant counts:
 
@@ -13,6 +13,9 @@ The [pinned upstream reference](https://github.com/OATML-Markslab/ProteinGym/blo
 | `SPIKE_SARS2_Starr_2020_expression` | SPIKE_SARS2 | Expression | 3,798 |
 | `UBE4B_MOUSE_Starita_2013` | UBE4B_MOUSE | Activity | 899 |
 | `OTU7A_HUMAN_Tsuboyama_2023_2L2D` | OTU7A_HUMAN | Stability | 635 |
+| `DYR_ECOLI_Thompson_2019` | DYR_ECOLI | OrganismalFitness | 2,363 |
+| `PTEN_HUMAN_Matreyek_2021` | PTEN_HUMAN | Expression | 5,083 |
+| `PTEN_HUMAN_Mighell_2018` | PTEN_HUMAN | Activity | 7,260 |
 
 `plb proteingym-list` lists the supported subset. Other assays, indels, clinical benchmarks, supervised cross-validation, and model checkpoint execution are outside this initial adapter.
 

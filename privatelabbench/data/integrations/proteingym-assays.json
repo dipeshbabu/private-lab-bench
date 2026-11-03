@@ -69,6 +69,33 @@
       "function": "Stability",
       "taxon": "Human",
       "n_variants": 635
+    },
+    {
+      "id": "DYR_ECOLI_Thompson_2019",
+      "filename": "DYR_ECOLI_Thompson_2019.csv",
+      "sha256": "7e55a3fe2100370734dfc0340de705fbd3bcad0ff7310123765dbcf3de9f9fd2",
+      "uniprot_id": "DYR_ECOLI",
+      "function": "OrganismalFitness",
+      "taxon": "Prokaryote",
+      "n_variants": 2363
+    },
+    {
+      "id": "PTEN_HUMAN_Matreyek_2021",
+      "filename": "PTEN_HUMAN_Matreyek_2021.csv",
+      "sha256": "1c52aba95950c6d3b1ac8320df4cb99a79ae97353bd43e24c87ef78dbb02e636",
+      "uniprot_id": "PTEN_HUMAN",
+      "function": "Expression",
+      "taxon": "Human",
+      "n_variants": 5083
+    },
+    {
+      "id": "PTEN_HUMAN_Mighell_2018",
+      "filename": "PTEN_HUMAN_Mighell_2018.csv",
+      "sha256": "d532bed24c80449936dd61cf303225d78e6e9963a58165c1c36dff92c89557e1",
+      "uniprot_id": "PTEN_HUMAN",
+      "function": "Activity",
+      "taxon": "Human",
+      "n_variants": 7260
     }
   ]
 }
