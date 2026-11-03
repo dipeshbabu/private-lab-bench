@@ -284,7 +284,7 @@ def _start(docker, name, content, limits):
             raise SandboxError("Sandbox output did not complete within its limits")
         if process.returncode:
             raise SandboxError(
-                "Sandbox model execution failed; untrusted logs withheld"
+                f"Sandbox model execution failed (exit {process.returncode}); untrusted logs withheld"
             )
         state = docker.json("inspect", "--format", "{{json .State}}", name)
         if (

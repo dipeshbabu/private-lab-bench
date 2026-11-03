@@ -35,8 +35,9 @@ def execute(image, code, *, limits=None):
 
 
 def test_real_inference_and_restrictions(image):
-    code = """import json, os, socket, sys
+    code = """import json, os, resource, socket, sys
 assert os.getuid() == 65534
+assert resource.getrlimit(resource.RLIMIT_NPROC) == (64, 64)
 assert not os.path.exists("/var/run/docker.sock")
 assert "PLB_HOST_SECRET" not in os.environ
 assert "CapEff:\\t0000000000000000" in open("/proc/self/status").read()
@@ -108,6 +109,7 @@ def test_real_resource_and_output_attacks_are_rejected_and_cleaned(image, code):
 def test_fork_limit_is_enforced(image):
     code = """import errno, json, os, time
 children = []
+failure = 0
 try:
     for _ in range(100):
         pid = os.fork()
@@ -116,13 +118,13 @@ try:
             os._exit(0)
         children.append(pid)
 except OSError as exc:
-    assert exc.errno == errno.EAGAIN
-else:
-    raise AssertionError("PID limit was not enforced")
+    failure = exc.errno
 finally:
     for pid in children:
         os.kill(pid, 9)
         os.waitpid(pid, 0)
-print(json.dumps({"predictions":[0., 0.]}))
+print(json.dumps({"predictions":[len(children), failure]}))
 """
-    np.testing.assert_equal(execute(image, code), [0.0, 0.0])
+    result = execute(image, code, limits=SandboxLimits(seconds=10, memory_mb=512))
+    assert result[0] < 64
+    assert result[1] == 11  # EAGAIN: the per-user process limit was reached.
