@@ -74,7 +74,11 @@ resource use. A wall-time/output watchdog terminates execution and removes only
 the uniquely named container created for that run. Cleanup failure is an error.
 
 The default limits are 30 seconds, 512 MiB memory with swap disabled, one CPU,
-64 processes, 16 MiB scratch space, and 4 MiB combined stdout/stderr. Numeric
+64 guest processes, 16 MiB scratch space, and 4 MiB combined stdout/stderr. The
+host PID cgroup allows 128 additional tasks for gVisor's runtime threads (192
+total by default); guest processes are separately limited through `RLIMIT_NPROC`.
+gVisor's [resource model](https://gvisor.dev/docs/architecture_guide/resources/)
+distinguishes guest processes from host runtime tasks. Numeric
 input is limited to one million values and 64 MiB of encoded JSON. Public API
 callers can choose bounded `SandboxLimits`; the CLI exposes time and memory.
 

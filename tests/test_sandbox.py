@@ -72,6 +72,8 @@ def test_container_command_has_no_host_input_directory_or_network(tmp_path):
     ]:
         assert command[command.index(flag) + 1] == value
     assert "--read-only" in command and "--no-healthcheck" in command
+    assert command[command.index("--pids-limit") + 1] == str(limits.host_pid_limit)
+    assert f"nproc={limits.pids}:{limits.pids}" in command
     assert command.count("--mount") == 1
     assert (
         command[command.index("--mount") + 1]

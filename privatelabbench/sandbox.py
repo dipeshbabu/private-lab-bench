@@ -43,6 +43,13 @@ class SandboxLimits:
     output_bytes: int = 4 * 1024 * 1024
     scratch_mb: int = 16
 
+    @property
+    def host_pid_limit(self):
+        # gVisor's host threads are distinct from the guest's process count.
+        # Leave bounded runtime overhead so RLIMIT_NPROC can reject guest forks
+        # without first exhausting the Go runtime's own thread quota.
+        return self.pids + 128
+
     def __post_init__(self):
         for name, low, high in (
             ("seconds", 1, 300),
@@ -182,7 +189,7 @@ def _create_args(name, image, model_path, limits):
         "--user",
         "65534:65534",
         "--pids-limit",
-        str(limits.pids),
+        str(limits.host_pid_limit),
         "--memory",
         f"{limits.memory_mb}m",
         "--memory-swap",
@@ -429,6 +436,7 @@ def sandbox_command(args):
                 "task_type": args.task_type,
                 "features": args.feature,
                 "limits": asdict(limits),
+                "host_pid_limit": limits.host_pid_limit,
                 "network": "none",
                 "n_samples": len(frame),
             },
