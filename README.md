@@ -135,6 +135,9 @@ Metric perturbation, including the deprecated `dp` alias, **does not provide a f
 
 ## Reference
 
+Enforce explicit model thresholds in CI with `plb gate <receipt> --policy quality.yaml`.
+See [quality gates](docs/quality_gates.md) for confidence, baseline, slice, and privacy requirements.
+
 Use `--help` to explore commands and options:
 
 ```sh

@@ -18,6 +18,7 @@ from privatelabbench.privacy.attacks import ensure_builtin_privacy_attacks_regis
 from privatelabbench.privacy.attack_registry import list_privacy_attacks
 from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
 from privatelabbench.privacy.export import check_release, publish_shareable_artifact
+from privatelabbench.quality import EXIT_CODES as QUALITY_EXIT_CODES, evaluate_quality_gate
 from privatelabbench.reports.integrity import verify_report
 from privatelabbench.reports.manifest import verify_run_manifest
 from privatelabbench.reports.json import write_json_report
@@ -60,6 +61,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = sub.add_parser("validate-config", help="Validate a YAML config before running it.")
     validate.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
+
+    gate = sub.add_parser("gate", help="Evaluate a versioned model-quality policy against an existing artifact.")
+    gate.add_argument("artifact")
+    gate.add_argument("--policy", required=True, help="Standalone quality-policy/v1 YAML.")
+    gate.add_argument("--out", default=None, help="Optional local decision artifact; preserves the source.")
+    gate.add_argument("--signing-secret", default=None)
+    gate.add_argument("--trust-store", default=None)
+    gate.add_argument("--require-trusted-signer", action="store_true")
 
     sub.add_parser("list-tasks", help="List built-in and installed third-party evaluation tasks.")
     sub.add_parser("list-privacy-attacks", help="List registered empirical privacy-audit attacks.")
@@ -189,7 +198,33 @@ def run_from_config(args: argparse.Namespace) -> int:
     summary = run_config(args.config_path)
     print_run_summary(summary)
     _print_receipt_paths(summary)
-    return 0
+    return QUALITY_EXIT_CODES[summary["quality_gate"]["status"]] if "quality_gate" in summary else 0
+
+
+def gate_command(args: argparse.Namespace) -> int:
+    try:
+        source = Path(args.artifact)
+        if args.out and source.resolve() == Path(args.out).resolve():
+            raise ValueError("Choose a different output path to preserve evaluation evidence")
+        if args.out:
+            Path(args.out).unlink(missing_ok=True)
+        trust = _read_release_policy(args.trust_store) if args.trust_store else None
+        verification = verify_report(str(source), signing_secret=_secret(args), trust_store=trust, require_trusted_signer=args.require_trusted_signer)
+        if not verification.get("valid"):
+            raise ValueError(f"Artifact verification failed: {verification.get('reason')}")
+        artifact = json.loads(source.read_text(encoding="utf-8"))
+        policy = yaml.safe_load(Path(args.policy).read_text(encoding="utf-8"))
+        result = evaluate_quality_gate(artifact, policy)
+        result["source_evidence_level"] = verification.get("evidence_level", "integrity_only")
+        if args.out:
+            from privatelabbench.reports.integrity import attach_integrity_metadata
+            from privatelabbench.privacy.export import atomic_write_json
+            atomic_write_json(Path(args.out), attach_integrity_metadata(result))
+        print(json.dumps(result, indent=2, allow_nan=False))
+        return QUALITY_EXIT_CODES[result["status"]]
+    except (OSError, ValueError, TypeError, AttributeError, yaml.YAMLError) as exc:
+        print(json.dumps({"schema_version": "quality-gate/v1", "scope": "local", "status": "investigate", "reason": str(exc)}))
+        return 2
 
 
 def print_validation_result(result: ConfigValidationResult) -> None:
@@ -244,7 +279,7 @@ def run_pack_command(args: argparse.Namespace) -> int:
     print_run_summary(summary)
     print(f"Benchmark pack: {summary['benchmark_pack']}")
     _print_receipt_paths(summary)
-    return 0
+    return QUALITY_EXIT_CODES[summary["quality_gate"]["status"]] if "quality_gate" in summary else 0
 
 
 def compare_command(args: argparse.Namespace) -> int:
@@ -518,6 +553,8 @@ def main() -> int:
     args = parser.parse_args()
     if args.command == "run":
         return run_from_config(args)
+    if args.command == "gate":
+        return gate_command(args)
     if args.command == "validate-config":
         return validate_config_command(args)
     if args.command == "list-tasks":

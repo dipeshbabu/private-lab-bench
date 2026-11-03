@@ -94,11 +94,11 @@ def _statistics(value: Any) -> dict[str, Any]:
 
 def validate_policy(value: Any) -> dict[str, Any]:
     policy = dict(_mapping(value))
-    allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "include_input_schema", "public_benchmark", "slices", "reviewed_repeat", "review_reference"}
+    allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "include_input_schema", "include_quality_gate", "public_benchmark", "slices", "reviewed_repeat", "review_reference"}
     if set(policy) - allowed or policy.get("schema_version") != POLICY_SCHEMA:
         raise ValueError("Invalid release policy schema or unknown policy fields")
     _token(policy.get("id"))
-    for key in ("enabled", "require_privacy_audit", "include_input_schema", "reviewed_repeat"):
+    for key in ("enabled", "require_privacy_audit", "include_input_schema", "include_quality_gate", "reviewed_repeat"):
         if key in policy and not isinstance(policy[key], bool):
             raise ValueError(f"{key} must be boolean")
     for key, default in (("min_samples", 20), ("min_cell_size", 5)):
@@ -198,6 +198,11 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
             "artifacts": [],
         }
         identifier = "receipt_id"
+        if policy.get("include_quality_gate") and evaluation.get("quality_gate"):
+            gate = _mapping(evaluation["quality_gate"])
+            if gate.get("schema_version") != "quality-gate/v1" or gate.get("status") not in {"pass", "fail", "investigate"}:
+                raise ValueError("Invalid quality gate summary")
+            clean["evaluation"]["quality_gate"] = {"schema_version": "quality-gate/v1", "status": gate["status"]}
     elif schema == "paired-comparison-artifact/v1":
         n = shared.get("n_samples")
         if isinstance(n, bool) or not isinstance(n, int) or n < policy["min_samples"]:

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PrivateLabBench quality policy v1",
+  "type": "object",
+  "required": ["schema_version"],
+  "properties": {
+    "schema_version": {"const": "quality-policy/v1"},
+    "metric_basis": {"enum": ["clean", "reported"], "default": "clean"},
+    "min_samples": {"type": "integer", "minimum": 1},
+    "metric": {"type": "object", "minProperties": 1, "propertyNames": {"enum": ["mae", "rmse", "r2", "accuracy", "f1", "auroc", "macro_f1", "weighted_f1", "log_loss", "macro_auroc_ovr"]}, "additionalProperties": {"$ref": "#/$defs/limits"}},
+    "baseline": {"type": "object", "required": ["metric"], "properties": {"metric": {"$ref": "#/$defs/metric"}, "allow_relative_regression": {"type": "number", "minimum": 0}, "allow_absolute_regression": {"type": "number", "minimum": 0}}, "anyOf": [{"required": ["allow_relative_regression"]}, {"required": ["allow_absolute_regression"]}], "additionalProperties": false},
+    "comparison": {"type": "object", "required": ["min_improvement"], "properties": {"min_improvement": {"type": "number"}, "require_confident": {"type": "boolean"}}, "additionalProperties": false},
+    "slices": {
+      "type": "object", "minProperties": 1,
+      "properties": {"critical": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "object", "required": ["column", "value", "metric"], "properties": {"column": {"type": "string"}, "value": {"type": "string"}, "metric": {"$ref": "#/$defs/metric"}, "min": {"type": "number"}, "max": {"type": "number"}, "min_ci_lower": {"type": "number"}, "max_ci_upper": {"type": "number"}}, "anyOf": [{"required": ["min"]}, {"required": ["max"]}, {"required": ["min_ci_lower"]}, {"required": ["max_ci_upper"]}], "additionalProperties": false}}},
+      "patternProperties": {"^worst_(mae|rmse|r2|accuracy|f1|auroc|macro_f1|weighted_f1|log_loss|macro_auroc_ovr)_(min|max)$": {"type": "number"}},
+      "additionalProperties": false
+    },
+    "privacy": {"type": "object", "minProperties": 1, "properties": {"require_audit": {"type": "boolean"}, "require_release": {"type": "boolean"}, "max_level": {"enum": ["low", "moderate", "high"]}}, "additionalProperties": false}
+  },
+  "anyOf": [{"required": ["min_samples"]}, {"required": ["metric"]}, {"required": ["baseline"]}, {"required": ["comparison"]}, {"required": ["slices"]}, {"required": ["privacy"]}],
+  "additionalProperties": false,
+  "$defs": {
+    "metric": {"enum": ["mae", "rmse", "r2", "accuracy", "f1", "auroc", "macro_f1", "weighted_f1", "log_loss", "macro_auroc_ovr"]},
+    "limits": {"type": "object", "minProperties": 1, "properties": {"min": {"type": "number"}, "max": {"type": "number"}, "min_ci_lower": {"type": "number"}, "max_ci_upper": {"type": "number"}}, "additionalProperties": false}
+  }
+}
