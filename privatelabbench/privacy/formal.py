@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from fractions import Fraction
+from math import isfinite, nextafter
 from typing import Iterable, Sequence
 
 import numpy as np
@@ -66,9 +68,13 @@ class PrivacyBudget:
     spends: list[PrivacySpend] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        if self.epsilon_limit <= 0:
-            raise ValueError("epsilon_limit must be positive")
-        if self.delta_limit < 0 or self.delta_limit >= 1:
+        if not isfinite(self.epsilon_limit) or self.epsilon_limit <= 0:
+            raise ValueError("epsilon_limit must be finite and positive")
+        if (
+            not isfinite(self.delta_limit)
+            or self.delta_limit < 0
+            or self.delta_limit >= 1
+        ):
             raise ValueError("delta_limit must satisfy 0 <= delta < 1")
 
     @property
@@ -88,13 +94,18 @@ class PrivacyBudget:
         return float(self.delta_limit - self.delta_spent)
 
     def spend(self, *, label: str, epsilon: float, delta: float = 0.0) -> None:
-        if epsilon <= 0:
-            raise ValueError("epsilon spend must be positive")
-        if delta < 0 or delta >= 1:
+        self.__post_init__()
+        if not isfinite(epsilon) or epsilon <= 0:
+            raise ValueError("epsilon spend must be finite and positive")
+        if not isfinite(delta) or delta < 0 or delta >= 1:
             raise ValueError("delta spend must satisfy 0 <= delta < 1")
-        if self.epsilon_spent + epsilon > self.epsilon_limit + 1e-12:
+        # Compare declared spends exactly. An absolute tolerance can admit many
+        # times the entire budget when epsilon_limit is very small.
+        epsilon_total = sum(Fraction(str(x.epsilon)) for x in self.spends)
+        delta_total = sum(Fraction(str(x.delta)) for x in self.spends)
+        if epsilon_total + Fraction(str(epsilon)) > Fraction(str(self.epsilon_limit)):
             raise ValueError("privacy epsilon budget exceeded")
-        if self.delta_spent + delta > self.delta_limit + 1e-18:
+        if delta_total + Fraction(str(delta)) > Fraction(str(self.delta_limit)):
             raise ValueError("privacy delta budget exceeded")
         self.spends.append(
             PrivacySpend(label=label, epsilon=float(epsilon), delta=float(delta))
@@ -151,8 +162,8 @@ def release_bounded_mean(
     """
 
     query.validate()
-    if epsilon <= 0:
-        raise ValueError("epsilon must be positive")
+    if not isfinite(epsilon) or epsilon <= 0:
+        raise ValueError("epsilon must be finite and positive")
     if budget is not None:
         budget.spend(label=query.name, epsilon=epsilon, delta=0.0)
     sensitivity = query.sensitivity
@@ -190,8 +201,8 @@ def release_bounded_means(
     query_list = list(queries)
     if not query_list:
         raise ValueError("at least one bounded mean query is required")
-    if epsilon_total <= 0:
-        raise ValueError("epsilon_total must be positive")
+    if not isfinite(epsilon_total) or epsilon_total <= 0:
+        raise ValueError("epsilon_total must be finite and positive")
     if len({query.name for query in query_list}) != len(query_list):
         raise ValueError("bounded mean query names must be unique")
 
@@ -200,12 +211,20 @@ def release_bounded_means(
     else:
         if len(weights) != len(query_list):
             raise ValueError("weights must contain one value per query")
-        if any(weight <= 0 for weight in weights):
-            raise ValueError("weights must all be positive")
+        if any(not isfinite(weight) or weight <= 0 for weight in weights):
+            raise ValueError("weights must all be finite and positive")
         total_weight = float(sum(weights))
+        if not isfinite(total_weight):
+            raise ValueError("total weight must be finite")
         allocations = [
-            epsilon_total * float(weight) / total_weight for weight in weights
+            epsilon_total * (float(weight) / total_weight) for weight in weights
         ]
+
+    # Rounded equal/weighted allocations may sum above the declared total.
+    # Round each allocation down, rather than relaxing the ledger's hard bound.
+    allocations = [nextafter(float(epsilon), 0.0) for epsilon in allocations]
+    if any(epsilon <= 0 for epsilon in allocations):
+        raise ValueError("allocated epsilon is too small to represent")
 
     budget = PrivacyBudget(epsilon_limit=float(epsilon_total), delta_limit=0.0)
     seed_sequence = np.random.SeedSequence(seed)

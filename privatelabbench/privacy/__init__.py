@@ -21,12 +21,15 @@ from privatelabbench.privacy.formal import (
     release_bounded_mean,
     release_bounded_means,
 )
+from privatelabbench.privacy.opendp_backend import OpenDPBoundedMean, OpenDPMeanRelease
 
 __all__ = [
     "ADJACENCY_MODEL",
     "BoundedMeanQuery",
     "METRIC_PERTURBATION",
     "MetricRelease",
+    "OpenDPBoundedMean",
+    "OpenDPMeanRelease",
     "PrivacyAttackSpec",
     "PrivacyBudget",
     "PrivacyConfig",
