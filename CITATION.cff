@@ -3,8 +3,8 @@ message: "If you use PrivateLabBench in research, please cite the software and t
 title: "PrivateLabBench"
 type: software
 authors:
-  - family-names: "Mahato"
-    given-names: "Dipesh Tharu"
+  - family-names: "Tharu Mahato"
+    given-names: "Dipesh"
 repository-code: "https://github.com/dipeshbabu/private-lab-bench"
 url: "https://github.com/dipeshbabu/private-lab-bench"
 license: MIT
