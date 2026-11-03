@@ -73,6 +73,10 @@ This separation is important for privacy mechanisms: future formal release mecha
 
 ## Verify a receipt
 
+Use the [receipt trust guide](receipt_trust.md) for Ed25519 signatures, offline
+public-key pinning, rotation/revocation, and protocol binding. Unsigned and legacy
+receipts remain readable with explicitly limited integrity semantics.
+
 Use the generic verifier:
 
 ```bash

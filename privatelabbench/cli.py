@@ -17,7 +17,7 @@ from privatelabbench.models.sklearn_baseline import evaluate_random_forest
 from privatelabbench.privacy.attacks import ensure_builtin_privacy_attacks_registered
 from privatelabbench.privacy.attack_registry import list_privacy_attacks
 from privatelabbench.privacy.dp import PrivacyConfig, privatize_metrics, privacy_summary
-from privatelabbench.privacy.export import check_release
+from privatelabbench.privacy.export import check_release, publish_shareable_artifact
 from privatelabbench.reports.integrity import verify_report
 from privatelabbench.reports.manifest import verify_run_manifest
 from privatelabbench.reports.json import write_json_report
@@ -105,6 +105,24 @@ def build_parser() -> argparse.ArgumentParser:
     verify_any = sub.add_parser("verify", help="Verify a receipt, run manifest, or JSON report.")
     verify_any.add_argument("artifact", help="Path to a receipt, run manifest, or JSON report.")
     verify_any.add_argument("--signing-secret", default=None, help="Optional HMAC signing secret.")
+    verify_any.add_argument("--trust-store", default=None, help="Offline receipt-trust-store/v1 with pinned Ed25519 public keys.")
+    verify_any.add_argument("--require-trusted-signer", action="store_true", help="Fail unless a non-revoked pinned signer authenticates the receipt.")
+    verify_any.add_argument("--expected-protocol-sha256", default=None, help="Require the signature to bind this independently known public protocol digest.")
+    verify_any.add_argument("--json", action="store_true", help="Print independently named verification outcomes as JSON.")
+
+    sign = sub.add_parser("sign", help="Apply disclosure policy and sign an aggregate receipt with a local Ed25519 key.")
+    sign.add_argument("artifact", help="Local evaluation receipt or paired-comparison artifact.")
+    sign.add_argument("--policy", required=True)
+    sign.add_argument("--private-key", required=True, help="Local unencrypted Ed25519 PEM; never included in output.")
+    sign.add_argument("--signer-id", required=True)
+    sign.add_argument("--key-id", required=True)
+    sign.add_argument("--out", required=True)
+    sign.add_argument("--signing-secret", default=None, help="Shared secret if the local source artifact uses HMAC.")
+    sign.add_argument("--protocol-id", default=None)
+    sign.add_argument("--protocol-version", default=None)
+    sign.add_argument("--protocol-sha256", default=None)
+    sign.add_argument("--model-id", default=None)
+    sign.add_argument("--model-revision", default=None)
 
     release_check = sub.add_parser("release-check", help="Dry-run disclosure checks without exporting or uploading anything.")
     release_check.add_argument("artifact", help="Local evaluation receipt or paired-comparison artifact.")
@@ -325,7 +343,7 @@ def release_check_command(args: argparse.Namespace) -> int:
 
 def _print_basic_verification(result: dict[str, object]) -> int:
     print(f"Artifact: {result.get('path')}")
-    print(f"Valid: {result.get('valid')}")
+    print(f"Hash valid: {result.get('hash_valid', result.get('valid'))}")
     print(f"Reason: {result.get('reason')}")
     if result.get("schema_version"):
         print(f"Schema: {result.get('schema_version')}")
@@ -333,6 +351,13 @@ def _print_basic_verification(result: dict[str, object]) -> int:
         print(f"Scope: {result.get('scope')}")
     if result.get("payload_sha256"):
         print(f"Payload SHA256: {result.get('payload_sha256')}")
+    if "evidence_level" in result:
+        print(f"Signature present: {result.get('signature_present')}")
+        print(f"Signature valid: {result.get('signature_valid')}")
+        print(f"Signer trusted: {result.get('signer_trusted')}")
+        print(f"Protocol bound: {result.get('protocol_bound')}")
+        print(f"Evidence level: {result.get('evidence_level')}")
+        print("Execution and scientific validity are not independently established.")
     return 0 if result.get("valid") else 1
 
 
@@ -340,16 +365,59 @@ def verify_any_command(args: argparse.Namespace) -> int:
     path = Path(args.artifact)
     payload = json.loads(path.read_text(encoding="utf-8"))
     schema = payload.get("schema_version") if isinstance(payload, dict) else None
+    trust_path = getattr(args, "trust_store", None)
+    try:
+        trust = yaml.safe_load(Path(trust_path).read_text(encoding="utf-8")) if trust_path else None
+    except (OSError, yaml.YAMLError):
+        trust = {"schema_version": "invalid"}
+    options = {"signing_secret": _secret(args), "trust_store": trust, "require_trusted_signer": getattr(args, "require_trusted_signer", False), "expected_protocol_sha256": getattr(args, "expected_protocol_sha256", None)}
     if schema == RECEIPT_SCHEMA_VERSION:
-        return _print_basic_verification(verify_receipt(path, signing_secret=_secret(args)))
+        result = verify_receipt(path, **options)
+        if getattr(args, "json", False):
+            print(json.dumps(result, indent=2))
+            return 0 if result.get("valid") else 1
+        return _print_basic_verification(result)
     if schema == "run-manifest/v0.1":
         result = verify_run_manifest(path, signing_secret=_secret(args))
         result["schema_version"] = schema
+        if options["require_trusted_signer"] or options["expected_protocol_sha256"]:
+            result.update(valid=False, reason="public_signer_verification_requires_receipt")
+        if getattr(args, "json", False):
+            print(json.dumps(result, indent=2))
+            return 0 if result.get("valid") else 1
         return _print_basic_verification(result)
-    result = verify_report(str(path), signing_secret=_secret(args))
+    result = verify_report(str(path), **options)
     result["schema_version"] = schema
     result["scope"] = payload.get("scope") if isinstance(payload, dict) else None
+    if getattr(args, "json", False):
+        print(json.dumps(result, indent=2))
+        return 0 if result.get("valid") else 1
     return _print_basic_verification(result)
+
+
+def sign_command(args: argparse.Namespace) -> int:
+    source = Path(args.artifact)
+    if source.resolve() == Path(args.out).resolve():
+        raise ValueError("Choose a separate signed output path; the local source must be preserved")
+    Path(args.out).unlink(missing_ok=True)
+    check = verify_report(str(source), signing_secret=_secret(args))
+    if not check.get("valid"):
+        raise ValueError("Source artifact failed its integrity check")
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    signer = {"private_key": args.private_key, "signer_id": args.signer_id, "key_id": args.key_id}
+    protocol = (args.protocol_id, args.protocol_version, args.protocol_sha256)
+    if any(protocol):
+        if not all(protocol):
+            raise ValueError("Protocol binding needs --protocol-id, --protocol-version, and --protocol-sha256")
+        signer["protocol"] = {"id": args.protocol_id, "version": args.protocol_version, "sha256": args.protocol_sha256}
+    if args.model_id or args.model_revision:
+        if not args.model_id or not args.model_revision:
+            raise ValueError("Model identity needs both --model-id and --model-revision")
+        signer["model"] = {"id": args.model_id, "revision": args.model_revision}
+    evidence = payload.get("local", {}).get("release_evidence") if payload.get("scope") == "local" else None
+    decision = publish_shareable_artifact(payload, _read_release_policy(args.policy), args.out, evidence=evidence, signer=signer)
+    print(json.dumps(decision.as_dict(), indent=2))
+    return 0 if decision.decision == "allow" else 1
 
 
 def verify_report_command(args: argparse.Namespace) -> int:
@@ -465,6 +533,8 @@ def main() -> int:
         return verify_any_command(args)
     if args.command == "release-check":
         return release_check_command(args)
+    if args.command == "sign":
+        return sign_command(args)
     if args.command == "verify-report":
         return verify_report_command(args)
     if args.command == "verify-manifest":

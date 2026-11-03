@@ -22,7 +22,7 @@ htmlcov/
 .ruff_cache/
 
 # Local outputs
-reports/
+/reports/
 outputs/
 artifacts/
 .privatelabbench_dashboard/
