@@ -1,5 +1,74 @@
 # Privacy Model and Guarantees
 
+## Enforced export policy
+
+Evaluation reports are local-only. Creating a shareable JSON artifact requires an
+explicit `release-policy/v1` policy and successful disclosure checks. A missing,
+invalid, disabled, or failed policy produces local results and a local
+`*.shareable.release-audit.json`; it removes any stale shareable file.
+
+Add a `release` section to an evaluation config, or pass a policy file to
+`plb compare --release-policy release.yaml`. For example:
+
+```yaml
+release:
+  schema_version: release-policy/v1
+  id: reviewed-study-2026
+  enabled: true
+  min_samples: 20
+  min_cell_size: 5
+  require_privacy_audit: true
+```
+
+The standalone comparison policy file contains these fields without the outer
+`release` key. Dry-run an existing local receipt with:
+
+```sh
+plb release-check reports/run_receipt.json --policy release.yaml
+```
+
+Dry runs do not export, upload, or consume a release approval. The writer also
+checks local repeated-release history; a successful dry run alone does not
+guarantee that a later export will be permitted.
+
+Every upstream privacy/aggregate gate must explicitly pass when present. A missing
+required audit is `not_run`; unrecognized audit evidence is `inconclusive`.
+An audit passing a configured policy is empirical evidence, not proof of privacy.
+Synthetic examples explicitly waive the audit requirement; review that decision
+before adapting their configuration to private data.
+
+The prediction demo's separate risk policy specifies thresholds but its table has
+no membership-audit split. Its export is therefore blocked even though the demo
+release policy waives a general audit requirement. Waiving that requirement never
+overrides a failing upstream gate.
+
+The exporter selects known metric and uncertainty fields. It omits local paths,
+configurations, artifact names/hashes, sample identifiers, private model/project
+labels, free-form metadata, and arbitrary plugin fields. Input column names are
+withheld unless `include_input_schema: true` is deliberately approved. Benchmark
+identity must be supplied explicitly through `public_benchmark` in the policy.
+Undefined numeric metrics are represented by JSON `null`.
+
+Slices stay local by default. A policy may approve one disjoint partition and its
+exact public labels, such as `slices: {site: [a, b, c]}`. If any category is missing,
+unexpected, or smaller than `min_cell_size`, the whole partition is withheld,
+including its counts. Multiple overlapping partitions are rejected. Clean
+intervals and clean slice metrics are withheld when overall metrics are perturbed.
+
+The output directory's local `.plb-release-ledger.json` records approved aggregate
+content by policy ID. Unchanged releases may be reproduced. Changed content under
+the same ID requires a deliberate `reviewed_repeat: true` and a local
+`review_reference` identifier. The override is audited and never bypasses other
+gates or cell thresholds. Keep policy IDs and the ledger stable for a study;
+moving directories or changing IDs starts a separate approval scope. This is a
+local safeguard, not a global privacy accountant or a defense against a malicious
+owner releasing additional information through other tools.
+
+Writes use a local ledger lock and atomic file replacement. A failed export or
+invalid ledger fails closed. A leftover lock from an interrupted process requires
+local inspection before removal. These controls do not establish differential
+privacy or guarantee that overlapping studies cannot disclose information.
+
 PrivateLabBench separates **privacy mechanisms**, **privacy audits**, and **release policies**. These are different tools and must not be interpreted as equivalent evidence.
 
 ## 1. Exact reporting (`mode: none`)

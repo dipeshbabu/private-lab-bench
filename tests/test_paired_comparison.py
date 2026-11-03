@@ -252,6 +252,7 @@ def test_comparison_artifacts_are_verifiable_and_shareable_boundary_is_clean(tmp
         min_slice_size=5,
         markdown_path=str(report),
         json_path=str(json_report),
+        release_policy={"schema_version": "release-policy/v1", "id": "synthetic-pair", "enabled": True, "min_samples": 20, "require_privacy_audit": False},
     )
     local = json.loads(json_report.read_text(encoding="utf-8"))
     shareable_path = Path(result["shareable_json_report"])

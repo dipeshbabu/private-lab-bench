@@ -34,3 +34,23 @@ report:
   markdown: reports/multiclass_demo_eval.md
   json: reports/multiclass_demo_eval.json
   manifest: reports/multiclass_demo_manifest.json
+
+# Reviewed release settings for this synthetic example only.
+release:
+  schema_version: release-policy/v1
+  id: synthetic-configs-multiclass_eval
+  enabled: true
+  min_samples: 2
+  min_cell_size: 2
+  require_privacy_audit: false
+  include_input_schema: true
+  public_benchmark:
+    id: generic-private-multiclass
+    version: '0.1'
+    suite: generic-tabular
+    domain: tabular
+  slices:
+    site:
+    - east
+    - north
+    - south

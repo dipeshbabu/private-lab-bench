@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 from privatelabbench.config import load_config
 from privatelabbench.eval.metrics import summarize_metrics
@@ -38,7 +38,10 @@ def compare_prediction_files(
     markdown_path: str,
     json_path: str,
     signing_secret: str | None = None,
+    release_policy: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    local_path = Path(json_path)
+    local_path.with_name(f"{local_path.stem}.shareable{local_path.suffix}").unlink(missing_ok=True)
     config = PairedComparisonConfig(
         metric=metric,
         confidence_level=confidence_level,
@@ -72,12 +75,13 @@ def compare_prediction_files(
         path_a=path_a,
         path_b=path_b,
         signing_secret=signing_secret,
+        release_policy=release_policy,
     )
     return {
         **result,
         "markdown_report": str(artifacts["markdown_report"]),
         "json_report": str(artifacts["json_report"]),
-        "shareable_json_report": str(artifacts["shareable_json_report"]),
+        "shareable_json_report": str(artifacts["shareable_json_report"]) if "shareable_json_report" in artifacts else None,
     }
 
 

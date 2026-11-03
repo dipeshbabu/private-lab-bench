@@ -40,6 +40,7 @@ def build_report_payload(
 ) -> dict[str, Any]:
     payload = {
         "schema_version": "0.2",
+        "scope": "local",
         "run_id": str(uuid4()),
         "created_at": datetime.now(timezone.utc).isoformat(),
         "report_type": report_type,

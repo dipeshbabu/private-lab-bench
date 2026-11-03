@@ -33,8 +33,8 @@
         "comparison_schema": {"const": "paired-comparison/v1"},
         "task_type": {"enum": ["regression", "classification", "multiclass"]},
         "class_labels": {"type": "array", "items": {"type": "string"}},
-        "sample_id_column": {"type": "string", "minLength": 1},
-        "target_column": {"type": "string", "minLength": 1},
+        "sample_id_column": {"type": ["string", "null"], "minLength": 1},
+        "target_column": {"type": ["string", "null"], "minLength": 1},
         "n_samples": {"type": "integer", "minimum": 1},
         "alignment": {
           "type": "object",
@@ -97,7 +97,7 @@
         "name": {"type": "string", "minLength": 1},
         "metrics": {
           "type": "object",
-          "additionalProperties": {"type": "number"}
+          "additionalProperties": {"type": ["number", "null"]}
         },
         "selected_metric": {"type": "number"}
       },

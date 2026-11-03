@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import Any, Mapping
 
 
@@ -38,7 +39,7 @@ def evaluate_privacy_gate(
     policy = policy or PrivacyRiskPolicy()
     violations: list[str] = []
     if not privacy_risk:
-        if policy.require_attack:
+        if policy.require_attack or policy.max_level != "high" or policy.max_member_advantage is not None or policy.max_attack_auc is not None:
             violations.append("privacy_attack_required")
         return {
             "status": "fail" if violations else "pass",
@@ -53,20 +54,24 @@ def evaluate_privacy_gate(
             "violations": violations,
         }
 
-    risk_level = str(privacy_risk.get("risk_level", "low")).strip().lower()
+    risk_level = str(privacy_risk.get("risk_level", "unknown")).strip().lower()
     if risk_level not in RISK_ORDER:
         violations.append("unknown_risk_level")
     elif RISK_ORDER[risk_level] > RISK_ORDER[policy.max_level]:
         violations.append("risk_level_exceeds_policy")
 
     member_advantage = privacy_risk.get("member_advantage")
-    if policy.max_member_advantage is not None and member_advantage is not None:
-        if float(member_advantage) > policy.max_member_advantage:
+    if policy.max_member_advantage is not None:
+        if not isinstance(member_advantage, (int, float)) or isinstance(member_advantage, bool) or not math.isfinite(member_advantage):
+            violations.append("member_advantage_required")
+        elif float(member_advantage) > policy.max_member_advantage:
             violations.append("member_advantage_exceeds_policy")
 
     attack_auc = privacy_risk.get("attack_auc")
-    if policy.max_attack_auc is not None and attack_auc is not None:
-        if float(attack_auc) > policy.max_attack_auc:
+    if policy.max_attack_auc is not None:
+        if not isinstance(attack_auc, (int, float)) or isinstance(attack_auc, bool) or not math.isfinite(attack_auc):
+            violations.append("attack_auc_required")
+        elif float(attack_auc) > policy.max_attack_auc:
             violations.append("attack_auc_exceeds_policy")
 
     return {
