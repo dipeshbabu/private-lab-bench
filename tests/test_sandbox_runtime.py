@@ -72,6 +72,12 @@ print(json.dumps({"predictions": [sum(row) for row in data["features"]]}))
     ],
 )
 def test_real_resource_and_output_attacks_are_rejected_and_cleaned(image, code):
+    limits = SandboxLimits(seconds=3, memory_mb=64, output_bytes=4096)
+    # An unavailable runtime or a policy too tight to start Python must not make
+    # the negative security tests pass without executing their attack scripts.
+    np.testing.assert_equal(
+        execute(image, "print('{\"predictions\":[0,0]}')", limits=limits), [0, 0]
+    )
     before = subprocess.check_output(
         [
             "docker",
@@ -85,11 +91,7 @@ def test_real_resource_and_output_attacks_are_rejected_and_cleaned(image, code):
     )
     started = time.monotonic()
     with pytest.raises(SandboxError) as caught:
-        execute(
-            image,
-            code,
-            limits=SandboxLimits(seconds=3, memory_mb=64, output_bytes=4096),
-        )
+        execute(image, code, limits=limits)
     assert "PRIVATE" not in str(caught.value) and "leak" not in str(caught.value)
     assert time.monotonic() - started < 30
     after = subprocess.check_output(
