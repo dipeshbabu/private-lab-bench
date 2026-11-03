@@ -279,7 +279,7 @@ def run_pack_command(args: argparse.Namespace) -> int:
     print_run_summary(summary)
     print(f"Benchmark pack: {summary['benchmark_pack']}")
     _print_receipt_paths(summary)
-    return 0
+    return QUALITY_EXIT_CODES[summary["quality_gate"]["status"]] if "quality_gate" in summary else 0
 
 
 def compare_command(args: argparse.Namespace) -> int:

@@ -60,8 +60,10 @@ def validate_quality_policy(value: Any) -> dict[str, Any]:
             if not threshold:
                 raise ValueError("Critical slices must contain at least one rule")
             for alias, entry in _object(threshold, "critical slices").items():
+                if not isinstance(alias, str) or not alias:
+                    raise ValueError("Critical slice names must be nonempty strings")
                 entry = _object(entry, f"critical.{alias}")
-                if not isinstance(entry.get("column"), str) or not isinstance(entry.get("value"), str):
+                if not isinstance(entry.get("column"), str) or not entry["column"] or not isinstance(entry.get("value"), str) or not entry["value"]:
                     raise ValueError("Critical slices require explicit column and value")
                 if set(entry) - {"column", "value", "metric", "min", "max", "min_ci_lower", "max_ci_upper"} or entry.get("metric") not in METRIC_DIRECTIONS:
                     raise ValueError("Critical slice requires a supported metric")
