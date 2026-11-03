@@ -111,6 +111,20 @@ jobs:
           /tmp/plb-wheel/bin/plb run-pack community-tabular-regression@1.0.0
           /tmp/plb-wheel/bin/plb verify reports/benchmark_packs/tabular_regression_receipt.shareable.json
 
+  chemical-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install optional chemistry adapter
+        run: pip install -e '.[dev,rdkit]'
+      - name: Test split audits and chemical adapters
+        run: pytest -q tests/test_design_audit.py tests/test_molecule_eval.py tests/test_adapters_and_compare.py tests/test_benchmark_packs.py
+
   docs:
     runs-on: ubuntu-latest
     steps:

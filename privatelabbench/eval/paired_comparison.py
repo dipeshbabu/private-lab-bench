@@ -196,6 +196,8 @@ def _load_aligned_tables(
     class_labels: Sequence[str] | None,
     slice_columns: Sequence[str] | None,
     metadata_columns: Sequence[str] = (),
+    frame_a: Any = None,
+    frame_b: Any = None,
 ) -> _AlignedTables:
     prediction_cols = _prediction_columns(
         prediction_column=prediction_column,
@@ -207,8 +209,11 @@ def _load_aligned_tables(
     selected_metadata = tuple(dict.fromkeys([*slices, *metadata_columns]))
     required = {sample_id_column, target, *prediction_cols, *selected_metadata}
     dtype = {sample_id_column: "string", **{column: "string" for column in metadata_columns}}
-    a = pd.read_csv(path_a, dtype=dtype)
-    b = pd.read_csv(path_b, dtype=dtype)
+    a = pd.read_csv(path_a, dtype=dtype) if frame_a is None else frame_a.copy(deep=False)
+    b = pd.read_csv(path_b, dtype=dtype) if frame_b is None else frame_b.copy(deep=False)
+    for frame in (a, b):
+        for column in dtype:
+            if column in frame: frame[column] = frame[column].astype("string")
 
     for frame, label in ((a, "Model A table"), (b, "Model B table")):
         missing = required - set(frame.columns)
@@ -727,6 +732,8 @@ def compare_prediction_tables(
     model_b_name: str | None = None,
     config: PairedComparisonConfig | None = None,
     sampling_design: Any = None,
+    frame_a: Any = None,
+    frame_b: Any = None,
 ) -> dict[str, Any]:
     from privatelabbench.eval.sampling import sampling_design as parse_design, apply_multiplicity
     design = parse_design(sampling_design)
@@ -744,6 +751,8 @@ def compare_prediction_tables(
         class_labels=class_labels,
         slice_columns=slices,
         metadata_columns=design.metadata_columns if design else (),
+        frame_a=frame_a,
+        frame_b=frame_b,
     )
     metrics_a = _metric_values(data.task_type, data.y_true, data.predictions_a)
     metrics_b = _metric_values(data.task_type, data.y_true, data.predictions_b)

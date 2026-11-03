@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PrivateLabBench local-only design audit v1",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "evaluation-design-audit/v1"
+    },
+    "scope": {
+      "const": "local"
+    },
+    "audit": {
+      "$ref": "evaluation-design-audit-summary-v1.schema.json"
+    },
+    "local": {
+      "type": "object"
+    },
+    "integrity": {
+      "type": "object"
+    },
+    "signer_statement": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema_version",
+    "scope",
+    "audit",
+    "local",
+    "integrity"
+  ],
+  "additionalProperties": false
+}

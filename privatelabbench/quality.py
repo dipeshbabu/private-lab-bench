@@ -33,7 +33,7 @@ def _limits(value: Any, label: str) -> None:
 
 def validate_quality_policy(value: Any) -> dict[str, Any]:
     policy = dict(_object(value, "quality policy"))
-    if policy.get("schema_version") != POLICY_SCHEMA or set(policy) - {"schema_version", "metric_basis", "min_samples", "metric", "baseline", "comparison", "slices", "privacy"}:
+    if policy.get("schema_version") != POLICY_SCHEMA or set(policy) - {"schema_version", "metric_basis", "min_samples", "metric", "baseline", "comparison", "slices", "privacy", "design"}:
         raise ValueError(f"Expected {POLICY_SCHEMA} and supported policy fields")
     if policy.get("metric_basis", "clean") not in {"clean", "reported"}:
         raise ValueError("metric_basis must be clean or reported")
@@ -79,7 +79,16 @@ def validate_quality_policy(value: Any) -> dict[str, Any]:
         raise ValueError("Privacy requirements must be boolean")
     if "max_level" in privacy and privacy["max_level"] not in {"low", "moderate", "high"}:
         raise ValueError("Privacy max_level must be low, moderate, or high")
-    if not metrics and not baseline and not comparison and not slices and not any(privacy.values()) and "min_samples" not in policy:
+    design = _object(policy.get("design", {}), "design requirements")
+    if set(design)-{"require_pass", "max_overlap_records", "max_duplicate_records", "max_conflicting_labels"}:
+        raise ValueError("Unsupported evaluation-design quality rule")
+    for key, value in design.items():
+        if key == "require_pass":
+            if type(value) is not bool: raise ValueError("design.require_pass must be boolean")
+        elif type(value) is not int or value < 0:
+            raise ValueError("Design finding thresholds must be nonnegative integers")
+    active_design = any(key != "require_pass" or value for key, value in design.items())
+    if not metrics and not baseline and not comparison and not slices and not any(privacy.values()) and not active_design and "min_samples" not in policy:
         raise ValueError("A quality policy must contain at least one decision rule")
     return policy
 
@@ -105,6 +114,8 @@ def evaluate_quality_gate(artifact: Mapping[str, Any], policy: Mapping[str, Any]
     policy = validate_quality_policy(policy)
     basis = policy.get("metric_basis", "clean")
     evidence = _evidence(_object(artifact, "artifact"), basis)
+    if artifact.get("schema_version") == "evaluation-design-audit/v1":
+        evidence = {"metrics": {}, "baseline": {}, "n": artifact.get("audit", {}).get("n_evaluation_records"), "slices": {}, "uncertainty": {}, "privacy": {}, "mode": "none"}
     rules: list[dict[str, Any]] = []
 
     def rule(name: str, observed: Any, threshold: Any, operator: str, missing: str = "evidence_missing") -> None:
@@ -160,6 +171,35 @@ def evaluate_quality_gate(artifact: Mapping[str, Any], policy: Mapping[str, Any]
             extreme = worst(group["metrics"][metric] for group in groups) if available else None
             rule(f"slices.{key}", extreme, threshold, operator, "slice_missing_suppressed_or_undefined")
     privacy = evidence["privacy"]
+    if policy.get("design"):
+        if artifact.get("schema_version") == "evaluation-design-audit/v1":
+            design_audits = [artifact.get("audit", {})]
+        elif artifact.get("schema_version") == "paired-comparison-artifact/v1":
+            design_audits = artifact.get("shareable", {}).get("design_audits", [])
+        else:
+            source = artifact.get("shareable", {}).get("evaluation", {}) if artifact.get("schema_version") == "evaluation-receipt/v1" else artifact.get("result", {})
+            design_audits = [source[key] for key in ("design_audit", "reference_design_audit") if source.get(key)]
+        from privatelabbench.design_audit import validate_audit_summary
+        checked_audits = []
+        for audit in design_audits:
+            try:
+                checked_audits.append(validate_audit_summary(audit))
+            except (ValueError, TypeError):
+                checked_audits.append({"status": "not_testable", "findings": {}})
+        design_audits = checked_audits
+        requirements = policy["design"]
+        if requirements.get("require_pass"):
+            observed = 0 if any(audit.get("status") == "fail" for audit in design_audits) else 1 if design_audits and all(audit.get("status") == "pass" for audit in design_audits) else None
+            rule("design.pass", observed, 1, "min", "design_evidence_missing_incomplete_or_withheld")
+        families = {"max_overlap_records": {"sample_id_overlap", "entity_overlap", "group_overlap", "molecular_identity", "scaffold_overlap", "near_duplicates"}, "max_duplicate_records": {"evaluation_duplicate_ids", "reference_duplicate_ids"}, "max_conflicting_labels": {"conflicting_labels"}}
+        for key, names in families.items():
+            if key not in requirements: continue
+            findings = [entry for audit in design_audits for name, entry in audit.get("findings", {}).items() if name in names]
+            known = [entry["affected_records"] for entry in findings if _finite(entry.get("affected_records"))]
+            maximum = max(known) if known else None
+            complete = bool(findings) and all(any(name in names for name in audit.get("findings", {})) for audit in design_audits) and all(entry.get("evidence_complete") is True and _finite(entry.get("affected_records")) for entry in findings)
+            observed = maximum if complete or maximum is not None and maximum > requirements[key] else None
+            rule(f"design.{key}", observed, requirements[key], "max", "design_check_not_requested_or_not_testable")
     audits = privacy.get("audits", {})
     audit = audits.get("membership_inference", {})
     for name, wanted in policy.get("privacy", {}).items():

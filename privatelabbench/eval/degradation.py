@@ -286,6 +286,8 @@ def diagnose_shift(
     numeric_metadata: Sequence[str] = (),
     categorical_metadata: Sequence[str] = (),
     sampling_design: Any = None,
+    current_frame: pd.DataFrame | None = None,
+    reference_frame: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     if (
         type(independent_cohorts) is not bool
@@ -317,9 +319,7 @@ def diagnose_shift(
         sample_id_column: "string",
         **({column: "string" for column in design.metadata_columns} if design else {}),
     }
-    frames = [
-        pd.read_csv(path, dtype=dtypes) for path in (reference_path, current_path)
-    ]
+    frames = [reference_frame if reference_frame is not None else pd.read_csv(reference_path, dtype=dtypes), current_frame if current_frame is not None else pd.read_csv(current_path, dtype=dtypes)]
     bindings = prediction_bindings(
         reference_path,
         frame=frames[0],

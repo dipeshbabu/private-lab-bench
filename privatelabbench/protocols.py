@@ -77,6 +77,7 @@ class EvaluationProtocol:
             raise ValueError("Protocol must be a mapping")
         raw = dict(value)
         design_payload = raw.pop("sampling_design", None)
+        audit_payload = raw.pop("evaluation_design", None)
         payload = deepcopy(_object(raw, fields, "Protocol"))
         if payload["schema_version"] != PROTOCOL_SCHEMA:
             raise ValueError(f"Expected {PROTOCOL_SCHEMA}")
@@ -137,6 +138,9 @@ class EvaluationProtocol:
             if not {column for column, value in design.critical_slices} <= set(required + optional):
                 raise ValueError("Protocol critical-slice columns must be declared in its required/optional slices")
             payload["sampling_design"] = design.as_dict()
+        if audit_payload is not None:
+            from privatelabbench.design_audit import EvaluationDesign
+            payload["evaluation_design"] = EvaluationDesign.from_dict(audit_payload).as_dict()
         return cls(json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8"))
 
     def as_dict(self) -> dict[str, Any]:
@@ -221,6 +225,13 @@ def apply_protocol(payload: Mapping[str, Any], protocol: EvaluationProtocol) -> 
         raise ValueError("sampling_design conflicts with the versioned protocol; declare it in a new protocol version")
     if fixed_design:
         result["sampling_design"] = fixed_design.as_dict()
+    from privatelabbench.design_audit import EvaluationDesign
+    fixed_audit = EvaluationDesign.from_dict(rules["evaluation_design"]) if rules.get("evaluation_design") else None
+    requested_audit = EvaluationDesign.from_dict(result["evaluation_design"]) if result.get("evaluation_design") else None
+    if requested_audit and (fixed_audit is None or requested_audit != fixed_audit):
+        raise ValueError("evaluation_design conflicts with the versioned protocol; declare a new protocol version")
+    if fixed_audit:
+        result["evaluation_design"] = fixed_audit.as_dict()
     for key in ("task", "uncertainty", "privacy", "quality_gate"):
         result[key] = _bind(result.get(key), rules[key], key)
     if result["quality_gate"] is None:

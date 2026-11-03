@@ -1,0 +1,378 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PrivateLabBench evaluation design v1",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "evaluation-design/v1"
+    },
+    "unit": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+    },
+    "sample_id_column": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entity_columns": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "group_columns": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "label_column": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "split_column": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "evaluation_partition": {
+      "enum": [
+        "train",
+        "validation",
+        "test"
+      ]
+    },
+    "reference_partition": {
+      "enum": [
+        "train",
+        "validation",
+        "test"
+      ]
+    },
+    "partition_labels": {
+      "type": "object",
+      "properties": {
+        "train": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "validation": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "test": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "train",
+        "validation",
+        "test"
+      ],
+      "additionalProperties": false
+    },
+    "forbidden_pairs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 2,
+        "uniqueItems": true,
+        "items": {
+          "enum": [
+            "train",
+            "validation",
+            "test"
+          ]
+        }
+      }
+    },
+    "duplicate_ids": {
+      "enum": [
+        "allow",
+        "warn",
+        "forbid"
+      ]
+    },
+    "reference_duplicate_ids": {
+      "enum": [
+        "allow",
+        "warn",
+        "forbid"
+      ]
+    },
+    "repeated_entities": {
+      "enum": [
+        "allow",
+        "warn",
+        "forbid"
+      ]
+    },
+    "conflicting_labels": {
+      "enum": [
+        "allow",
+        "warn",
+        "forbid"
+      ]
+    },
+    "label_tolerance": {
+      "type": "number",
+      "minimum": 0
+    },
+    "overlap": {
+      "type": "object",
+      "properties": {
+        "sample_ids": {
+          "enum": [
+            "allow",
+            "warn",
+            "forbid"
+          ]
+        },
+        "entities": {
+          "enum": [
+            "allow",
+            "warn",
+            "forbid"
+          ]
+        },
+        "groups": {
+          "enum": [
+            "allow",
+            "warn",
+            "forbid"
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "chronology": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "column": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cutoff": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "strictly_before": {
+              "type": "boolean"
+            },
+            "timezone": {
+              "const": "UTC"
+            }
+          },
+          "required": [
+            "column"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "exclusions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "column": {
+            "type": "string",
+            "minLength": 1
+          },
+          "operator": {
+            "enum": [
+              "equals",
+              "less_than",
+              "greater_than",
+              "is_missing"
+            ]
+          },
+          "value": {
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          }
+        },
+        "required": [
+          "column",
+          "operator"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "operator": {
+                  "const": "is_missing"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "value": {
+                  "type": "null"
+                }
+              }
+            },
+            "else": {
+              "required": [
+                "value"
+              ],
+              "properties": {
+                "value": {
+                  "not": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "operator": {
+                  "enum": [
+                    "less_than",
+                    "greater_than"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "value": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "adapter": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "const": "rdkit-molecule/v1"
+            },
+            "smiles_column": {
+              "type": "string",
+              "minLength": 1
+            },
+            "canonical_isomeric": {
+              "type": "boolean"
+            },
+            "scaffold_include_chirality": {
+              "type": "boolean"
+            },
+            "identity_overlap": {
+              "enum": [
+                "allow",
+                "warn",
+                "forbid"
+              ]
+            },
+            "scaffold_overlap": {
+              "enum": [
+                "allow",
+                "warn",
+                "forbid"
+              ]
+            },
+            "near_duplicates": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "threshold": {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "maximum": 1
+                    },
+                    "radius": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "bits": {
+                      "type": "integer",
+                      "minimum": 64
+                    },
+                    "max_pairs": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "policy": {
+                      "enum": [
+                        "allow",
+                        "warn",
+                        "forbid"
+                      ]
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "smiles_column"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema_version"
+  ],
+  "additionalProperties": false
+}

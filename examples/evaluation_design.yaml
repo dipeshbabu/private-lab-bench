@@ -1,0 +1,20 @@
+schema_version: evaluation-design/v1
+unit: sample
+sample_id_column: sample_id
+split_column: split
+evaluation_partition: test
+reference_partition: train
+entity_columns: []
+group_columns: []
+label_column: null
+duplicate_ids: forbid
+reference_duplicate_ids: warn
+repeated_entities: allow
+conflicting_labels: warn
+label_tolerance: 0.0
+# Requires a qc_pass column. These rules apply only to scored evaluation records.
+exclusions:
+  - column: qc_pass
+    operator: equals
+    value: false
+    reason: predeclared_qc_failure

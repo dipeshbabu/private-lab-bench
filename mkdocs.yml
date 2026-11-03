@@ -26,6 +26,7 @@ nav:
   - Prediction tables: prediction_tables.md
   - Statistical uncertainty: uncertainty.md
   - Sampling units and slice inference: sampling_design.md
+  - Evaluation-design audits: evaluation_design.md
   - Paired model comparison: paired_comparison.md
   - Tasks and plugins: tasks.md
   - Evaluation receipts: evaluation_receipts.md

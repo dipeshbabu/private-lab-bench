@@ -112,6 +112,8 @@ Inspect cohort changes with `plb evaluate current.csv --reference reference.csv 
 
 For repeated or nested observations, declare a [sampling design](docs/sampling_design.md) to resample independent clusters and keep paired models aligned. Optional slice-test families record dependence assumptions and multiplicity adjustments.
 
+Check declared split integrity before scoring with `plb audit-design` or `plb evaluate --evaluation-design design.yaml`. [Evaluation-design audits](docs/evaluation_design.md) detect supported overlap/group/time violations and keep unavailable training evidence explicit.
+
 ## Inspect Evaluation Receipts
 
 `evaluation-receipt/v1` separates local context from aggregate information intended for exchange:

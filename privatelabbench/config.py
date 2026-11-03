@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
@@ -17,6 +17,8 @@ class RunnerConfig:
     raw: dict[str, Any]
     config_path: str | None = None
     protocol: EvaluationProtocol | None = None
+    prepared_input: Any = field(default=None, repr=False, compare=False)
+    design_audits: tuple[dict[str, Any], ...] = field(default=(), repr=False, compare=False)
 
     @property
     def task_id(self) -> str:
@@ -32,6 +34,12 @@ def load_config(path: str, *, protocol_override: str | None = None) -> RunnerCon
     payload = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError("Config must be a YAML mapping.")
+    if payload.get("evaluation_design") is not None:
+        from privatelabbench.design_audit import EvaluationDesign
+        value = payload["evaluation_design"]
+        if isinstance(value, str):
+            value = yaml.safe_load((config_path.resolve().parent / value).read_text(encoding="utf-8"))
+        payload["evaluation_design"] = EvaluationDesign.from_dict(value).as_dict()
 
     protocol = None
     reference = protocol_override or payload.get("protocol")
@@ -52,6 +60,16 @@ def load_config(path: str, *, protocol_override: str | None = None) -> RunnerCon
     if payload.get("sampling_design") is not None:
         from privatelabbench.eval.sampling import sampling_design
         payload["sampling_design"] = sampling_design(payload["sampling_design"]).as_dict()
+    if payload.get("evaluation_design") is not None:
+        rules = payload["evaluation_design"]
+        input_cfg = payload.setdefault("input", {})
+        if not isinstance(input_cfg, dict): raise ValueError("input must be a mapping")
+        if input_cfg.get("sample_id_column", rules["sample_id_column"]) != rules["sample_id_column"] or input_cfg.get("require_sample_id", True) is not True:
+            raise ValueError("Evaluation-design runs require the declared stable sample-ID column")
+        input_cfg["sample_id_column"] = rules["sample_id_column"]
+        input_cfg["require_sample_id"] = True
+        if rules["label_column"] is not None and input_cfg.get("target_column") != rules["label_column"]:
+            raise ValueError("evaluation_design.label_column must match input.target_column")
 
     project = str(payload.get("project", config_path.stem))
     task_value = payload.get("task")
