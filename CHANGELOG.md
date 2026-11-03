@@ -13,6 +13,7 @@
 - Enforce Ruff lint/format and pre-commit checks locally and in CI; clean up the existing style/import baseline.
 - Add weekly Dependabot updates for Python dependencies, Actions, Docker, and pre-commit hooks, with explicit scientific-compatibility exclusions.
 - Label new issues and PRs automatically using trusted default-branch code and metadata, including fork PRs.
+- Create GitHub Releases automatically after successful PyPI publishing, attaching the published distributions and SHA-256 checksums.
 
 Upgrade from v0.1.0 to receive the input-resolution correction.
 

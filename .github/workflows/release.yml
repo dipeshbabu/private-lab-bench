@@ -47,3 +47,25 @@ jobs:
           path: dist/
       - name: Publish to PyPI with trusted publishing
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download published distributions
+        uses: actions/download-artifact@v8
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Create GitHub Release with distributions and checksums
+        working-directory: dist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          sha256sum -- *.whl *.tar.gz > SHA256SUMS.txt
+          gh release create "$RELEASE_TAG" *.whl *.tar.gz SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes \
+            --title "PrivateLabBench $RELEASE_TAG"

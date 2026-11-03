@@ -20,6 +20,9 @@ git push origin v0.1.1
 ```
 
 The release workflow refuses to publish if the tag version differs from package metadata.
+After PyPI publishing succeeds, it creates a GitHub Release with the same wheel,
+source archive, and a `SHA256SUMS.txt` checksum file. It never rebuilds the package
+between the two destinations.
 
 ## PyPI Trusted Publishing
 
