@@ -125,7 +125,7 @@ def validate_policy(value: Any) -> dict[str, Any]:
     return policy
 
 
-def _slices(value: Any, policy: Mapping[str, Any]) -> dict[str, Any]:
+def _slices(value: Any, policy: Mapping[str, Any], total: int) -> dict[str, Any]:
     result = {}
     for column, approved_labels in policy.get("slices", {}).items():
         groups = _mapping(_mapping(value).get(column, {}))
@@ -133,6 +133,8 @@ def _slices(value: Any, policy: Mapping[str, Any]) -> dict[str, Any]:
         if not groups or set(groups) != set(approved_labels):
             continue
         if any(not isinstance(entry, Mapping) or isinstance(entry.get("n"), bool) or not isinstance(entry.get("n"), int) or entry["n"] < policy["min_cell_size"] for entry in groups.values()):
+            continue
+        if sum(entry["n"] for entry in groups.values()) != total:
             continue
         result[column] = {}
         for label, entry in groups.items():
@@ -190,7 +192,7 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
         clean = {
             "run": {"run_id": None, "created_at": None, "project": None, "task": "predictions" if clean_schema["schema_version"] == "prediction-table/v1" else None, "report_type": "evaluation"},
             "benchmark": dict(policy.get("public_benchmark", {})),
-            "evaluation": {"task_type": task_type, "sample_counts": counts, "input_schema": clean_schema, "metrics": _metrics(evaluation.get("metrics")), "metric_source": source, "uncertainty": uncertainty, "slices": _slices(evaluation.get("slices", {}), policy) if mode == "none" else {}},
+            "evaluation": {"task_type": task_type, "sample_counts": counts, "input_schema": clean_schema, "metrics": _metrics(evaluation.get("metrics")), "metric_source": source, "uncertainty": uncertainty, "slices": _slices(evaluation.get("slices", {}), policy, n) if mode == "none" else {}},
             "privacy": {"mechanism": {"mode": mode, "formal_dp": False, "guarantee_level": "none" if mode == "none" else "heuristic_no_dp_guarantee"}, "audits": {}, "release": {}},
             "provenance": {"package": {"name": "private-lab-bench"}},
             "artifacts": [],
@@ -205,7 +207,7 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
             raise ValueError("Unsupported comparison metric")
         if shared.get("task_type") not in {"regression", "classification", "multiclass"} or shared.get("direction") not in {"lower_is_better", "higher_is_better"}:
             raise ValueError("Invalid comparison semantics")
-        clean = {"n_samples": n, "metric": metric, "task_type": shared["task_type"], "direction": shared["direction"], "class_labels": [], "sample_id_column": None, "target_column": None, "comparison_schema": "paired-comparison/v1", "alignment": {"status": "exact_sample_id_match", "n_model_a": n, "n_model_b": n, "dropped_samples": 0}, "slices": _slices(shared.get("slices", {}), policy)}
+        clean = {"n_samples": n, "metric": metric, "task_type": shared["task_type"], "direction": shared["direction"], "class_labels": [], "sample_id_column": None, "target_column": None, "comparison_schema": "paired-comparison/v1", "alignment": {"status": "exact_sample_id_match", "n_model_a": n, "n_model_b": n, "dropped_samples": 0}, "slices": _slices(shared.get("slices", {}), policy, n)}
         for key in ("raw_delta_a_minus_b", "improvement_a_over_b"):
             clean[key] = _number(shared.get(key))
             if clean[key] is None:
