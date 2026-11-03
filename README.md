@@ -91,6 +91,8 @@ plb run configs/tabular_uncertainty_eval.yaml
 
 Config runs write local JSON and Markdown reports, an artifact manifest, and evaluation receipts. Enable bootstrap intervals explicitly and choose a sampling method appropriate to your data. See [statistical uncertainty](docs/uncertainty.md) for assumptions and limits.
 
+Use `plb list-protocols` and `plb run local.yaml --protocol plb://generic/regression@1.0.0` to apply fixed, versioned evaluation rules across private datasets. Receipts record the exact protocol digest. See [evaluation protocols](docs/protocols.md) for local definitions, package providers, and release controls.
+
 ## Compare Models
 
 Compare two prediction tables containing the same sample IDs and targets:

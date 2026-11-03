@@ -71,6 +71,7 @@ privatelabbench = [
   "data/benchmark_packs/*/*.csv",
   "data/benchmark_packs/*/*.json",
   "data/schemas/*.json",
+  "data/protocols/*.yaml",
 ]
 
 [tool.pytest.ini_options]

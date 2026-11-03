@@ -58,6 +58,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     run = sub.add_parser("run", help="Run a local evaluation task from a YAML config file.")
     run.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
+    run.add_argument("--protocol", default=None, help="Exact plb://namespace/name@version or local protocol YAML.")
+
+    sub.add_parser("list-protocols", help="List bundled and installed versioned evaluation protocols.")
+    show_protocol = sub.add_parser("show-protocol", help="Show frozen protocol rules and their SHA-256 digest.")
+    show_protocol.add_argument("protocol", help="Exact plb:// reference or local YAML path.")
 
     validate = sub.add_parser("validate-config", help="Validate a YAML config before running it.")
     validate.add_argument("config_path", help="Path to a PrivateLabBench YAML config.")
@@ -195,7 +200,7 @@ def _print_receipt_paths(summary: dict[str, object]) -> None:
 
 
 def run_from_config(args: argparse.Namespace) -> int:
-    summary = run_config(args.config_path)
+    summary = run_config(args.config_path, protocol_override=args.protocol)
     print_run_summary(summary)
     _print_receipt_paths(summary)
     return QUALITY_EXIT_CODES[summary["quality_gate"]["status"]] if "quality_gate" in summary else 0
@@ -553,6 +558,15 @@ def main() -> int:
     args = parser.parse_args()
     if args.command == "run":
         return run_from_config(args)
+    if args.command in {"list-protocols", "show-protocol"}:
+        from privatelabbench.protocols import discover_protocols, resolve_protocol
+        if args.command == "list-protocols":
+            for protocol in discover_protocols():
+                print(f"{protocol.ref}  sha256:{protocol.sha256}")
+        else:
+            protocol = resolve_protocol(args.protocol)
+            print(json.dumps({"identity": protocol.identity(), "definition": protocol.as_dict()}, indent=2, sort_keys=True))
+        return 0
     if args.command == "gate":
         return gate_command(args)
     if args.command == "validate-config":

@@ -26,6 +26,13 @@ def _identifier(value: Any) -> str:
     return value
 
 
+def _receipt_protocol(payload: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    shared = payload.get("shareable")
+    evaluation = shared.get("evaluation") if isinstance(shared, Mapping) else None
+    protocol = evaluation.get("protocol") if isinstance(evaluation, Mapping) else None
+    return protocol if isinstance(protocol, Mapping) else None
+
+
 def sign_artifact(payload: Mapping[str, Any], signer: Mapping[str, Any]) -> dict[str, Any]:
     try:
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -40,6 +47,12 @@ def sign_artifact(payload: Mapping[str, Any], signer: Mapping[str, Any]) -> dict
         "provenance": "declared_by_signer",
     }
     protocol = signer.get("protocol")
+    receipt_protocol = _receipt_protocol(payload)
+    if receipt_protocol:
+        claimed = {key: receipt_protocol.get(key) for key in ("id", "version", "sha256")}
+        if protocol is not None and protocol != claimed:
+            raise ValueError("Signer protocol conflicts with the protocol in the approved receipt")
+        protocol = claimed
     if protocol is not None:
         if not isinstance(protocol, Mapping) or not isinstance(protocol.get("sha256"), str) or not DIGEST.fullmatch(protocol["sha256"]):
             raise ValueError("Protocol binding requires a SHA-256 content digest")
@@ -146,6 +159,9 @@ def verify_trust(payload: Mapping[str, Any], *, trust_store: Mapping[str, Any] |
         protocol = statement.get("protocol")
         protocol_declared = isinstance(protocol, Mapping) and isinstance(protocol.get("sha256"), str) and bool(DIGEST.fullmatch(protocol["sha256"])) and bool(protocol.get("id")) and bool(protocol.get("version"))
         result["protocol_bound"] = bool(protocol_declared and result["signature_valid"])
+        receipt_protocol = _receipt_protocol(payload)
+        if receipt_protocol and (not protocol_declared or any(protocol.get(key) != receipt_protocol.get(key) for key in ("id", "version", "sha256"))):
+            result.update(protocol_bound=False, trust_requirements_met=False, trust_reason="receipt_protocol_statement_mismatch")
         if expected_protocol_sha256 is not None:
             result["protocol_recognized"] = bool(result["protocol_bound"] and protocol["sha256"] == expected_protocol_sha256)
         result["model_identity_bound"] = bool(isinstance(statement.get("model"), Mapping) and result["signature_valid"])

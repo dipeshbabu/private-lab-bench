@@ -115,7 +115,11 @@ def _aggregate_release_policy(config: RunnerConfig) -> AggregateReleasePolicy:
 
 
 def _identity_metadata(config: RunnerConfig) -> dict[str, Any]:
-    return {**benchmark_metadata(config), **runner_metadata(config)}
+    identity = {**benchmark_metadata(config), **runner_metadata(config)}
+    if config.protocol is not None:
+        identity["evaluation_protocol"] = config.protocol.identity()
+        identity["protocol_definition"] = config.protocol.as_dict()
+    return identity
 
 
 def _string_list(value: Any, *, key: str) -> list[str]:
@@ -450,8 +454,8 @@ def ensure_builtin_tasks_registered() -> None:
             register_task(task_id, task_runner, description=description)
 
 
-def run_config(config_path: str) -> dict[str, Any]:
-    config = load_config(config_path)
+def run_config(config_path: str, *, protocol_override: str | None = None) -> dict[str, Any]:
+    config = load_config(config_path, protocol_override=protocol_override)
     # Invalidate a previous export before any evaluation or plugin can fail.
     from privatelabbench.reports.manifest import _receipt_output_paths
     _, previous_shareable, previous_markdown = _receipt_output_paths(Path(_manifest_path(config)))
@@ -497,6 +501,9 @@ def run_config(config_path: str) -> dict[str, Any]:
 
 def print_run_summary(summary: dict[str, Any]) -> None:
     print("PrivateLabBench local evaluation")
+    if "evaluation_protocol" in summary:
+        protocol = summary["evaluation_protocol"]
+        print(f"Protocol: {protocol['id']}@{protocol['version']} (sha256:{protocol['sha256']})")
     if "quality_gate" in summary:
         print(f"Quality gate: {summary['quality_gate']['status']}")
     print(f"Project: {summary['project']}")
