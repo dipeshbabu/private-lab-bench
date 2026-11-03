@@ -12,8 +12,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/quickstart.md">Quickstart</a> ·
-  <a href="https://github.com/dipeshbabu/private-lab-bench/tree/main/docs">Documentation</a> ·
+  <a href="https://dipeshbabu.github.io/private-lab-bench/quickstart/">Quickstart</a> ·
+  <a href="https://dipeshbabu.github.io/private-lab-bench/">Documentation</a> ·
   <a href="https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.1">v0.1.1 release</a> ·
   <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/CONTRIBUTING.md">Contributing</a>
 </p>

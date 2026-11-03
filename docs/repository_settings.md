@@ -58,3 +58,10 @@ Enable GitHub private vulnerability reporting before broad public launch so `SEC
 ## Branch/review policy
 
 Use pull requests and squash merge only after all checks on the current commit pass. Dependency updates follow this rule too. Schema/privacy/security changes need explicit maintainer review even when tests pass. See the maintenance-bot section in `CONTRIBUTING.md` for schedules and automatic labels.
+
+## Documentation hosting
+
+GitHub Pages uses GitHub Actions as its publishing source. The `docs.yml`
+workflow deploys the tested main commit after CI succeeds, using the
+`github-pages` environment and a short-lived deployment token. The public site
+is https://dipeshbabu.github.io/private-lab-bench/.
