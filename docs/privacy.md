@@ -37,6 +37,11 @@ An audit passing a configured policy is empirical evidence, not proof of privacy
 Synthetic examples explicitly waive the audit requirement; review that decision
 before adapting their configuration to private data.
 
+The prediction demo's separate risk policy specifies thresholds but its table has
+no membership-audit split. Its export is therefore blocked even though the demo
+release policy waives a general audit requirement. Waiving that requirement never
+overrides a failing upstream gate.
+
 The exporter selects known metric and uncertainty fields. It omits local paths,
 configurations, artifact names/hashes, sample identifiers, private model/project
 labels, free-form metadata, and arbitrary plugin fields. Input column names are
