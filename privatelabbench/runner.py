@@ -60,6 +60,10 @@ def _input_path(config: RunnerConfig, value: str) -> str:
     candidate = Path(value)
     if candidate.is_absolute():
         return str(candidate)
+    if config.config_path:
+        config_relative = Path(config.config_path).parent / candidate
+        if config_relative.exists():
+            return str(config_relative)
     cwd_relative = Path.cwd() / candidate
     if cwd_relative.exists():
         return str(cwd_relative)

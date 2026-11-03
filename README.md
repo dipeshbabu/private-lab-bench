@@ -5,214 +5,154 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/dipeshbabu/private-lab-bench/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/dipeshbabu/private-lab-bench/ci.yml?branch=main&label=build&style=flat-square"></a>
   <a href="https://pypi.org/project/private-lab-bench/"><img alt="PyPI" src="https://img.shields.io/pypi/v/private-lab-bench?style=flat-square"></a>
+  <a href="https://github.com/dipeshbabu/private-lab-bench/actions/workflows/ci.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/dipeshbabu/private-lab-bench/ci.yml?branch=main&label=build&style=flat-square"></a>
   <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/pyproject.toml"><img alt="Python 3.10, 3.11, and 3.12" src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue?style=flat-square"></a>
-  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-green?style=flat-square"></a>
+  <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-green?style=flat-square"></a>
 </p>
 
 <p align="center">
-  <a href="docs/quickstart.md">Quickstart</a> ·
-  <a href="docs/prediction_tables.md">Prediction tables</a> ·
-  <a href="docs/evaluation_receipts.md">Receipts</a> ·
-  <a href="CONTRIBUTING.md">Contributing</a>
+  <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/quickstart.md">Quickstart</a> ·
+  <a href="https://github.com/dipeshbabu/private-lab-bench/tree/main/docs">Documentation</a> ·
+  <a href="https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.0">v0.1.0 release</a> ·
+  <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/CONTRIBUTING.md">Contributing</a>
 </p>
 
 ---
 
-PrivateLabBench is a local evaluation framework for scientific machine learning. Bring a prediction table, measure performance across datasets and subgroups, estimate uncertainty, and compare models on matched samples. Keep the underlying data in your environment and exchange aggregate evaluation receipts with collaborators.
+PrivateLabBench is a local evaluation framework for scientific machine learning. Bring model predictions and a validation table to compare candidates, estimate uncertainty, and find failures across sites, assays, or other groups. Keep the underlying data in your environment and share approved aggregate receipts with collaborators.
 
-Evaluation runs locally without an account, hosted service, or data upload.
+Evaluation runs without an account, hosted service, or data upload. A receipt records the evaluation protocol, selected results, and the evidence available to verify them.
 
 ## Installation
 
-Use **Python 3.10 or later**. Create an environment for **v0.1.0**:
+The current release is **v0.1.0**, available on [PyPI](https://pypi.org/project/private-lab-bench/0.1.0/) and [GitHub Releases](https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.0). CI tests Python 3.10, 3.11, and 3.12.
+
+Create a virtual environment:
 
 ```sh
 python -m venv .venv
 ```
 
-Activate the environment and install:
+Activate it with `source .venv/bin/activate` on macOS/Linux, or `.venv\Scripts\Activate.ps1` in Windows PowerShell. Then install:
 
 ```sh
-# macOS / Linux
-source .venv/bin/activate
-
-# Windows PowerShell
-.venv\Scripts\Activate.ps1
-
 python -m pip install private-lab-bench==0.1.0
 plb --help
 ```
 
-The `privatelabbench` command is also available. Optional molecular featurization uses `python -m pip install 'private-lab-bench[rdkit]==0.1.0'`. See the [installation guide](docs/install.md) for source/development installs, or run the [quickstart notebook in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.0/examples/notebooks/quickstart.ipynb).
+The longer command name, `privatelabbench`, works too. See the [installation guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/install.md) for optional dependencies and source installs, or open the [quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.0/examples/notebooks/quickstart.ipynb).
 
-## Run Your First Evaluation
+## Run a first evaluation
 
-Start with a bundled synthetic benchmark pack:
+Run a bundled synthetic example in a fresh directory and verify its shareable receipt:
 
 ```sh
+mkdir plb-example
+cd plb-example
 plb list-packs
 plb run-pack community-tabular-regression@1.0.0
 plb verify reports/benchmark_packs/tabular_regression_receipt.shareable.json
 ```
 
-Packs include example predictions and versioned evaluation settings. They work from installed wheels and require no model downloads or training. Other packs cover molecular regression and protein binary classification.
+For v0.1.0, keep this folder empty before running the pack: a same-named local CSV can override the bundled fixture. The pack includes predictions, evaluation settings, and an example disclosure policy. It runs from the installed package without a checkout or model download. Other packs cover molecular regression and protein binary classification. Pack and protocol versions are independent of the package release.
 
-## Evaluate Your Predictions
+## Evaluate your predictions
 
-Use `prediction-table/v1` to evaluate outputs from your own model:
+Save a table like this as `predictions.csv`:
 
 ```csv
-sample_id,target,prediction,site,batch
-s01,0.12,0.14,lab-a,b1
-s02,0.20,0.23,lab-a,b1
-s03,0.33,0.31,lab-b,b2
-s04,0.41,0.45,lab-b,b2
+sample_id,target,prediction,site
+s01,0.12,0.14,lab-a
+s02,0.20,0.23,lab-a
+s03,0.33,0.31,lab-b
+s04,0.41,0.45,lab-b
 ```
 
-Save the table as `predictions.csv`, then run:
-
 ```sh
-plb evaluate predictions.csv --slice site --slice batch
+plb evaluate predictions.csv --task-type regression --slice site
 plb verify reports/evaluation/evaluation_receipt.json
 ```
 
-Regression, binary classification, and multiclass probability tables are supported. Ambiguous columns or task types require explicit flags; binary probabilities with named labels require ordered negative/positive classes. Results stay local until a reviewed release policy permits export. This four-row example is too small for the default bootstrap interval or slice minimum. See the [5-minute quickstart](docs/quickstart.md) for defaults and the [prediction-table reference](docs/prediction_tables.md) for classification schemas.
+This writes local reports and a receipt. The four rows illustrate the schema; the default bootstrap requires at least 20 observations, and slice metrics require at least five per group. Repeated patients, compounds, or batches need a declared [sampling design](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/sampling_design.md).
 
-## Make Runs Reproducible
+Binary classification and multiclass probability tables are also supported. Class order and probability meaning matter: use explicit labels when needed. The [prediction-table reference](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/prediction_tables.md) covers column bindings, missing values, and classification examples.
 
-Store task, input, slice, uncertainty, and reporting settings in YAML:
+Save the settings for another run:
 
 ```sh
-plb init predictions.csv --slice site --out evaluation.yaml
+plb init predictions.csv --task-type regression --slice site --out evaluation.yaml
+plb validate-config evaluation.yaml
 plb run evaluation.yaml
-plb validate-config configs/tabular_uncertainty_eval.yaml
-plb run configs/tabular_uncertainty_eval.yaml
 ```
 
-Config runs write local JSON and Markdown reports, an artifact manifest, and evaluation receipts. Review the uncertainty settings and choose a sampling method appropriate to your data. See [statistical uncertainty](docs/uncertainty.md) for assumptions and limits.
+Use a versioned [evaluation protocol](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/protocols.md) when collaborators need the same metrics, sampling rules, and decision criteria. Receipts bind its identity and digest.
 
-Use `plb list-protocols` and `plb run local.yaml --protocol plb://generic/regression@1.0.0` to apply fixed, versioned evaluation rules across private datasets. Receipts record the exact protocol digest. See [evaluation protocols](docs/protocols.md) for local definitions, package providers, and release controls.
+## Compare models
 
-## Compare Models
-
-Compare two prediction tables containing the same sample IDs and targets:
+Provide one prediction table per model, with identical sample IDs and targets:
 
 ```sh
-plb compare model-a.csv model-b.csv --target target --task-type regression --metric rmse --resamples 1000 --practical-threshold 0.01
+plb compare model-a.csv model-b.csv --target target --task-type regression --metric rmse --practical-threshold 0.01
 ```
 
-Paired comparisons report metric differences, bootstrap intervals, and a decision relative to your practical threshold. Optional slice comparisons help locate differences across groups. See the [paired-comparison guide](docs/paired_comparison.md).
+The comparison reports the paired improvement, bootstrap interval, and whether the evidence supports your practical threshold. Subgroup comparisons help locate the difference. See the [paired-comparison guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/paired_comparison.md) for noninferiority, sampling assumptions, and interval interpretation.
 
-Combine compatible shared receipts with `plb aggregate lab-a.shareable.json lab-b.shareable.json --model model@revision`. The [aggregation guide](docs/aggregation.md) covers site identities, signer verification, and the metrics that support pooled point estimates.
+## Scientific workflows
 
-Inspect cohort changes with `plb evaluate current.csv --reference reference.csv --slice site`. [Reference/current diagnostics](docs/degradation.md) report performance degradation, slice prevalence, and selected distribution changes, with explicit uncertainty and release controls.
-
-Track the same model over repeated evaluations with [`plb trend`](docs/trends.md). It compares verified shareable receipts at declared collection times, retains uncertainty and quality decisions, and reports changing slices without needing prior raw datasets.
-
-For repeated or nested observations, declare a [sampling design](docs/sampling_design.md) to resample independent clusters and keep paired models aligned. Optional slice-test families record dependence assumptions and multiplicity adjustments.
-
-Check declared split integrity before scoring with `plb audit-design` or `plb evaluate --evaluation-design design.yaml`. [Evaluation-design audits](docs/evaluation_design.md) detect supported overlap/group/time violations and keep unavailable training evidence explicit.
-
-Evaluate real Caco2 and PGP benchmark predictions with the optional [TDC ADMET integration](docs/tdc_admet.md). It preserves the pinned official test sets and metrics, checks upstream score agreement, and supports the same evaluation protocols on private ADMET tables.
-
-The [Matbench integration](docs/matbench.md) supports composition and structure tasks with pinned official folds, units, corrected probability ROC-AUC, and verified upstream fold aggregation.
-
-The [ProteinGym integration](docs/proteingym.md) evaluates DMS substitution scores within each assay, with tied-rank Spearman and explicit protein/function aggregation.
-
-Describe evaluations of released models with the [external-validation profile](docs/external_validation.md): immutable model identity, declared evaluator relationship and dataset provenance, plus explicitly approved aggregate receipts that can be compared across labs.
-
-When predictions need to be generated inside the lab, use the [trusted local scorer](docs/trusted_scoring.md) with a reviewed numeric model, pinned digest, and explicit feature units. Its optional evaluation pipeline reuses the normal protocol and release controls.
-
-Operate a [hidden benchmark](docs/hidden_benchmarks.md) with owner-held labels, strict prediction submissions, approved result receipts, and a verified results table. Ranking requires an explicit rule in the pinned scientific protocol.
-
-## Inspect Evaluation Receipts
-
-Follow the [Caco2 model-selection case](docs/case_study.md) from a fresh environment to a paired decision, critical-group diagnosis, release check, and signed receipt. It distinguishes real public benchmark evidence from its synthetic measurement-shift proxy; independent researcher trials remain pending.
-
-`evaluation-receipt/v1` separates local context from aggregate information intended for exchange:
-
-| Artifact | Contents |
+| Evaluation needs | Guide |
 | --- | --- |
-| `<run>_receipt.json` | Local receipt, including paths, configuration, and exact results |
-| `<run>_receipt.shareable.json` | Approved aggregate receipt, written only when the export policy allows it |
+| Check supported split, entity, or time-overlap rules | [Evaluation-design audits](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/evaluation_design.md) |
+| Inspect cohort degradation and changing groups | [Reference/current diagnostics](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/degradation.md) |
+| Apply explicit acceptance thresholds | [Quality gates](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/quality_gates.md) |
+| Describe an evaluated model and compare evidence across labs | [External validation](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/external_validation.md) and [receipt aggregation](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/aggregation.md) |
+| Follow the same model over time | [Longitudinal evaluation](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/trends.md) |
+| Evaluate submissions against owner-held labels | [Hidden benchmarks](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/hidden_benchmarks.md) |
+| Generate predictions from an approved local numeric model | [Trusted local scoring](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/trusted_scoring.md) |
+
+The initial benchmark integrations reproduce pinned upstream scoring rules:
+
+| Ecosystem | Initial coverage |
+| --- | --- |
+| [TDC ADMET](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/tdc_admet.md) | Caco2 and PGP tasks with official splits and MAE/AUROC checks |
+| [Matbench](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/matbench.md) | Selected composition and structure tasks with official folds and aggregation |
+| [ProteinGym](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/proteingym.md) | A pinned DMS substitution subset with assay Spearman and protein/function aggregation |
+
+The [Caco2 case study](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/case_study.md) follows a model-selection decision through uncertainty, critical-group checks, approved export, and signature verification. It distinguishes the real public control from a synthetic measurement-shift proxy. Independent researcher onboarding trials remain pending.
+
+## Receipts and sharing
+
+| Artifact | Purpose |
+| --- | --- |
+| `<run>_receipt.json` | Local evidence, including paths, configuration, and exact results |
+| `<run>_receipt.shareable.json` | Approved aggregate evidence for exchange |
 | `<run>_receipt.md` | Human-readable receipt summary |
 
-```sh
-plb verify reports/tabular_uncertainty_demo_receipt.shareable.json
-```
-
-Shareable receipts require an explicit `release-policy/v1` policy. A blocked export leaves local results and a release audit, and removes any previous shareable file. The bundled synthetic packs include reviewed example policies; private-data runs need their own review. Use `plb release-check <local-receipt.json> --policy release.yaml` for a dry run.
-
-Verification checks artifact integrity and optional signatures. A matching self-contained hash alone does not establish authorship, correct execution, or scientific validity. See [evaluation receipts](docs/evaluation_receipts.md) and [report integrity](docs/report_integrity.md).
-
-For offline signer authentication, use optional Ed25519 signatures and pinned public keys:
+A reviewed release policy controls export. When export is blocked, the run keeps its local results and release audit and removes a previous shareable receipt. Bundled packs use policies for synthetic examples; private-data evaluations need their own review.
 
 ```sh
+plb release-check local_receipt.json --policy release.yaml
 plb verify receipt.shareable.json --trust-store trusted-labs.yaml --require-trusted-signer --json
 ```
 
-See the [receipt trust guide](docs/receipt_trust.md) for signing, key rotation, protocol binding, and the limits of these checks.
+Verification distinguishes artifact integrity from an authenticated signer statement. Execution and scientific validity require separate evidence. The [receipt trust guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/receipt_trust.md) covers signing and pinned keys.
 
-## Privacy and Sharing
+Keeping rows local limits data movement, but aggregates can still disclose sensitive information. Empirical audits, disclosure policies, and heuristic metric perturbation address different questions. Metric perturbation, including the deprecated `dp` alias, provides no formal differential privacy guarantee. Read the [privacy guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/privacy.md) before sharing private results.
 
-Keeping data local limits data movement; aggregate results can still disclose sensitive information. PrivateLabBench provides separate tools for exact reporting, empirical privacy audits, release-policy checks, and heuristic `metric_perturbation`.
-
-Metric perturbation, including the deprecated `dp` alias, **does not provide a formal differential privacy guarantee**. Bounded-query DP reference primitives have their own sensitivity and accounting requirements. Read the [privacy guide](docs/privacy.md) before selecting a release method.
-
-## Reference
-
-Enforce explicit model thresholds in CI with `plb gate <receipt> --policy quality.yaml`.
-See [quality gates](docs/quality_gates.md) for confidence, baseline, slice, and privacy requirements.
-
-Use `--help` to explore commands and options:
+## Developing and contributing
 
 ```sh
-plb eval-predictions --help
-plb compare --help
-plb list-tasks
-plb list-privacy-attacks
-```
-
-- [Five-minute quickstart](docs/quickstart.md)
-- [Core concepts](docs/concepts.md)
-- [Tasks and plugins](docs/tasks.md)
-- [Community benchmark packs](docs/benchmark_packs.md)
-- [Troubleshooting](docs/troubleshooting.md)
-- [Project scope](docs/project_scope.md) and [roadmap](docs/roadmap.md)
-
-## Developing
-
-Install the development and documentation tools:
-
-```sh
+git clone https://github.com/dipeshbabu/private-lab-bench.git
+cd private-lab-bench
 python -m pip install -e '.[dev,docs]' build twine
 python -m pytest -q
-python -m build
-python -m twine check dist/*
-mkdocs build
+python -m mkdocs build --strict
 ```
 
-CI tests Python 3.10, 3.11, and 3.12, validates packages and documentation, and exercises the Docker runner. It also installs the wheel in a clean environment and runs a bundled pack outside the checkout. Release publishing uses the [tag-based release workflow](docs/releases.md).
+CI checks supported Python versions, package builds, installation outside the checkout, documentation, Docker, scientific adapters, and repository history. Read [CONTRIBUTING.md](https://github.com/dipeshbabu/private-lab-bench/blob/main/CONTRIBUTING.md) for extension boundaries and validation requirements.
 
-Useful source entry points:
+Report bugs or propose tasks through [GitHub Issues](https://github.com/dipeshbabu/private-lab-bench/issues/new/choose). Use the process in [SECURITY.md](https://github.com/dipeshbabu/private-lab-bench/blob/main/SECURITY.md) for sensitive vulnerabilities. Contributions follow the [Code of Conduct](https://github.com/dipeshbabu/private-lab-bench/blob/main/CODE_OF_CONDUCT.md) and [governance guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/GOVERNANCE.md).
 
-| Path | Purpose |
-| --- | --- |
-| `privatelabbench/cli.py` | Command-line interface |
-| `privatelabbench/core/` | Task registry and extension interfaces |
-| `privatelabbench/eval/` | Metrics, slices, uncertainty, and paired comparisons |
-| `privatelabbench/privacy/` | Privacy audits and release policies |
-| `privatelabbench/reports/` | Reports, receipts, and artifact integrity |
-| `privatelabbench/data/` | Bundled benchmark packs and schemas |
+## License and citation
 
-## Contributing
-
-Focused fixes, scientific-domain plugins, benchmark packs, and documentation improvements are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for setup, extension boundaries, and validation requirements. Discuss new tasks, privacy methods, or schema changes in an issue before implementation.
-
-The project follows its [Code of Conduct](CODE_OF_CONDUCT.md) and [governance guide](GOVERNANCE.md). Report sensitive vulnerabilities through the process in [SECURITY.md](SECURITY.md).
-
-## License
-
-Released under the [MIT license](LICENSE). Use [CITATION.cff](CITATION.cff) to cite PrivateLabBench in research.
+PrivateLabBench uses the [MIT license](https://github.com/dipeshbabu/private-lab-bench/blob/main/LICENSE). Cite the release or commit you used with [CITATION.cff](https://github.com/dipeshbabu/private-lab-bench/blob/main/CITATION.cff).
