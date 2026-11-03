@@ -22,7 +22,11 @@ nav:
   - Home: index.md
   - Install: install.md
   - Quickstart: quickstart.md
-  - Caco2 model-selection case: case_study.md
+  - Caco2 model-selection case:
+      - Walkthrough: case_study.md
+      - Analysis plan: case_study/analysis_plan.md
+      - Voluntary trial guide: case_study/trial_guide.md
+      - Independent findings: case_study/findings.md
   - Concepts: concepts.md
   - Prediction tables: prediction_tables.md
   - Statistical uncertainty: uncertainty.md

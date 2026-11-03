@@ -14,7 +14,7 @@
 <p align="center">
   <a href="https://dipeshbabu.github.io/private-lab-bench/quickstart/">Quickstart</a> ·
   <a href="https://dipeshbabu.github.io/private-lab-bench/">Documentation</a> ·
-  <a href="https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.1">v0.1.1 release</a> ·
+  <a href="https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.2">v0.1.2 release</a> ·
   <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/CONTRIBUTING.md">Contributing</a>
 </p>
 
@@ -26,7 +26,7 @@ Evaluation runs without an account, hosted service, or data upload. A receipt re
 
 ## Installation
 
-The current release is **v0.1.1**, available on [PyPI](https://pypi.org/project/private-lab-bench/0.1.1/) and [GitHub Releases](https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.1). CI tests Python 3.10, 3.11, and 3.12.
+The current release is **v0.1.2**, available on [PyPI](https://pypi.org/project/private-lab-bench/0.1.2/) and [GitHub Releases](https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.2). CI tests Python 3.10, 3.11, and 3.12.
 
 Create a virtual environment:
 
@@ -37,11 +37,11 @@ python -m venv .venv
 Activate it with `source .venv/bin/activate` on macOS/Linux, or `.venv\Scripts\Activate.ps1` in Windows PowerShell. Then install:
 
 ```sh
-python -m pip install private-lab-bench==0.1.1
+python -m pip install private-lab-bench==0.1.2
 plb --help
 ```
 
-The longer command name, `privatelabbench`, works too. See the [installation guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/install.md) for optional dependencies and source installs, or open the [quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.1/examples/notebooks/quickstart.ipynb).
+The longer command name, `privatelabbench`, works too. See the [installation guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/install.md) for optional dependencies and source installs, or open the [quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.2/examples/notebooks/quickstart.ipynb).
 
 ## Run a first evaluation
 

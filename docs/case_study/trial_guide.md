@@ -4,6 +4,12 @@ This is an onboarding/usability dry run on public and synthetic demonstration da
 
 Ask a researcher who was not involved in building PrivateLabBench to follow [the walkthrough](../case_study.md) from a fresh Python 3.11 environment without maintainer assistance. Record both successful and unsuccessful attempts. Use anonymous labels such as `trial-01`; participation and every note are voluntary.
 
+Use the version pinned in the walkthrough so results can be compared. Participants
+may submit a short, redacted note in
+[issue #47](https://github.com/dipeshbabu/private-lab-bench/issues/47); posting is
+optional. Check the [findings](findings.md) for the current trial count. Do not
+submit a complete run directory.
+
 ## What to try
 
 1. Install from the documented checkout/constraints and run the complete case.

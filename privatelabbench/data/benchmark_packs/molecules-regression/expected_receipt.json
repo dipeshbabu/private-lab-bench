@@ -2,7 +2,7 @@
   "created_at": "2026-11-03T00:00:00+00:00",
   "integrity": {
     "algorithm": "sha256",
-    "payload_sha256": "6428cf07ff557b873cbec0c758102506de32f9ca11b9314dc89bdd67783f4a13",
+    "payload_sha256": "cfc85de4a33a48a9e5ecc41e88aad09172139e9fccd2b9023de7b2280e71b594",
     "signed": false
   },
   "receipt_id": "known-good:molecules-regression@1.0.0",
@@ -64,7 +64,7 @@
       "attestation_id": "known-good",
       "package": {
         "name": "private-lab-bench",
-        "version": "0.1.1"
+        "version": "0.1.2"
       }
     },
     "run": {

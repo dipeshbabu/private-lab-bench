@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.2 — 2026-11-03
 
 ### Fixed
 
@@ -9,6 +9,12 @@
 - Reject overlapping target, prediction, and sample-ID columns in prediction-table and paired evaluation.
 - Reject ambiguous slice labels instead of silently replacing one group's results with another's.
 - Report invalid config-run input with a concise rejection and exit code 2, preserving the distinct exit code for failed design audits.
+
+### Changed
+
+- Raise Dependabot’s per-ecosystem PR limit to ten while retaining grouped updates and scientific compatibility exclusions.
+- Refresh the release checklist, roadmap, and independent-trial navigation.
+- Apply Ruff checks to the report modules and refresh the PyPI badge cache URL.
 
 ## v0.1.1 — 2026-11-03
 

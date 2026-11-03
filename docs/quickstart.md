@@ -9,12 +9,12 @@ Install the current release in a virtual environment:
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-python -m pip install private-lab-bench==0.1.1
+python -m pip install private-lab-bench==0.1.2
 ```
 
 On Windows, activate with `.venv\Scripts\Activate.ps1`. The [installation guide](install.md)
 covers optional dependencies and development installs. You can also run the
-[quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.1/examples/notebooks/quickstart.ipynb).
+[quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.2/examples/notebooks/quickstart.ipynb).
 
 ## 2. Evaluate your own model outputs
 
