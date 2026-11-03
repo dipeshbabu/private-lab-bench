@@ -36,7 +36,7 @@ The reference is upstream commit `35f88110a51adf817a53515780d99fc34f614bf8`. Its
 
 Each fold produces an ordinary local `evaluation-receipt/v1` identifying task, snapshot, fold, protocol digest, and score. `matbench-evaluation/v1` then records all five scores and the [official task statistics](https://github.com/materialsproject/matbench/blob/35f88110a51adf817a53515780d99fc34f614bf8/matbench/task.py): unweighted mean, population standard deviation of the five scores, minimum, and maximum. Unequal fold sizes do not change the weighting. Flattening test predictions into one pooled MAE/AUROC is not the benchmark aggregation procedure.
 
-Fold standard deviation describes those five evaluations. It is not a test-population confidence interval, and overlapping training sets are not asserted independent. These point-score protocols disable bootstrap uncertainty deliberately. Normal local fold reports can also contain PLB supplementary metrics; only the protocol primary metric is the official score. Target units are part of regression protocol definitions and therefore their canonical digests.
+Fold standard deviation describes those five evaluations. It is not a test-population confidence interval, and overlapping training sets are not asserted independent. These point-score protocols disable bootstrap uncertainty deliberately and select the official primary metric. Target units are part of regression protocol definitions and therefore their canonical digests.
 
 ## Optional materials tooling and upstream parity
 

@@ -50,7 +50,7 @@ Evaluation uses the official fixed test set. The optional baseline obtains train
 
 MAE matches TDC's `Evaluator("mae")`; PLB `auroc` matches `Evaluator("roc-auc")` with class order `[0, 1]`. TDC's group evaluator rounds displayed scores to three decimals; PLB retains full precision and compares both forms in the reference run. These protocols intentionally specify point estimates, with bootstrap uncertainty disabled. Variation across training seeds is distinct from test-population uncertainty. A new protocol version can declare a justified sampling design for another study.
 
-Local reports also contain PLB's standard supplementary metrics for the task type. The protocol's declared primary metric is the official benchmark score; supplementary metrics do not acquire TDC leaderboard status.
+Protocol runs compute the declared metric list. The protocol's primary metric is the official benchmark score; ordinary runs without a protocol retain PLB's standard task metrics.
 
 ## Reproduce the real-data parity check
 

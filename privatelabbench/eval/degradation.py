@@ -74,7 +74,7 @@ def _samples(y, p, *, task_type, names, config, rng, plan=None):
             resamples=config.resamples,
             rng=rng,
         )
-    if task_type == "regression":
+    if task_type == "regression" and set(names) <= {"mae","rmse","r2"}:
         return _regression_bootstrap_values(y, p, resamples=config.resamples, rng=rng)
     return _generic_bootstrap_values(
         y,
@@ -288,6 +288,8 @@ def diagnose_shift(
     sampling_design: Any = None,
     current_frame: pd.DataFrame | None = None,
     reference_frame: pd.DataFrame | None = None,
+    metric_names=None,
+    evaluation_group=None,
 ) -> dict[str, Any]:
     if (
         type(independent_cohorts) is not bool
@@ -298,6 +300,7 @@ def diagnose_shift(
             "Declare boolean independent_cohorts and prevalence_threshold between zero and one"
         )
     thresholds = _thresholds(practical_thresholds or {})
+    if metric_names is None and metric == "spearman": metric_names = ["spearman"]
     config = uncertainty_config or BootstrapConfig(enabled=True)
     config.validate()
     from privatelabbench.eval.sampling import (
@@ -319,6 +322,7 @@ def diagnose_shift(
         sample_id_column: "string",
         **({column: "string" for column in design.metadata_columns} if design else {}),
     }
+    if evaluation_group: dtypes[evaluation_group["column"]]="string"
     frames = [reference_frame if reference_frame is not None else pd.read_csv(reference_path, dtype=dtypes), current_frame if current_frame is not None else pd.read_csv(current_path, dtype=dtypes)]
     bindings = prediction_bindings(
         reference_path,
@@ -364,6 +368,8 @@ def diagnose_shift(
             slice_columns=slice_columns,
             min_slice_size=min_slice_size,
             sampling_design=design,
+            metric_names=metric_names,
+            evaluation_group=evaluation_group,
         )
         for frame, path in zip(frames, (reference_path, current_path))
     ]

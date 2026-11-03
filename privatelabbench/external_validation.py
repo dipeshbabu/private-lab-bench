@@ -136,6 +136,8 @@ def prepare_validation(config, path):
         }
         if inputs.get("class_labels"):
             dtype[inputs["target_column"]] = "string"
+        group=config.protocol.as_dict().get("evaluation_group")
+        if group: dtype[group["column"]]="string"
         frame = pd.read_csv(BytesIO(content), dtype=dtype)
         basis = "input_file_bytes"
     else:

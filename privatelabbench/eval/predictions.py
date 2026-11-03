@@ -69,6 +69,16 @@ def _summary(values: np.ndarray, prefix: str) -> dict[str, float]:
     }
 
 
+def validate_evaluation_group(frame: pd.DataFrame, group: Any) -> None:
+    if group is None:
+        return
+    if not isinstance(group,dict) or set(group)!={"column","max_groups"} or not isinstance(group["column"],str) or type(group["max_groups"]) is not int or group["max_groups"]!=1:
+        raise ValueError("Unsupported protocol evaluation-group declaration")
+    column=group["column"]
+    if column not in frame or frame.empty or frame[column].isna().any() or frame[column].nunique(dropna=False)!=1:
+        raise ValueError("The protocol requires exactly one nonmissing evaluation group; evaluate assays separately")
+
+
 def _normalize_split_value(value: Any) -> str:
     normalized = str(value).strip().lower()
     if normalized in {"train", "training", "member", "members", "in", "1", "true"}:
@@ -227,15 +237,17 @@ def _metrics_for_task(
     task_type: str,
     y_true: np.ndarray,
     prediction_values: np.ndarray,
+    metric_names=None,
 ) -> dict[str, float]:
     if task_type == "regression":
-        return regression_metrics(y_true.astype(float), prediction_values.astype(float))
+        return regression_metrics(y_true.astype(float), prediction_values.astype(float),metric_names=metric_names)
     if task_type == "classification":
-        return classification_metrics(y_true.astype(int), prediction_values.astype(float))
+        return classification_metrics(y_true.astype(int), prediction_values.astype(float),metric_names=metric_names)
     return multiclass_metrics(
         y_true.astype(int),
         prediction_values.astype(float),
         labels=list(range(prediction_values.shape[1])),
+        metric_names=metric_names,
     )
 
 
@@ -249,6 +261,7 @@ def _slice_metrics(
     prediction_values: np.ndarray,
     uncertainty_config: BootstrapConfig | None = None,
     sampling_design: Any = None,
+    metric_names=None,
 ) -> dict[str, dict[str, dict[str, object]]]:
     if min_slice_size < 1:
         raise ValueError("min_slice_size must be at least 1")
@@ -271,6 +284,7 @@ def _slice_metrics(
                     task_type=task_type,
                     y_true=target_values[index_array],
                     prediction_values=prediction_values[index_array],
+                    metric_names=metric_names,
                 )
                 if uncertainty_config and uncertainty_config.enabled and uncertainty_config.include_slices:
                     slice_counter += 1
@@ -281,6 +295,7 @@ def _slice_metrics(
                         config=uncertainty_config.for_slice(seed_offset=slice_counter),
                         sampling_design=sampling_design,
                         sampling_metadata=df.iloc[index_array].reset_index(drop=True),
+                        metric_names=metric_names,
                     )
             column_results[key] = entry
         out[column] = column_results
@@ -303,16 +318,20 @@ def evaluate_prediction_csv(
     split_column: str | None = None,
     uncertainty_config: BootstrapConfig | None = None,
     sampling_design: Any = None,
+    metric_names=None,
+    evaluation_group=None,
 ) -> PredictionEvaluation:
     from privatelabbench.eval.sampling import sampling_design as parse_design
     design = parse_design(sampling_design)
     return evaluate_prediction_table(
-        pd.read_csv(path, dtype={**({sample_id_column: "string"} if sample_id_column else {}), **({target: "string"} if class_labels else {}), **({column: "string" for column in design.metadata_columns} if design else {})}), dataset_path=str(path), target=target,
+        pd.read_csv(path, dtype={**({sample_id_column: "string"} if sample_id_column else {}), **({target: "string"} if class_labels else {}), **({evaluation_group["column"]:"string"} if evaluation_group else {}), **({column: "string" for column in design.metadata_columns} if design else {})}), dataset_path=str(path), target=target,
         prediction_column=prediction_column, prediction_columns=prediction_columns,
         task_type=task_type, sample_id_column=sample_id_column, require_sample_id=require_sample_id,
         metadata_columns=metadata_columns, slice_columns=slice_columns, min_slice_size=min_slice_size,
         class_labels=class_labels, split_column=split_column, uncertainty_config=uncertainty_config,
         sampling_design=design,
+        metric_names=metric_names,
+        evaluation_group=evaluation_group,
     )
 
 
@@ -333,10 +352,13 @@ def evaluate_prediction_table(
     split_column: str | None = None,
     uncertainty_config: BootstrapConfig | None = None,
     sampling_design: Any = None,
+    metric_names=None,
+    evaluation_group=None,
 ) -> PredictionEvaluation:
     path = dataset_path
     if not isinstance(df, pd.DataFrame) or df.columns.duplicated().any():
         raise ValueError("Prediction table must be a DataFrame with unique column names")
+    validate_evaluation_group(df,evaluation_group)
     from privatelabbench.eval.sampling import sampling_design as parse_design
     design = parse_design(sampling_design)
     prediction_cols = _resolve_prediction_columns(
@@ -387,11 +409,11 @@ def evaluate_prediction_table(
             prediction_values = df[prediction_cols[0]].astype(float).to_numpy()
         except ValueError as exc:
             raise ValueError("Regression target and prediction columns must be numeric.") from exc
-        metrics = regression_metrics(y_true, prediction_values)
+        metrics = regression_metrics(y_true, prediction_values,metric_names=metric_names)
         prediction_summary = {
             **_summary(y_true, "target"),
             **_summary(prediction_values, "prediction"),
-            "mean_absolute_prediction_error": float(np.mean(np.abs(y_true - prediction_values))),
+            **({"mean_absolute_prediction_error":metrics["mae"]} if "mae" in metrics else {}),
         }
     elif resolved_task_type == "classification":
         y_true, labels = _encode_binary_targets(raw_targets, class_labels=class_labels)
@@ -401,7 +423,7 @@ def evaluate_prediction_table(
             raise ValueError("Binary classification prediction column must contain numeric probabilities.") from exc
         if np.any(prediction_values < 0.0) or np.any(prediction_values > 1.0):
             raise ValueError("Binary classification prediction probabilities must be between 0 and 1.")
-        metrics = classification_metrics(y_true, prediction_values)
+        metrics = classification_metrics(y_true, prediction_values,metric_names=metric_names)
         prediction_summary = {
             **_summary(prediction_values, "prediction"),
             "positive_rate": float(np.mean(y_true)),
@@ -422,6 +444,7 @@ def evaluate_prediction_table(
             y_true,
             probabilities,
             labels=list(range(len(labels))),
+            metric_names=metric_names,
         )
         confidence = probabilities.max(axis=1)
         safe_probabilities = np.clip(probabilities, 1e-12, 1.0)
@@ -441,6 +464,7 @@ def evaluate_prediction_table(
         config=resolved_uncertainty,
         sampling_design=design,
         sampling_metadata=df,
+        metric_names=metric_names,
     ) if resolved_uncertainty.enabled or design else {}
 
     inferred_metadata = tuple(
@@ -461,6 +485,7 @@ def evaluate_prediction_table(
         prediction_values=prediction_values,
         uncertainty_config=resolved_uncertainty,
         sampling_design=design,
+        metric_names=metric_names,
     )
 
     privacy_risk = None

@@ -17,7 +17,7 @@ from typing import Any, Mapping
 from privatelabbench.reports.integrity import attach_integrity_metadata
 
 POLICY_SCHEMA = "release-policy/v1"
-METRICS = frozenset({"mae", "rmse", "r2", "accuracy", "f1", "auroc", "macro_f1", "weighted_f1", "log_loss", "macro_auroc_ovr"})
+METRICS = frozenset({"mae", "rmse", "r2", "spearman", "accuracy", "f1", "auroc", "macro_f1", "weighted_f1", "log_loss", "macro_auroc_ovr"})
 TOKEN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.@+-]{0,127}\Z")
 STATUSES = frozenset({"evaluated", "undefined_point_estimate", "insufficient_valid_resamples", "skipped_min_samples", "skipped_min_slice_size", "unavailable", "disabled", "inconclusive", "insufficient_evidence", "a_noninferior", "noninferiority_not_established", "withheld_metric_basis_mismatch"})
 STATUSES = STATUSES | frozenset({"skipped_min_independent_units", "skipped_min_units_per_stratum", "not_supported_missing_cluster_columns", "not_supported_missing_cluster_ids", "not_supported_nonconstant_cluster_strata", "not_supported_crossed_clusters", "not_supported_resource_limit", "not_supported_nested_permutation", "exchangeability_not_declared", "insufficient_valid_permutations", "withheld_small_independent_unit_count", "metric_undefined"})
@@ -105,7 +105,7 @@ def _release_statistics(value: Any, policy: Mapping[str, Any]) -> dict[str, Any]
 def validate_policy(value: Any) -> dict[str, Any]:
     policy = dict(_mapping(value))
     allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "require_design_audit", "include_design_audit", "include_input_schema", "include_quality_gate", "include_protocol", "include_degradation", "include_slice_inference", "include_multiplicity", "public_validation", "public_shift_features", "public_benchmark", "public_sites", "public_models", "slices", "reviewed_repeat", "review_reference"}
-    allowed |= {"public_series", "public_times", "include_source_receipts", "include_submission", "public_submission_ids"}
+    allowed |= {"public_series", "public_times", "include_source_receipts", "include_submission", "public_submission_ids", "public_assays"}
     if set(policy) - allowed or policy.get("schema_version") != POLICY_SCHEMA:
         raise ValueError("Invalid release policy schema or unknown policy fields")
     _token(policy.get("id"))
@@ -167,6 +167,11 @@ def validate_policy(value: Any) -> dict[str, Any]:
         if not isinstance(values,list) or not values or len(set(values))!=len(values):
             raise ValueError("Explicit unique submission IDs are required")
         for value in values: _token(value)
+    if "public_assays" in policy:
+        assays=policy["public_assays"]
+        if not isinstance(assays,list) or not assays or len(set(assays))!=len(assays):
+            raise ValueError("Approve a unique nonempty list of public assay IDs")
+        for assay in assays: _token(assay)
     if "public_series" in policy:
         from privatelabbench.aggregate import model_identity
         model_identity(policy["public_series"])
@@ -380,6 +385,10 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
         identifier = "leaderboard_id"
     elif schema == "matbench-evaluation/v1":
         from privatelabbench.integrations.matbench import sanitize_result
+        clean = sanitize_result(shared,policy)
+        identifier = "evaluation_id"
+    elif schema == "proteingym-evaluation/v1":
+        from privatelabbench.integrations.proteingym import sanitize_result
         clean = sanitize_result(shared,policy)
         identifier = "evaluation_id"
     else:

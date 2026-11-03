@@ -5,10 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from hashlib import sha256
 from io import BytesIO
-import gzip, json, os
+import gzip, json
 from pathlib import Path
-import tempfile
-from urllib.request import Request, urlopen
 from uuid import uuid4
 from datetime import datetime, timezone
 
@@ -17,6 +15,7 @@ import pandas as pd
 import yaml
 
 from privatelabbench.core.local_io import atomic_write_csv
+from privatelabbench.core.public_data import download_verified as _download
 from privatelabbench.privacy.export import (
     atomic_write_json,
     _mapping,
@@ -126,39 +125,6 @@ def _verified_bytes(path, expected):
             "Matbench snapshot differs from pinned official bytes; choose a fresh cache for modified/private data"
         )
     return content
-
-
-def _download(path, url, expected):
-    path = Path(path)
-    if path.exists():
-        _verified_bytes(path, expected)
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = None
-    try:
-        with urlopen(
-            Request(url, headers={"User-Agent": "PrivateLabBench-Matbench"}), timeout=60
-        ) as response:
-            with tempfile.NamedTemporaryFile(
-                dir=path.parent, prefix=".plb-matbench-", delete=False
-            ) as handle:
-                temporary = Path(handle.name)
-                digest = sha256()
-                total = 0
-                while chunk := response.read(1024 * 1024):
-                    total += len(chunk)
-                    if total > 128 * 1024 * 1024:
-                        raise ValueError(
-                            "Official snapshot exceeds the adapter download limit"
-                        )
-                    digest.update(chunk)
-                    handle.write(chunk)
-        if digest.hexdigest() != expected:
-            raise ValueError("Downloaded official snapshot failed its pinned digest")
-        os.replace(temporary, path)
-    finally:
-        if temporary:
-            temporary.unlink(missing_ok=True)
 
 
 def download_benchmark(root, dataset):

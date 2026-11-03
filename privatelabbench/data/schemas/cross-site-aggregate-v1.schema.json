@@ -14,7 +14,7 @@
       "properties": {
         "protocol": {"type": "object", "required": ["id", "version", "sha256", "metrics", "primary_metric"], "properties": {"id": {"type": "string", "pattern": "^plb://"}, "version": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "metrics": {"type": "array", "items": {"type": "string"}}, "primary_metric": {"type": "string"}}, "additionalProperties": false},
         "task_type": {"enum": ["regression", "classification", "multiclass"]},
-        "metric": {"enum": ["mae", "rmse", "r2", "accuracy", "f1", "auroc", "macro_f1", "weighted_f1", "log_loss", "macro_auroc_ovr"]},
+        "metric": {"enum": ["mae", "rmse", "r2", "spearman", "accuracy", "f1", "auroc", "macro_f1", "weighted_f1", "log_loss", "macro_auroc_ovr"]},
         "input_family": {"enum": ["evaluation-receipt/v1", "paired-comparison-artifact/v1"]},
         "assume_disjoint_sites": {"type": "boolean"},
         "range_threshold": {"type": ["number", "null"], "minimum": 0},

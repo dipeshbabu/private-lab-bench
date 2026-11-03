@@ -131,6 +131,17 @@ def _string_list(value: Any, *, key: str) -> list[str]:
     return [str(item) for item in value]
 
 
+def _selected_metric_names(config: RunnerConfig):
+    if config.protocol is not None:
+        return config.protocol.as_dict()["metrics"]
+    evaluation = section(config, "evaluation")
+    return evaluation.get("metrics", ["spearman"] if evaluation.get("primary_metric") == "spearman" else None)
+
+
+def _evaluation_group(config: RunnerConfig):
+    return config.protocol.as_dict().get("evaluation_group") if config.protocol is not None else None
+
+
 def _baseline_prediction_metrics(
     config: RunnerConfig,
     *,
@@ -155,6 +166,8 @@ def _baseline_prediction_metrics(
         prediction_column=str(baseline_column),
         task_type=task_type,
         class_labels=input_cfg.get("class_labels") or None,
+        metric_names=_selected_metric_names(config),
+        evaluation_group=_evaluation_group(config),
         sample_id_column=sample_id_column,
         require_sample_id=False,
         sampling_design=config.raw.get("sampling_design"),
@@ -226,6 +239,8 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
         slice_columns=slice_columns or None,
         min_slice_size=min_slice_size,
         class_labels=class_labels or None,
+        metric_names=_selected_metric_names(config),
+        evaluation_group=_evaluation_group(config),
         split_column=str(split_column) if split_column else None,
         uncertainty_config=uncertainty_config,
         sampling_design=config.raw.get("sampling_design"),
@@ -490,7 +505,10 @@ def _prepare_design_audit(config: RunnerConfig, path: str, *, reference_cohort: 
         raise ValueError("Design-audit output must be separate from every input")
     audit_path.unlink(missing_ok=True)
     design = sampling_design(config.raw.get("sampling_design"))
-    prepared = prepare_evaluation(path, rules, training_reference=reference, reference_complete=options.get("reference_complete", False), additional_identifier_columns=design.metadata_columns if design else ())
+    identifiers=tuple(design.metadata_columns) if design else ()
+    group=_evaluation_group(config)
+    if group: identifiers=(*identifiers,group["column"])
+    prepared = prepare_evaluation(path, rules, training_reference=reference, reference_complete=options.get("reference_complete", False), additional_identifier_columns=identifiers)
     atomic_write_json(audit_path, prepared.artifact)
     if prepared.artifact["audit"]["status"] == "fail" and options.get("failure_mode", "stop") == "stop":
         raise DesignAuditFailure(f"Evaluation design failed before scoring; inspect local audit: {audit_path}")
@@ -562,7 +580,7 @@ def run_config(config_path: str, *, protocol_override: str | None = None) -> dic
             prepared_reference, record = _prepare_design_audit(config, reference, reference_cohort=True)
             config = replace(config, design_audits=(*config.design_audits, record))
         primary = section(config, "evaluation").get("primary_metric") or (config.protocol.as_dict()["primary_metric"] if config.protocol else None)
-        shift = diagnose_shift(reference, _input_path(config, str(input_cfg["path"])), target=input_cfg["target_column"], prediction_column=input_cfg.get("prediction_column"), prediction_columns=input_cfg.get("prediction_columns"), task_type=input_cfg.get("task_type"), class_labels=input_cfg.get("class_labels"), sample_id_column=input_cfg.get("sample_id_column", "sample_id"), slice_columns=input_cfg.get("slice_columns", []), min_slice_size=input_cfg.get("min_slice_size", 5), metric=primary, uncertainty_config=_uncertainty_config(config), sampling_design=config.raw.get("sampling_design"), current_frame=config.prepared_input, reference_frame=prepared_reference.frame if prepared_reference else None, **{key: value for key, value in diagnostics.items() if key != "reference_path"})
+        shift = diagnose_shift(reference, _input_path(config, str(input_cfg["path"])), target=input_cfg["target_column"], prediction_column=input_cfg.get("prediction_column"), prediction_columns=input_cfg.get("prediction_columns"), task_type=input_cfg.get("task_type"), class_labels=input_cfg.get("class_labels"), sample_id_column=input_cfg.get("sample_id_column", "sample_id"), slice_columns=input_cfg.get("slice_columns", []), min_slice_size=input_cfg.get("min_slice_size", 5), metric=primary, uncertainty_config=_uncertainty_config(config), sampling_design=config.raw.get("sampling_design"), current_frame=config.prepared_input, reference_frame=prepared_reference.frame if prepared_reference else None, metric_names=_selected_metric_names(config), evaluation_group=_evaluation_group(config), **{key: value for key, value in diagnostics.items() if key != "reference_path"})
         report_path = Path(summary["json_report"])
         report = json.loads(report_path.read_text(encoding="utf-8"))
         report["result"]["degradation_summary"] = shift["degradation_summary"]

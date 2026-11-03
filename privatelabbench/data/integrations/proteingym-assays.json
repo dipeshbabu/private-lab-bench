@@ -1,0 +1,74 @@
+{
+  "schema_version": "proteingym-assay-registry/v1",
+  "reference_commit": "144fe22b07dfaeec2b366f2346203a9838a55b4c",
+  "reference_sha256": "a8f498011532a74aa9fe556a50555a75e928c5837d19c06a87592ae04049b308",
+  "archive_url": "https://marks.hms.harvard.edu/proteingym/ProteinGym_v1.3/DMS_ProteinGym_substitutions.zip",
+  "archive_sha256": "3a83766254ac9ac9984ec25cb73c6e010ea4418f5e35f143933e6b6e6473b921",
+  "version": "1.3",
+  "full_assay_count": 217,
+  "assays": [
+    {
+      "id": "BLAT_ECOLX_Stiffler_2015",
+      "filename": "BLAT_ECOLX_Stiffler_2015.csv",
+      "sha256": "82835aeecc2001c742434457102e02b5aaf38673274aaba00ac85e07bcd94f35",
+      "uniprot_id": "BLAT_ECOLX",
+      "function": "OrganismalFitness",
+      "taxon": "Prokaryote",
+      "n_variants": 4996
+    },
+    {
+      "id": "RL40A_YEAST_Mavor_2016",
+      "filename": "RL40A_YEAST_Mavor_2016.csv",
+      "sha256": "1a80d896cfb54909b5a47fe00a143cbe4a65579b63ff8a36972fda51b10d2b42",
+      "uniprot_id": "RL40A_YEAST",
+      "function": "OrganismalFitness",
+      "taxon": "Eukaryote",
+      "n_variants": 1253
+    },
+    {
+      "id": "RL40A_YEAST_Roscoe_2013",
+      "filename": "RL40A_YEAST_Roscoe_2013.csv",
+      "sha256": "640b9ba64202d345314d59b210dab4155e27101c4271068d0b56737212b67c4a",
+      "uniprot_id": "RL40A_YEAST",
+      "function": "OrganismalFitness",
+      "taxon": "Eukaryote",
+      "n_variants": 1195
+    },
+    {
+      "id": "SPIKE_SARS2_Starr_2020_binding",
+      "filename": "SPIKE_SARS2_Starr_2020_binding.csv",
+      "sha256": "a9280512c1bb01b722d4a8d99639de289aaed520343c0b796f9182ba266e0895",
+      "uniprot_id": "SPIKE_SARS2",
+      "function": "Binding",
+      "taxon": "Virus",
+      "n_variants": 3802
+    },
+    {
+      "id": "SPIKE_SARS2_Starr_2020_expression",
+      "filename": "SPIKE_SARS2_Starr_2020_expression.csv",
+      "sha256": "6cc98b0227227fc653f2c5bc765b1fa5ed27085cb509e37e527c15b423c2806e",
+      "uniprot_id": "SPIKE_SARS2",
+      "function": "Expression",
+      "taxon": "Virus",
+      "n_variants": 3798
+    },
+    {
+      "id": "UBE4B_MOUSE_Starita_2013",
+      "filename": "UBE4B_MOUSE_Starita_2013.csv",
+      "sha256": "30f568d92b6a0c7ce3f8717fa224e02812946d7e43aacea90927164876949e65",
+      "uniprot_id": "UBE4B_MOUSE",
+      "function": "Activity",
+      "taxon": "Eukaryote",
+      "n_variants": 899
+    },
+    {
+      "id": "OTU7A_HUMAN_Tsuboyama_2023_2L2D",
+      "filename": "OTU7A_HUMAN_Tsuboyama_2023_2L2D.csv",
+      "sha256": "e46a6f57fa05d76f20e353536bebe956ef9392e880d890068eee103fa8c39cc4",
+      "uniprot_id": "OTU7A_HUMAN",
+      "function": "Stability",
+      "taxon": "Human",
+      "n_variants": 635
+    }
+  ]
+}

@@ -198,6 +198,7 @@ def _load_aligned_tables(
     metadata_columns: Sequence[str] = (),
     frame_a: Any = None,
     frame_b: Any = None,
+    evaluation_group=None,
 ) -> _AlignedTables:
     prediction_cols = _prediction_columns(
         prediction_column=prediction_column,
@@ -206,10 +207,11 @@ def _load_aligned_tables(
     slices = tuple(str(column) for column in (slice_columns or ()))
     if len(set(slices)) != len(slices):
         raise ValueError("slice_columns cannot contain duplicates")
-    selected_metadata = tuple(dict.fromkeys([*slices, *metadata_columns]))
+    selected_metadata = tuple(dict.fromkeys([*slices, *metadata_columns,*([evaluation_group["column"]] if evaluation_group else [])]))
     required = {sample_id_column, target, *prediction_cols, *selected_metadata}
     dtype = {sample_id_column: "string", **{column: "string" for column in metadata_columns}}
     if class_labels: dtype[target] = "string"
+    if evaluation_group: dtype[evaluation_group["column"]]="string"
     a = pd.read_csv(path_a, dtype=dtype) if frame_a is None else frame_a.copy(deep=False)
     b = pd.read_csv(path_b, dtype=dtype) if frame_b is None else frame_b.copy(deep=False)
     for frame in (a, b):
@@ -217,6 +219,8 @@ def _load_aligned_tables(
             if column in frame: frame[column] = frame[column].astype("string")
 
     for frame, label in ((a, "Model A table"), (b, "Model B table")):
+        from privatelabbench.eval.predictions import validate_evaluation_group
+        validate_evaluation_group(frame,evaluation_group)
         missing = required - set(frame.columns)
         if missing:
             raise ValueError(f"{label} is missing required column(s): {', '.join(sorted(missing))}")
@@ -290,15 +294,17 @@ def _metric_values(
     task_type: str,
     y_true: np.ndarray,
     predictions: np.ndarray,
+    metric_names=None,
 ) -> dict[str, float]:
     if task_type == "regression":
-        return regression_metrics(y_true.astype(float), predictions.astype(float))
+        return regression_metrics(y_true.astype(float), predictions.astype(float),metric_names=metric_names)
     if task_type == "classification":
-        return classification_metrics(y_true.astype(int), predictions.astype(float))
+        return classification_metrics(y_true.astype(int), predictions.astype(float),metric_names=metric_names)
     return multiclass_metrics(
         y_true.astype(int),
         predictions.astype(float),
         labels=list(range(predictions.shape[1])),
+        metric_names=metric_names,
     )
 
 
@@ -335,7 +341,7 @@ def _metric_at(
     y_true: np.ndarray,
     predictions: np.ndarray,
 ) -> float:
-    return float(_metric_values(task_type, y_true, predictions).get(metric, float("nan")))
+    return float(_metric_values(task_type, y_true, predictions,metric_names=[metric]).get(metric, float("nan")))
 
 
 def _regression_metric_batch(
@@ -418,7 +424,7 @@ def _bootstrap_improvements(
         }
 
     rng = np.random.default_rng(config.seed)
-    if data.task_type == "regression":
+    if data.task_type == "regression" and metric in {"mae","rmse","r2"}:
         values = _regression_bootstrap_improvements(
             data.y_true,
             data.predictions_a,
@@ -430,7 +436,7 @@ def _bootstrap_improvements(
     else:
         values = np.full(config.resamples, np.nan, dtype=float)
         for index in range(config.resamples):
-            indices = _stratified_indices(data.y_true, rng)
+            indices = rng.integers(0,data.n_samples,size=data.n_samples) if data.task_type=="regression" else _stratified_indices(data.y_true, rng)
             value_a = _metric_at(
                 data.task_type, metric, data.y_true[indices], data.predictions_a[indices]
             )
@@ -516,7 +522,7 @@ def _randomization_test(
         return {**metadata, "status": "skipped_min_samples", "p_value": None}
 
     rng = np.random.default_rng(config.seed + 1)
-    if data.task_type == "regression":
+    if data.task_type == "regression" and metric in {"mae","rmse","r2"}:
         values = _regression_randomization_improvements(
             data,
             metric=metric,
@@ -670,8 +676,8 @@ def _slice_results(
                 metadata=data.metadata.iloc[idx].reset_index(drop=True),
                 n_samples=len(idx),
             )
-            metrics_a = _metric_values(data.task_type, subset.y_true, subset.predictions_a)
-            metrics_b = _metric_values(data.task_type, subset.y_true, subset.predictions_b)
+            metrics_a = _metric_values(data.task_type, subset.y_true, subset.predictions_a,metric_names=[metric] if metric=="spearman" else None)
+            metrics_b = _metric_values(data.task_type, subset.y_true, subset.predictions_b,metric_names=[metric] if metric=="spearman" else None)
             value_a = float(metrics_a[metric])
             value_b = float(metrics_b[metric])
             if not (math.isfinite(value_a) and math.isfinite(value_b)):
@@ -735,6 +741,7 @@ def compare_prediction_tables(
     sampling_design: Any = None,
     frame_a: Any = None,
     frame_b: Any = None,
+    evaluation_group=None,
 ) -> dict[str, Any]:
     from privatelabbench.eval.sampling import sampling_design as parse_design, apply_multiplicity
     design = parse_design(sampling_design)
@@ -754,10 +761,11 @@ def compare_prediction_tables(
         metadata_columns=design.metadata_columns if design else (),
         frame_a=frame_a,
         frame_b=frame_b,
+        evaluation_group=evaluation_group,
     )
-    metrics_a = _metric_values(data.task_type, data.y_true, data.predictions_a)
-    metrics_b = _metric_values(data.task_type, data.y_true, data.predictions_b)
     metric = resolved_config.metric or _default_metric(data.task_type)
+    metrics_a = _metric_values(data.task_type, data.y_true, data.predictions_a,metric_names=[metric] if metric=="spearman" else None)
+    metrics_b = _metric_values(data.task_type, data.y_true, data.predictions_b,metric_names=[metric] if metric=="spearman" else None)
     if metric not in metrics_a or metric not in metrics_b:
         available = ", ".join(sorted(set(metrics_a) & set(metrics_b)))
         raise ValueError(
