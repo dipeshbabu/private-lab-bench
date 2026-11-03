@@ -72,7 +72,7 @@ def validate_manifest(value: Any) -> dict:
         or manifest["trust"] != "approved_local"
     ):
         raise ValueError(
-            "Only explicitly approved local models are supported; an untrusted isolated executor is not implemented"
+            "Only explicitly approved local models are supported by this trusted scorer; use sandbox-score for isolated Python scripts"
         )
     model_metadata(manifest["model"])
     artifact = _object(
@@ -188,7 +188,7 @@ def _numeric(values, *, shape):
 class TrustedModelAdapter(ABC):
     """Versioned local adapter boundary; installing an adapter grants process trust.
 
-    A future isolated executor needs independently enforced filesystem/egress/resource
+    The separate sandbox executor enforces its own filesystem/egress/resource
     controls. This in-process interface provides no such isolation and never dispatches
     untrusted or manifest-specified Python modules.
     """

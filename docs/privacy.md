@@ -173,9 +173,6 @@ For high-assurance deployment where numerical details and end-to-end transformat
 
 ## Optional OpenDP backend
 
-This API is available on the development branch and will ship in the next feature
-release. Until then, use a source install as described in [installation](install.md).
-
 Install the optional backend with `pip install 'private-lab-bench[opendp]'`.
 It supports a bounded column mean with **public, fixed sample size and replace-one
 row adjacency**. One row must represent one individual's bounded contribution.

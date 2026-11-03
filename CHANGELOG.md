@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.3 — 2026-11-03
 
 ### Added
 
@@ -11,6 +11,12 @@
 ### Fixed
 
 - Reject nonfinite privacy budgets and spends; remove absolute comparison slack that could exceed very small budgets.
+- Explain how to use `sandbox-score` when the trusted scorer rejects untrusted scripts.
+
+### Changed
+
+- Read the PyPI version badge from the project's JSON metadata to avoid stale version results from the dedicated badge endpoint.
+- Refresh installation instructions, the notebook, roadmap, and verified example receipts for v0.1.3. Regenerate the signed public Caco2 artifacts under this version.
 
 ## v0.1.2 — 2026-11-03
 

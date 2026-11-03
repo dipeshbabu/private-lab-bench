@@ -2,8 +2,7 @@
 
 `plb sandbox-score` runs an untrusted Python inference script inside gVisor's
 `runsc` runtime on a Linux Docker host. This is separate from the trusted
-in-process `plb score` interface. It is available in the development source and
-will ship in the next feature release.
+in-process `plb score` interface.
 
 ## Operator setup
 

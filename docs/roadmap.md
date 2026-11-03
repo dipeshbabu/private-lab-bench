@@ -14,10 +14,17 @@ that still needs implementation or outside evidence.
   Ed25519 verification, cross-site receipt aggregation, and longitudinal trends.
 - Reviewed numeric local model scoring and owner-controlled hidden benchmarks.
   The trusted scorer runs in process and provides no execution sandbox.
+- A separate [Linux/gVisor executor](sandbox.md) for untrusted Python inference
+  scripts, with restricted mounts, denied network access, resource and output
+  limits, and adversarial runtime checks. Predictions remain local.
 - Synthetic molecule, tabular, and protein packs, plus pinned TDC ADMET,
-  Matbench, and ProteinGym integrations checked against upstream implementations.
+  Matbench, and ProteinGym integrations checked against upstream implementations:
+  six ADMET tasks, five materials tasks, and ten DMS substitution assays.
 - Bounded-query privacy reference mechanisms and sequential budget accounting.
   These remain separate from privacy attacks and experimental metric noise.
+- An optional [OpenDP bounded-mean backend](privacy.md#optional-opendp-backend)
+  using upstream transformations, numerical privacy maps, and Laplace sampling,
+  with public bounds/size and an explicit shared budget.
 - PyPI and GitHub releases, a documentation site, a checkout-free quickstart,
   a Colab notebook, Ruff/pre-commit checks, and dependency/label automation.
 
@@ -26,21 +33,16 @@ for version history and [project scope](project_scope.md) for the limits of thes
 claims. Receipt signatures authenticate statements; they do not independently
 verify model execution or scientific validity.
 
-## Next implementation work
+## Extension boundaries
 
-The following extensions are approved for development after the v0.1.2 patch:
-
-- **Sandboxed execution of untrusted models:** a separate executor with enforced
-  filesystem, egress, resource, and output restrictions, adversarial runtime
-  checks, and no fallback to the trusted in-process scorer.
-- **Broader benchmark coverage:** additional pinned tasks and assays, with
-  explicit licenses, split definitions, metrics, and actual upstream parity.
-- **A vetted differential-privacy backend:** optional OpenDP measurements for
-  supported bounded queries, with explicit adjacency, sensitivity, and budget
-  composition. Adding noise to arbitrary metrics is not sufficient.
-
-These are development commitments, not features of v0.1.2. Their documentation
-and release notes will describe the tested scope when they ship.
+The three extensions added in v0.1.3 have explicit limits. The sandbox supports
+CPU Python scripts in an operator-reviewed image, rather than participant images
+or large multi-file/GPU checkpoints. Its controls and tests do not constitute an
+independent security audit. OpenDP currently supports bounded means with fixed
+public size and row-level replace-one adjacency; the application must maintain
+accounting across processes and restarts. Its upstream `contrib` status and
+privacy assumptions are documented. Benchmark coverage remains a tested subset
+of each upstream suite.
 
 ## Independent researcher evidence
 
