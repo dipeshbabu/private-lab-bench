@@ -130,3 +130,41 @@ print(json.dumps({"predictions":[len(children), failure]}))
     result = execute(image, code, limits=SandboxLimits(seconds=10, memory_mb=512))
     assert result[0] < 64
     assert result[1] == 11  # EAGAIN: the per-user process limit was reached.
+
+
+def test_large_stdin_is_completely_delivered(image):
+    model = b'import json, sys\nrows=json.load(sys.stdin)["features"]\nprint(json.dumps({"predictions":[sum(row) for row in rows]}))\n'
+    result = run_sandbox(
+        model,
+        np.ones((1024, 64)),
+        model_sha256=sha256(model).hexdigest(),
+        runtime_image=image,
+        limits=SandboxLimits(seconds=10, memory_mb=256),
+    )
+    np.testing.assert_equal(result, np.full(1024, 64.0))
+
+
+def test_ignored_large_stdin_cannot_block_timeout_cleanup(image):
+    model = b"while True: pass\n"
+    started = time.monotonic()
+    with pytest.raises(SandboxError, match="wall-time"):
+        run_sandbox(
+            model,
+            np.zeros((8000, 100)),
+            model_sha256=sha256(model).hexdigest(),
+            runtime_image=image,
+            limits=SandboxLimits(seconds=3, memory_mb=128),
+        )
+    assert time.monotonic() - started < 30
+    remaining = subprocess.check_output(
+        [
+            "docker",
+            "--host",
+            "unix:///var/run/docker.sock",
+            "ps",
+            "-aq",
+            "--filter",
+            "label=privatelabbench.sandbox",
+        ]
+    )
+    assert not remaining.strip()
