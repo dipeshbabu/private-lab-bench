@@ -19,6 +19,7 @@ class RunnerConfig:
     protocol: EvaluationProtocol | None = None
     prepared_input: Any = field(default=None, repr=False, compare=False)
     design_audits: tuple[dict[str, Any], ...] = field(default=(), repr=False, compare=False)
+    validation_context: dict[str, Any] | None = field(default=None, repr=False, compare=False)
 
     @property
     def task_id(self) -> str:

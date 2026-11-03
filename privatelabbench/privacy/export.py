@@ -104,7 +104,7 @@ def _release_statistics(value: Any, policy: Mapping[str, Any]) -> dict[str, Any]
 
 def validate_policy(value: Any) -> dict[str, Any]:
     policy = dict(_mapping(value))
-    allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "require_design_audit", "include_design_audit", "include_input_schema", "include_quality_gate", "include_protocol", "include_degradation", "include_slice_inference", "include_multiplicity", "public_shift_features", "public_benchmark", "public_sites", "public_models", "slices", "reviewed_repeat", "review_reference"}
+    allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "require_design_audit", "include_design_audit", "include_input_schema", "include_quality_gate", "include_protocol", "include_degradation", "include_slice_inference", "include_multiplicity", "public_validation", "public_shift_features", "public_benchmark", "public_sites", "public_models", "slices", "reviewed_repeat", "review_reference"}
     if set(policy) - allowed or policy.get("schema_version") != POLICY_SCHEMA:
         raise ValueError("Invalid release policy schema or unknown policy fields")
     _token(policy.get("id"))
@@ -152,6 +152,11 @@ def validate_policy(value: Any) -> dict[str, Any]:
         approved_models = [model_identity(item) for item in models]
         if len({(item['id'], item['revision']) for item in approved_models}) != len(models):
             raise ValueError("public_models cannot contain duplicates")
+    if "public_validation" in policy:
+        from privatelabbench.external_validation import public_approval
+        public_approval(policy["public_validation"])
+        if not policy.get("include_protocol"):
+            raise ValueError("External-validation release requires explicit protocol identity approval")
     return policy
 
 
@@ -286,6 +291,9 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
         identifier = "receipt_id"
         if policy.get("include_protocol") and evaluation.get("protocol"):
             clean["evaluation"]["protocol"] = protocol_identity(evaluation["protocol"])
+        if "public_validation" in policy:
+            from privatelabbench.external_validation import sanitize_validation
+            clean["evaluation"]["external_validation"] = sanitize_validation(evaluation.get("external_validation"), policy["public_validation"])
         if policy.get("include_quality_gate") and evaluation.get("quality_gate"):
             gate = _mapping(evaluation["quality_gate"])
             if gate.get("schema_version") != "quality-gate/v1" or gate.get("status") not in {"pass", "fail", "investigate"}:

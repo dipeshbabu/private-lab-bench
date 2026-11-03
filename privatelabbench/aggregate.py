@@ -137,6 +137,7 @@ def aggregate_receipts(
     signing_secret: str | None = None,
     trust_store: Mapping[str, Any] | None = None,
     require_trusted_signer: bool = False,
+    require_external_validation: bool = False,
 ) -> dict[str, Any]:
     if len(paths) < 2:
         raise ValueError("Supply at least two shareable receipts")
@@ -149,10 +150,13 @@ def aggregate_receipts(
         raise ValueError("Supply one nonempty --site label per input, in input order")
     if type(assume_disjoint_sites) is not bool:
         raise ValueError("assume_disjoint_sites must be boolean")
+    if type(require_external_validation) is not bool:
+        raise ValueError("require_external_validation must be boolean")
     parsed_models = [model_identity(value) for value in models or ()]
     seen_hashes, seen_ids = set(), set()
     compatibility = None
     groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    validation_digests = {}
     paired_sites, verification = [], []
     kind = None
     for index, path in enumerate(paths):
@@ -222,6 +226,19 @@ def aggregate_receipts(
         from privatelabbench.privacy.export import protocol_identity
 
         protocol = protocol_identity(evaluation.get("protocol"))
+        validation_model = None
+        if require_external_validation:
+            from privatelabbench.external_validation import SCHEMA, public_approval
+            validation = evaluation.get("external_validation", {})
+            if validation.get("schema_version") != SCHEMA:
+                raise ValueError("Every input must contain an approved external-validation profile")
+            approved = public_approval({key: validation[key] for key in ("model", "dataset", "evaluator_relationship")})
+            validation_model = {key: approved["model"][key] for key in ("id", "revision")}
+            model_key = tuple(validation_model.values())
+            model_digest = approved["model"]["artifact_sha256"]
+            if model_key in validation_digests and validation_digests[model_key] != model_digest:
+                raise ValueError("The same external-validation model revision has conflicting artifact digests")
+            validation_digests[model_key] = model_digest
         chosen_metric = metric or protocol["primary_metric"]
         if chosen_metric not in protocol["metrics"]:
             raise ValueError("Selected metric must be declared in the protocol")
@@ -290,6 +307,8 @@ def aggregate_receipts(
                     "Unsigned or unauthenticated model identity requires an explicit --model id@revision declaration"
                 )
             model = declared or claimed
+            if validation_model is not None and model != validation_model:
+                raise ValueError("Declared aggregation model differs from the external-validation model")
             count = _count(evaluation.get("sample_counts", {}).get("n_samples"))
             estimate = _finite(
                 evaluation.get("metrics", {}).get(chosen_metric), "selected metric"
