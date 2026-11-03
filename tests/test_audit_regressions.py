@@ -336,7 +336,10 @@ def test_metrics_and_paired_evidence_survive_table_reordering(task):
     rng = np.random.default_rng(17)
     n = 12
     frame = pd.DataFrame(
-        {"sample_id": [f"s{i:02}" for i in range(n)], "site": ["a", "b"] * (n // 2)}
+        {
+            "sample_id": [f"s{i:02}" for i in range(n)],
+            "site": ["a"] * (n // 2) + ["b"] * (n // 2),
+        }
     )
     args = {"target": "target", "task_type": task, "slice_columns": ["site"]}
     if task == "regression":
@@ -377,5 +380,10 @@ def test_metrics_and_paired_evidence_survive_table_reordering(task):
         frame_b=other.sample(frac=1, random_state=7),
         config=config,
         **args,
+    )
+    assert all(
+        group["status"] == "evaluated"
+        for groups in actual["slices"].values()
+        for group in groups.values()
     )
     assert actual == expected
