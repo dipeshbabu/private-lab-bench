@@ -1,0 +1,35 @@
+schema_version: model-manifest/v1
+trust: approved_local
+model:
+  id: synthetic-solubility-linear
+  revision: reference-v1
+  artifact_sha256: 6f42f1d59637c97efa311a19ccbdb7cf623fd25af24269a91f2062f55b562b70
+artifact:
+  path: model.json
+  sha256: 6f42f1d59637c97efa311a19ccbdb7cf623fd25af24269a91f2062f55b562b70
+  format: numeric-json/v1
+adapter:
+  id: plb.linear-json
+  version: 1.0.0
+task_type: regression
+features:
+  - name: molecular_weight
+    unit: g/mol
+    dtype: float64
+  - name: logp
+    unit: dimensionless
+    dtype: float64
+sample_id_column: sample_id
+preprocessing:
+  version: identity/v1
+  missing_values: reject
+postprocessing:
+  version: identity/v1
+  class_labels: []
+permissions:
+  network: false
+  filesystem: declared_local_io
+  execution: trusted_in_process
+deterministic: true
+input_dataset_version: synthetic-v1
+provenance: Synthetic illustrative linear solubility reference, not a fitted or validated scientific model. Code/model MIT; generated observations CC0.

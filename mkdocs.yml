@@ -29,6 +29,7 @@ nav:
   - Evaluation-design audits: evaluation_design.md
   - TDC ADMET integration: tdc_admet.md
   - External model validation: external_validation.md
+  - Trusted local model scoring: trusted_scoring.md
   - Paired model comparison: paired_comparison.md
   - Tasks and plugins: tasks.md
   - Evaluation receipts: evaluation_receipts.md

@@ -140,6 +140,23 @@ def prepare_validation(config, path):
         frame = config.prepared_input
         content = frame.to_csv(index=False, lineterminator="\n").encode("utf-8")
         basis = "audited_frame_csv"
+    scoring = config.raw.get("scoring_provenance")
+    if scoring is not None:
+        source_digest = (
+            sha256(content).hexdigest()
+            if basis == "input_file_bytes"
+            else config.design_audits[0]["artifact"]["local"]["evaluation_sha256"]
+        )
+        if (
+            not isinstance(scoring, Mapping)
+            or scoring.get("schema_version") != "local-scoring-provenance/v1"
+            or scoring.get("scope") != "local"
+            or scoring.get("model") != profile["model"]
+            or scoring.get("prediction_sha256") != source_digest
+        ):
+            raise ValueError(
+                "Scored prediction snapshot or model identity differs from local scoring provenance"
+            )
     return frame, {
         "schema_version": SCHEMA,
         "model": profile["model"],

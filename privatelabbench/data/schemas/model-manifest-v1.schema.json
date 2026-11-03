@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://privatelabbench.org/schemas/model-manifest-v1.schema.json",
+  "title": "Approved local model manifest v1",
+  "type": "object",
+  "required": ["schema_version", "trust", "model", "artifact", "adapter", "task_type", "features", "sample_id_column", "preprocessing", "postprocessing", "permissions", "deterministic"],
+  "properties": {
+    "schema_version": {"const": "model-manifest/v1"},
+    "trust": {"const": "approved_local"},
+    "model": {"$ref": "external-validation-profile-v1.schema.json#/$defs/model"},
+    "artifact": {
+      "type": "object", "required": ["path", "sha256", "format"],
+      "properties": {"path": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "format": {"const": "numeric-json/v1"}}, "additionalProperties": false
+    },
+    "adapter": {
+      "type": "object", "required": ["id", "version"],
+      "properties": {"id": {"const": "plb.linear-json"}, "version": {"const": "1.0.0"}}, "additionalProperties": false
+    },
+    "task_type": {"enum": ["regression", "classification"]},
+    "features": {
+      "type": "array", "minItems": 1, "maxItems": 10000,
+      "items": {"type": "object", "required": ["name", "unit", "dtype"], "properties": {"name": {"type": "string", "minLength": 1}, "unit": {"type": "string", "minLength": 1}, "dtype": {"const": "float64"}}, "additionalProperties": false}
+    },
+    "sample_id_column": {"type": "string", "minLength": 1},
+    "preprocessing": {
+      "type": "object", "required": ["version", "missing_values"],
+      "properties": {"version": {"enum": ["identity/v1", "standardize/v1"]}, "missing_values": {"const": "reject"}}, "additionalProperties": false
+    },
+    "postprocessing": {
+      "oneOf": [
+        {"type": "object", "required": ["version", "class_labels"], "properties": {"version": {"const": "identity/v1"}, "class_labels": {"const": []}}, "additionalProperties": false},
+        {"type": "object", "required": ["version", "class_labels"], "properties": {"version": {"const": "sigmoid/v1"}, "class_labels": {"const": ["0", "1"]}}, "additionalProperties": false}
+      ]
+    },
+    "permissions": {"const": {"network": false, "filesystem": "declared_local_io", "execution": "trusted_in_process"}},
+    "deterministic": {"const": true},
+    "input_dataset_version": {"type": "string", "minLength": 1},
+    "provenance": {"type": "string", "maxLength": 2000}
+  },
+  "additionalProperties": false
+}

@@ -1,6 +1,6 @@
 # Example Data Provenance
 
-The files under `examples/` are small synthetic/demo fixtures created for PrivateLabBench software and evaluation-workflow testing. They are not proprietary customer data and are not copied from a restricted scientific dataset.
+The CSV fixtures under `examples/` are small synthetic/demo tables created for PrivateLabBench software and evaluation-workflow testing. They are not proprietary customer data and are not copied from a restricted scientific dataset. Separately, `tdc_admet/verification.json` records aggregate parity results from fetched public upstream benchmarks; it contains no benchmark rows or prediction tables and declares its real-data provenance explicitly.
 
 ## License
 
@@ -20,6 +20,7 @@ Current fixture families include:
 - multiclass probability tables;
 - candidate-versus-baseline prediction examples;
 - generic tabular slice examples.
+- the trusted local scoring example's illustrative molecular descriptors/targets.
 
 SMILES strings representing simple molecules are used as test identifiers/metadata; the associated labels and prediction values are synthetic demo values.
 

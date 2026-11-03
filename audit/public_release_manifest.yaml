@@ -26,6 +26,9 @@ examples:
   - path: examples/tabular_predictions_demo.csv
     provenance: synthetic
     license: CC0-1.0
+  - path: examples/trusted_scoring/inputs.csv
+    provenance: synthetic
+    license: CC0-1.0
 
 direct_dependencies:
   numpy:
