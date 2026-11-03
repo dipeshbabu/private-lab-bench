@@ -16,7 +16,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.11"
       - name: Install quality tooling
@@ -41,7 +41,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install package
@@ -102,7 +102,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.11"
       - name: Build distributions
@@ -137,7 +137,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.11"
       - name: Install optional chemistry adapter
@@ -151,7 +151,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.11"
       - name: Install optional TDC reference environment
@@ -165,7 +165,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.12"
       - name: Install optional materials tooling
@@ -183,7 +183,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.11"
       - name: Install optional protein baseline tooling
@@ -197,7 +197,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.11"
       - name: Build docs site
