@@ -54,6 +54,7 @@ def prediction_bindings(
     slices: Sequence[str] | None = None,
     metadata: Sequence[str] | None = None,
     baseline_column: str | None = None,
+    frame: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     source = Path(path).resolve()
     with source.open(encoding="utf-8-sig", newline="") as handle:
@@ -112,19 +113,51 @@ def prediction_bindings(
     labels = list(class_labels or ())
     if len(labels) != len(set(labels)) or any(not label.strip() for label in labels):
         raise ValueError("--class-labels must specify unique ordered labels")
-    values = None
+    selected = (
+        frame
+        if frame is not None
+        else pd.read_csv(
+            source,
+            usecols=list(
+                dict.fromkeys(
+                    [
+                        selected_target,
+                        sample_id,
+                        *predictions,
+                        *([baseline_column] if baseline_column else []),
+                    ]
+                )
+            ),
+        )
+    )
+    if selected[selected_target].isna().any():
+        raise ValueError(
+            "Target contains missing labels; resolve them before evaluation"
+        )
+    if selected[predictions].isna().any().any():
+        raise ValueError(
+            "Prediction columns contain missing values; resolve them before evaluation"
+        )
+    if baseline_column and selected[baseline_column].isna().any():
+        raise ValueError(
+            "Baseline predictions contain missing values; compare the same complete observations"
+        )
+    if (
+        selected[sample_id].isna().any()
+        or selected[sample_id].astype(str).str.strip().eq("").any()
+    ):
+        raise ValueError("Stable sample IDs contain missing/empty values")
+    if selected[sample_id].duplicated().any():
+        raise ValueError(
+            "Stable sample IDs must be unique; remove accidental duplicates or provide correct observation IDs"
+        )
+    values = selected[selected_target]
     if task_type is None and len(predictions) > 1:
         if not labels:
             raise ValueError(
                 "Multiclass probabilities need explicit ordered --class-labels matching --prediction-columns"
             )
         task_type = "multiclass"
-    if task_type is None or task_type == "classification" and not labels:
-        values = pd.read_csv(source, usecols=[selected_target])[selected_target]
-        if values.isna().any():
-            raise ValueError(
-                "Target contains missing labels; resolve them before evaluation"
-            )
     if task_type is None:
         numeric = pd.to_numeric(values, errors="coerce")
         if len(labels) == 2:
@@ -349,6 +382,23 @@ def evaluation_summary(
         )
     if "quality_gate" in summary:
         lines.append(f"Quality gate         {summary['quality_gate']['status']}")
+    if summary.get("degradation_summary"):
+        changes = summary["degradation_summary"]
+        overall = changes["overall"][primary]
+        lines.append(
+            f"Cohort change        {overall['status']}; degradation {overall['degradation']}; relative {overall['relative_degradation']}"
+        )
+        lines.append(f"Delta uncertainty    {overall['interval']['status']}")
+        if overall["interval"]["status"] == "evaluated":
+            interval = overall["interval"]
+            lines.append(
+                f"Delta CI             [{interval['lower']:.6g}, {interval['upper']:.6g}]"
+            )
+        if changes["ranked_slices"]:
+            worst = changes["ranked_slices"][0]
+            lines.append(
+                f"Largest degradation  {worst['column']}={worst['value']} ({primary} {worst['degradation']:+.6g})"
+            )
     decision = release.get("decision", "needs_review")
     reason = (
         "shareable"

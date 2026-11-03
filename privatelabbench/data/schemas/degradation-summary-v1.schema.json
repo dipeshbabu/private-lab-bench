@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PrivateLabBench reference/current degradation summary v1",
+  "type": "object",
+  "required": ["schema_version", "metric_basis", "metric", "n_reference", "n_current", "overall", "slices", "ranked_slices", "distributions", "prevalence_threshold", "uncertainty", "limitations"],
+  "properties": {
+    "schema_version": {"const": "degradation-summary/v1"},
+    "metric_basis": {"const": "clean_metrics"},
+    "metric": {"$ref": "#/$defs/metric"},
+    "n_reference": {"type": "integer", "minimum": 1},
+    "n_current": {"type": "integer", "minimum": 1},
+    "overall": {"$ref": "#/$defs/metrics"},
+    "slices": {"type": "object", "additionalProperties": {"type": "object", "additionalProperties": {"type": "object", "required": ["n_reference", "n_current", "status", "metrics", "prevalence_reference", "prevalence_current", "prevalence_change", "material_prevalence_change"], "properties": {"n_reference": {"type": "integer", "minimum": 0}, "n_current": {"type": "integer", "minimum": 0}, "status": {"enum": ["evaluated", "new_slice", "missing_slice", "skipped_min_slice_size"]}, "metrics": {"$ref": "#/$defs/metrics"}, "prevalence_reference": {"type": "number", "minimum": 0, "maximum": 1}, "prevalence_current": {"type": "number", "minimum": 0, "maximum": 1}, "prevalence_change": {"type": "number", "minimum": -1, "maximum": 1}, "material_prevalence_change": {"type": "boolean"}}, "additionalProperties": false}}},
+    "ranked_slices": {"type": "array", "items": {"type": "object", "required": ["column", "value", "degradation", "status"], "properties": {"column": {"type": "string"}, "value": {"type": "string"}, "degradation": {"type": "number"}, "status": {"enum": ["undefined", "degraded", "improved", "within_threshold"]}}, "additionalProperties": false}},
+    "distributions": {"type": "object", "additionalProperties": {"type": "object", "required": ["type", "status", "n_reference", "n_current", "missing_reference", "missing_current"], "properties": {"type": {"enum": ["numeric", "categorical"]}, "status": {"enum": ["evaluated", "not_testable"]}, "n_reference": {"type": "integer", "minimum": 1}, "n_current": {"type": "integer", "minimum": 1}, "missing_reference": {"type": "integer", "minimum": 0}, "missing_current": {"type": "integer", "minimum": 0}, "min_observed_cell": {"type": "integer", "minimum": 1}, "mean_reference": {"type": ["number", "null"]}, "mean_current": {"type": ["number", "null"]}, "std_reference": {"type": ["number", "null"], "minimum": 0}, "std_current": {"type": ["number", "null"], "minimum": 0}, "standardized_mean_change": {"type": ["number", "null"]}, "ks_distance": {"type": "number", "minimum": 0, "maximum": 1}, "total_variation_distance": {"type": "number", "minimum": 0, "maximum": 1}}, "additionalProperties": false}},
+    "prevalence_threshold": {"type": "number", "minimum": 0, "maximum": 1},
+    "uncertainty": {"type": "object", "required": ["schema_version", "method", "enabled", "confidence_level", "resamples", "seed", "min_samples", "include_slices", "independent_cohorts_declared", "sampling"], "properties": {"schema_version": {"const": "cohort-delta-uncertainty/v1"}, "method": {"const": "independent_percentile_bootstrap"}, "enabled": {"type": "boolean"}, "confidence_level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1}, "resamples": {"type": "integer", "minimum": 100}, "seed": {"type": "integer", "minimum": 0}, "min_samples": {"type": "integer", "minimum": 2}, "include_slices": {"type": "boolean"}, "independent_cohorts_declared": {"type": "boolean"}, "overlapping_sample_ids": {"type": "boolean"}, "sampling": {"enum": ["iid_rows", "stratified_by_target"]}}, "additionalProperties": false},
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "metric": {"enum": ["mae", "rmse", "r2", "accuracy", "f1", "auroc", "macro_f1", "weighted_f1", "log_loss", "macro_auroc_ovr"]},
+    "metrics": {"type": "object", "propertyNames": {"$ref": "#/$defs/metric"}, "additionalProperties": {"$ref": "#/$defs/change"}},
+    "change": {"type": "object", "required": ["reference", "current", "raw_delta_current_minus_reference", "degradation", "relative_degradation", "practical_threshold", "status", "interval"], "properties": {"reference": {"type": ["number", "null"]}, "current": {"type": ["number", "null"]}, "raw_delta_current_minus_reference": {"type": ["number", "null"]}, "degradation": {"type": ["number", "null"]}, "relative_degradation": {"type": ["number", "null"]}, "practical_threshold": {"type": "number", "minimum": 0}, "status": {"enum": ["undefined", "degraded", "improved", "within_threshold"]}, "interval": {"type": "object", "required": ["status", "lower", "upper"], "properties": {"status": {"enum": ["evaluated", "disabled", "independence_not_declared", "overlapping_cohorts_not_supported", "skipped_min_samples", "undefined_point_estimate", "insufficient_valid_resamples"]}, "lower": {"type": ["number", "null"]}, "upper": {"type": ["number", "null"]}, "estimate": {"type": ["number", "null"]}, "valid_resamples": {"type": "integer", "minimum": 0}}, "additionalProperties": false}}, "additionalProperties": false}
+  }
+}

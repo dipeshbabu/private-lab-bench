@@ -297,7 +297,35 @@ def evaluate_prediction_csv(
     split_column: str | None = None,
     uncertainty_config: BootstrapConfig | None = None,
 ) -> PredictionEvaluation:
-    df = pd.read_csv(path)
+    return evaluate_prediction_table(
+        pd.read_csv(path), dataset_path=str(path), target=target,
+        prediction_column=prediction_column, prediction_columns=prediction_columns,
+        task_type=task_type, sample_id_column=sample_id_column, require_sample_id=require_sample_id,
+        metadata_columns=metadata_columns, slice_columns=slice_columns, min_slice_size=min_slice_size,
+        class_labels=class_labels, split_column=split_column, uncertainty_config=uncertainty_config,
+    )
+
+
+def evaluate_prediction_table(
+    df: pd.DataFrame,
+    *,
+    dataset_path: str = "in-memory",
+    target: str,
+    prediction_column: str | None = None,
+    prediction_columns: Sequence[str] | None = None,
+    task_type: str | None = None,
+    sample_id_column: str | None = "sample_id",
+    require_sample_id: bool = False,
+    metadata_columns: Sequence[str] | None = None,
+    slice_columns: Sequence[str] | None = None,
+    min_slice_size: int = 2,
+    class_labels: Sequence[str] | None = None,
+    split_column: str | None = None,
+    uncertainty_config: BootstrapConfig | None = None,
+) -> PredictionEvaluation:
+    path = dataset_path
+    if not isinstance(df, pd.DataFrame) or df.columns.duplicated().any():
+        raise ValueError("Prediction table must be a DataFrame with unique column names")
     prediction_cols = _resolve_prediction_columns(
         prediction_column=prediction_column,
         prediction_columns=prediction_columns,
