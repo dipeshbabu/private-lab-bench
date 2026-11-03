@@ -20,11 +20,10 @@ updates:
       - dependency-name: pytdc
       - dependency-name: huggingface-hub
       - dependency-name: setuptools
-      # Raising these major-version floors would conflict with the TDC extra.
+      # Range widening can remove TDC's upper bounds even on a minor update.
+      # Review these shared dependencies manually against the frozen reference stack.
       - dependency-name: numpy
-        update-types: ["version-update:semver-major"]
       - dependency-name: pandas
-        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

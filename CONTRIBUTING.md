@@ -84,7 +84,7 @@ are grouped where appropriate; larger upgrades get separate PRs. Updates follow
 the same requirement for green CI and squash merging as other contributions.
 
 The pinned legacy TDC loader, Hugging Face Hub, and setuptools compatibility stack
-need a manual upstream-parity review. Major NumPy/Pandas floor changes and Python
+need a manual upstream-parity review. NumPy/Pandas constraint changes and Python
 Docker minor-line upgrades also need explicit compatibility review. These limits
 are recorded in `.github/dependabot.yml`.
 
