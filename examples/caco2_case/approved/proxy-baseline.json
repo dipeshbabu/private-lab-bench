@@ -1,0 +1,270 @@
+{
+  "created_at": "2026-11-03T16:44:05.813193+00:00",
+  "integrity": {
+    "algorithm": "sha256",
+    "payload_sha256": "286602b9ea443ee315b0033e37517ed925537e8aac7bae31626453ba274d81b8",
+    "signature": "d0haD+wFf27pm2NNjoDhLZ88y0bEqyAHuulwuka+AdkKnYKgf/GD6FcZoPJpFwRcfUfHYsRuQGiKTv2Tk0K9CA==",
+    "signature_algorithm": "ed25519",
+    "signed": true
+  },
+  "receipt_id": "ae373791-195e-426a-9eb8-f9b7e20f74a0",
+  "schema_version": "evaluation-receipt/v1",
+  "scope": "shareable",
+  "shareable": {
+    "artifacts": [],
+    "benchmark": {},
+    "evaluation": {
+      "design_audit": {
+        "adapter": null,
+        "algorithm": "split-audit/v1",
+        "definition_sha256": "7b23d4f5ecedc52692aadcdd2108d20a23d7cf74719f1056a03f83cb018dea57",
+        "excluded_evaluation_records": 0,
+        "findings": {
+          "entity_overlap": {
+            "affected_records": 0,
+            "evidence_complete": true,
+            "policy": "forbid",
+            "status": "pass"
+          },
+          "evaluation_duplicate_ids": {
+            "affected_records": 0,
+            "evidence_complete": true,
+            "policy": "forbid",
+            "status": "pass"
+          },
+          "reference_duplicate_ids": {
+            "affected_records": 0,
+            "evidence_complete": true,
+            "policy": "warn",
+            "status": "pass"
+          },
+          "repeated_entities": {
+            "affected_records": 131,
+            "evidence_complete": true,
+            "policy": "allow",
+            "status": "pass"
+          },
+          "sample_id_overlap": {
+            "affected_records": 0,
+            "evidence_complete": true,
+            "policy": "forbid",
+            "status": "pass"
+          },
+          "training_reference_coverage": {
+            "affected_records": 0,
+            "evidence_complete": true,
+            "policy": "allow",
+            "status": "pass"
+          }
+        },
+        "limitations": [
+          "Findings apply only to the supplied records, identifiers, and declared rules.",
+          "A negative scoped audit cannot exclude undisclosed pretraining or unknown training records.",
+          "Reference completeness and dataset descriptions are declarations by the evaluator.",
+          "Scientific split checks are not privacy guarantees or proof of model execution."
+        ],
+        "n_checked_records": 819,
+        "n_evaluation_records": 182,
+        "n_input_records": 182,
+        "n_reference_records": 637,
+        "reference_declared_complete": true,
+        "schema_version": "evaluation-design-audit/v1",
+        "scope": "provided_records_only",
+        "status": "pass",
+        "training_reference_present": true
+      },
+      "external_validation": {
+        "claim_scope": "declared_external_evaluation",
+        "dataset": {
+          "provenance_statement": "Original official public Caco2 holdout plus a synthetic +0.8 target-scale offset for MolLogP>=3.0; same compounds/IDs, not new private lab data or independent cohorts. Cohort: synthetic_measurement_shift_proxy",
+          "training_overlap": "none_known",
+          "visibility": "public"
+        },
+        "evaluator_relationship": "model_developer",
+        "independence_verified": false,
+        "model": {
+          "artifact_sha256": "ee33872c2bb58c2d183e9154b1be3053987af4a8f4e209ff8216bc501f2e0659",
+          "id": "caco2-training-mean",
+          "revision": "reference-v1"
+        },
+        "schema_version": "external-validation/v1"
+      },
+      "input_schema": {
+        "schema_version": "prediction-table/v1"
+      },
+      "metric_source": "reported_metrics",
+      "metrics": {
+        "mae": 0.7349776167189953
+      },
+      "protocol": {
+        "id": "plb://examples/caco2-external-validation",
+        "metrics": [
+          "mae"
+        ],
+        "primary_metric": "mae",
+        "sha256": "575f08d63cbf36608bfb62050fbc03ee08ccd74e72d17556f2e223871b31eb26",
+        "version": "1.0.0"
+      },
+      "quality_gate": {
+        "schema_version": "quality-gate/v1",
+        "status": "fail"
+      },
+      "sample_counts": {
+        "n_samples": 182
+      },
+      "slices": {
+        "regime": {
+          "high-logp": {
+            "metrics": {
+              "mae": 1.065921079826028
+            },
+            "n": 61,
+            "n_independent_units": 59,
+            "status": "evaluated",
+            "uncertainty": {
+              "confidence_level": 0.95,
+              "enabled": true,
+              "include_slices": false,
+              "method": "cluster_percentile_bootstrap",
+              "metric_basis": "clean_metrics",
+              "metrics": {
+                "mae": {
+                  "estimate": 1.065921079826028,
+                  "lower": 0.9277039073567099,
+                  "status": "evaluated",
+                  "upper": 1.216159435335864,
+                  "valid_resamples": 1000
+                }
+              },
+              "min_samples": 20,
+              "n_independent_units": 59,
+              "n_samples": 61,
+              "resamples": 1000,
+              "sampling": "independent_clusters",
+              "schema_version": "uncertainty/v1",
+              "seed": 14,
+              "status": "evaluated"
+            }
+          },
+          "other": {
+            "metrics": {
+              "mae": 0.5681383501939622
+            },
+            "n": 121,
+            "n_independent_units": 81,
+            "status": "evaluated",
+            "uncertainty": {
+              "confidence_level": 0.95,
+              "enabled": true,
+              "include_slices": false,
+              "method": "cluster_percentile_bootstrap",
+              "metric_basis": "clean_metrics",
+              "metrics": {
+                "mae": {
+                  "estimate": 0.5681383501939622,
+                  "lower": 0.48142038000013754,
+                  "status": "evaluated",
+                  "upper": 0.6628857868315959,
+                  "valid_resamples": 1000
+                }
+              },
+              "min_samples": 20,
+              "n_independent_units": 81,
+              "n_samples": 121,
+              "resamples": 1000,
+              "sampling": "independent_clusters",
+              "schema_version": "uncertainty/v1",
+              "seed": 15,
+              "status": "evaluated"
+            }
+          }
+        }
+      },
+      "task_type": "regression",
+      "uncertainty": {
+        "confidence_level": 0.95,
+        "enabled": true,
+        "include_slices": true,
+        "method": "cluster_percentile_bootstrap",
+        "metric_basis": "clean_metrics",
+        "metrics": {
+          "mae": {
+            "estimate": 0.7349776167189953,
+            "lower": 0.6470380300499986,
+            "status": "evaluated",
+            "upper": 0.8249916726294274,
+            "valid_resamples": 1000
+          }
+        },
+        "min_samples": 20,
+        "n_independent_units": 140,
+        "n_samples": 182,
+        "resamples": 1000,
+        "sampling": "independent_clusters",
+        "schema_version": "uncertainty/v1",
+        "seed": 13,
+        "status": "evaluated"
+      }
+    },
+    "privacy": {
+      "audits": {
+        "status": "not_run"
+      },
+      "mechanism": {
+        "formal_dp": false,
+        "guarantee_level": "none",
+        "mode": "none"
+      },
+      "release": {
+        "audience": "external",
+        "audit_status": "not_run",
+        "decision": "allow",
+        "excluded_fields": [
+          "local",
+          "free_form_metadata",
+          "artifact_names_and_hashes",
+          "unapproved_slices",
+          "plugin_fields"
+        ],
+        "policy_id": "reviewed-caco2-case-v1",
+        "publishable": true,
+        "reason_codes": [
+          "explicit_policy_passed"
+        ],
+        "schema_version": "release-policy/v1",
+        "status": "pass"
+      }
+    },
+    "provenance": {
+      "package": {
+        "name": "private-lab-bench"
+      }
+    },
+    "run": {
+      "created_at": null,
+      "project": null,
+      "report_type": "evaluation",
+      "run_id": null,
+      "task": "predictions"
+    }
+  },
+  "signer_statement": {
+    "evaluation_code": {
+      "package_version": "0.11.0",
+      "python_version": "3.11.15"
+    },
+    "key_id": "caco2-case-example-v1",
+    "model": {
+      "id": "caco2-training-mean",
+      "revision": "reference-v1"
+    },
+    "protocol": {
+      "id": "plb://examples/caco2-external-validation",
+      "sha256": "575f08d63cbf36608bfb62050fbc03ee08ccd74e72d17556f2e223871b31eb26",
+      "version": "1.0.0"
+    },
+    "provenance": "declared_by_signer",
+    "schema_version": "signer-profile/v1",
+    "signer_id": "caco2-case-example"
+  }
+}
