@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/private-lab-bench/"><img alt="PyPI version" src="https://img.shields.io/pypi/v/private-lab-bench?style=flat-square&amp;cacheSeconds=300"></a>
+  <a href="https://pypi.org/project/private-lab-bench/"><img alt="PyPI version" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpypi.org%2Fpypi%2Fprivate-lab-bench%2Fjson&amp;query=%24.info.version&amp;label=pypi&amp;prefix=v&amp;style=flat-square&amp;cacheSeconds=300"></a>
   <a href="https://github.com/dipeshbabu/private-lab-bench/actions/workflows/ci.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/dipeshbabu/private-lab-bench/ci.yml?branch=main&label=build&style=flat-square"></a>
   <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/pyproject.toml"><img alt="Python 3.10, 3.11, and 3.12" src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue?style=flat-square"></a>
   <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-green?style=flat-square"></a>
@@ -14,7 +14,7 @@
 <p align="center">
   <a href="https://dipeshbabu.github.io/private-lab-bench/quickstart/">Quickstart</a> ·
   <a href="https://dipeshbabu.github.io/private-lab-bench/">Documentation</a> ·
-  <a href="https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.2">v0.1.2 release</a> ·
+  <a href="https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.3">v0.1.3 release</a> ·
   <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/CONTRIBUTING.md">Contributing</a>
 </p>
 
@@ -26,7 +26,7 @@ Evaluation runs without an account, hosted service, or data upload. A receipt re
 
 ## Installation
 
-The current release is **v0.1.2**, available on [PyPI](https://pypi.org/project/private-lab-bench/0.1.2/) and [GitHub Releases](https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.2). CI tests Python 3.10, 3.11, and 3.12.
+The current release is **v0.1.3**, available on [PyPI](https://pypi.org/project/private-lab-bench/0.1.3/) and [GitHub Releases](https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.3). CI tests Python 3.10, 3.11, and 3.12.
 
 Create a virtual environment:
 
@@ -37,11 +37,11 @@ python -m venv .venv
 Activate it with `source .venv/bin/activate` on macOS/Linux, or `.venv\Scripts\Activate.ps1` in Windows PowerShell. Then install:
 
 ```sh
-python -m pip install private-lab-bench==0.1.2
+python -m pip install private-lab-bench==0.1.3
 plb --help
 ```
 
-The longer command name, `privatelabbench`, works too. See the [installation guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/install.md) for optional dependencies and source installs, or open the [quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.2/examples/notebooks/quickstart.ipynb).
+The longer command name, `privatelabbench`, works too. See the [installation guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/install.md) for optional dependencies and source installs, or open the [quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.3/examples/notebooks/quickstart.ipynb).
 
 ## Run a first evaluation
 
@@ -109,14 +109,22 @@ The comparison reports the paired improvement, bootstrap interval, and whether t
 | Follow the same model over time | [Longitudinal evaluation](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/trends.md) |
 | Evaluate submissions against owner-held labels | [Hidden benchmarks](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/hidden_benchmarks.md) |
 | Generate predictions from an approved local numeric model | [Trusted local scoring](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/trusted_scoring.md) |
+| Isolate an untrusted Python model on a Linux/gVisor host | [Sandboxed execution](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/sandbox.md) |
+| Release a bounded mean with an explicit privacy budget | [Optional OpenDP backend](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/privacy.md#optional-opendp-backend) |
 
-The initial benchmark integrations reproduce pinned upstream scoring rules:
+The benchmark integrations reproduce pinned upstream scoring rules:
 
-| Ecosystem | Initial coverage |
+| Ecosystem | Tested coverage |
 | --- | --- |
-| [TDC ADMET](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/tdc_admet.md) | Caco2 and PGP tasks with official splits and MAE/AUROC checks |
-| [Matbench](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/matbench.md) | Selected composition and structure tasks with official folds and aggregation |
-| [ProteinGym](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/proteingym.md) | A pinned DMS substitution subset with assay Spearman and protein/function aggregation |
+| [TDC ADMET](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/tdc_admet.md) | Six tasks covering permeability, transport, mutagenicity, cardiotoxicity, lipophilicity, and solubility; official splits and MAE/AUROC checks |
+| [Matbench](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/matbench.md) | Five composition/structure tasks with official folds, target units, and aggregation |
+| [ProteinGym](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/proteingym.md) | Ten pinned substitution assays with assay Spearman and protein/function aggregation |
+
+Sandbox execution requires a reviewed local runtime image and gVisor; it rejects
+missing isolation and keeps predictions private. The optional OpenDP backend
+uses public bounds and fixed sample size, checks upstream privacy maps, and
+requires a shared budget. Neither extension automatically authorizes disclosure
+of model outputs or existing exact evaluation reports.
 
 The [Caco2 case study](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/case_study.md) follows a model-selection decision through uncertainty, critical-group checks, approved export, and signature verification. It distinguishes the real public control from a synthetic measurement-shift proxy. Independent researcher onboarding trials remain pending.
 

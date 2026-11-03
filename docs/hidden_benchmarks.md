@@ -6,7 +6,7 @@ Evaluate prediction submissions locally against owner-held labels, then publish 
 
 `approved_participant_inputs` means the owner has approved participants' access to the required model inputs and opaque sample IDs. Participants return only IDs and predictions; labels stay with the owner. PLB does not distribute input features or decide whether those features may be disclosed.
 
-`owner_only` means inputs stay inside the lab. Ordinary participant predictions are rejected. Run a reviewed model with the [trusted local scorer](trusted_scoring.md), then supply its snapshot-bound scoring provenance. That scorer has no security sandbox and accepts only its reviewed numeric reference format. Submitted containers, executables, pickle files, remote/custom Python, and untrusted model execution are unsupported.
+`owner_only` means inputs stay inside the lab. Ordinary participant predictions are rejected. Run a reviewed model with the [trusted local scorer](trusted_scoring.md), then supply its snapshot-bound scoring provenance. That scorer has no security sandbox and accepts only its reviewed numeric reference format. The benchmark command does not execute submitted containers, executables, pickle files, or remote/custom Python. The separate [sandbox executor](sandbox.md) produces local predictions; it does not automatically approve them for an owner-only benchmark or for disclosure.
 
 The owner-only provenance check detects mismatched prediction/model artifacts. It is an owner declaration backed by local file hashes, not independent proof of execution or protection against a malicious model/runtime.
 
@@ -139,4 +139,9 @@ plb verify outputs/hidden-owner-demo/leaderboard.shareable.json
 
 This is an owner-side hidden-data workflow, not a complete anti-cheating system. It does not prove that owner labels, model revisions, or scoring statements are honest; prevent an owner from selecting favorable submissions; or eliminate test-set leakage, adaptive overfitting, and inference from repeated aggregate queries. Apply governance, access controls, query review, and appropriate privacy methods to the study.
 
-Future untrusted model/container execution needs an independently reviewed executor with enforced filesystem, resource, egress, and output restrictions. The versioned trusted adapter boundary exists for reviewed local scoring; this benchmark command executes no submitted model code and does not silently route untrusted submissions to that trusted interface.
+Untrusted Python inference scripts can use the separate Linux/gVisor executor,
+with enforced runtime controls and local-only outputs. Submitted container images
+remain unsupported. Valid predictions can encode hidden inputs, so isolation
+does not authorize disclosure or replace benchmark provenance approval. This
+benchmark command executes no submitted model code and does not route untrusted
+submissions to the trusted adapter.
