@@ -118,6 +118,8 @@ Check declared split integrity before scoring with `plb audit-design` or `plb ev
 
 Evaluate real Caco2 and PGP benchmark predictions with the optional [TDC ADMET integration](docs/tdc_admet.md). It preserves the pinned official test sets and metrics, checks upstream score agreement, and supports the same evaluation protocols on private ADMET tables.
 
+The [Matbench integration](docs/matbench.md) supports composition and structure tasks with pinned official folds, units, corrected probability ROC-AUC, and verified upstream fold aggregation.
+
 Describe evaluations of released models with the [external-validation profile](docs/external_validation.md): immutable model identity, declared evaluator relationship and dataset provenance, plus explicitly approved aggregate receipts that can be compared across labs.
 
 When predictions need to be generated inside the lab, use the [trusted local scorer](docs/trusted_scoring.md) with a reviewed numeric model, pinned digest, and explicit feature units. Its optional evaluation pipeline reuses the normal protocol and release controls.

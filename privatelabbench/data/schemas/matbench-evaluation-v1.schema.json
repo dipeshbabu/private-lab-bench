@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pinned five-fold Matbench evaluation v1",
+  "type": "object", "required": ["schema_version", "evaluation_id", "scope", "created_at", "shareable", "integrity"],
+  "properties": {
+    "schema_version": {"const": "matbench-evaluation/v1"}, "evaluation_id": {"type": "string"}, "scope": {"enum": ["local", "shareable"]}, "created_at": {"type": "string"},
+    "shareable": {
+      "type": "object", "required": ["dataset", "benchmark", "protocol", "task_type", "input_type", "target_unit", "metric", "upstream_metric", "folds", "metrics", "fold_score_statistics", "aggregation", "uncertainty_scope", "reference_commit", "classification_semantics"],
+      "properties": {
+        "dataset": {"enum": ["matbench_steels", "matbench_expt_is_metal", "matbench_jdft2d"]},
+        "benchmark": {"type": "object", "required": ["id", "version", "suite", "domain", "protocol"], "properties": {"id": {"type": "string"}, "version": {"type": "string"}, "suite": {"const": "matbench"}, "domain": {"const": "materials"}, "protocol": {"const": "prediction-table/v1"}}, "additionalProperties": false},
+        "protocol": {"type": "object", "required": ["id", "version", "sha256", "metrics", "primary_metric"], "properties": {"id": {"type": "string"}, "version": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "metrics": {"type": "array", "items": {"type": "string"}}, "primary_metric": {"type": "string"}}, "additionalProperties": false},
+        "task_type": {"enum": ["regression", "classification"]}, "input_type": {"enum": ["composition", "structure"]}, "target_unit": {"type": ["string", "null"]}, "metric": {"enum": ["mae", "auroc"]}, "upstream_metric": {"enum": ["mae", "rocauc"]},
+        "folds": {"type": "array", "minItems": 5, "maxItems": 5, "items": {"type": "object", "required": ["fold", "n_train", "n_test", "score"], "properties": {"fold": {"type": "integer", "minimum": 0, "maximum": 4}, "n_train": {"type": "integer", "minimum": 1}, "n_test": {"type": "integer", "minimum": 1}, "score": {"type": "number"}}, "additionalProperties": false}},
+        "metrics": {"type": "object", "minProperties": 1, "maxProperties": 1, "properties": {"mae": {"type": "number", "minimum": 0}, "auroc": {"type": "number", "minimum": 0, "maximum": 1}}, "additionalProperties": false},
+        "fold_score_statistics": {"type": "object", "required": ["mean", "std", "min", "max"], "properties": {"mean": {"type": "number"}, "std": {"type": "number", "minimum": 0}, "min": {"type": "number"}, "max": {"type": "number"}}, "additionalProperties": false},
+        "aggregation": {"const": "unweighted_mean_of_five_official_fold_scores"}, "uncertainty_scope": {"const": "across_fold_standard_deviation_not_population_ci"}, "reference_commit": {"type": "string", "pattern": "^[a-f0-9]{40}$"}, "classification_semantics": {"enum": ["probability_roc_auc_corrected", "not_applicable"]}, "release": {"type": "object"}
+      }, "additionalProperties": false
+    }, "local": {"type": "object"}, "integrity": {"type": "object"}, "signer_statement": {"type": "object"}
+  },
+  "allOf": [{"if": {"properties": {"scope": {"const": "shareable"}}}, "then": {"not": {"required": ["local"]}}}],
+  "additionalProperties": false
+}

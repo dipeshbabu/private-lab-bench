@@ -139,6 +139,24 @@ jobs:
       - name: Check adapter contracts and upstream metric agreement
         run: pytest -q tests/test_tdc_integration.py
 
+  matbench-adapter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install optional materials tooling
+        run: pip install -e '.[dev,matbench]'
+      - name: Install the pinned corrected upstream scorer
+        run: |
+          python scripts/fetch_matbench_reference.py --output-dir "$RUNNER_TEMP/matbench-reference"
+          pip install --no-deps --force-reinstall "$RUNNER_TEMP/matbench-reference"
+      - name: Check fold contracts and actual upstream metric agreement
+        run: pytest -q tests/test_matbench_integration.py
+
   docs:
     runs-on: ubuntu-latest
     steps:

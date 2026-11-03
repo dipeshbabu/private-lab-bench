@@ -79,6 +79,7 @@ class EvaluationProtocol:
         design_payload = raw.pop("sampling_design", None)
         audit_payload = raw.pop("evaluation_design", None)
         ranking_payload = raw.pop("ranking", None)
+        target_unit = raw.pop("target_unit", None)
         payload = deepcopy(_object(raw, fields, "Protocol"))
         if payload["schema_version"] != PROTOCOL_SCHEMA:
             raise ValueError(f"Expected {PROTOCOL_SCHEMA}")
@@ -150,6 +151,10 @@ class EvaluationProtocol:
             if ranking["require_uncertainty"] and not uncertainty["enabled"]:
                 raise ValueError("Ranking with uncertainty requires enabled protocol uncertainty")
             payload["ranking"] = deepcopy(ranking)
+        if target_unit is not None:
+            if not isinstance(target_unit,str) or not target_unit.strip() or len(target_unit)>128 or any(ord(char)<32 for char in target_unit):
+                raise ValueError("Protocol target_unit must be a bounded unit declaration")
+            payload["target_unit"] = target_unit
         return cls(json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8"))
 
     def as_dict(self) -> dict[str, Any]:

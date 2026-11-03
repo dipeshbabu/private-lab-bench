@@ -1,0 +1,409 @@
+{
+  "data_provenance": "real_public_upstream_benchmark",
+  "fold_definition_sha256": "94c17bc3dac32c67d33d69289927a5fec174497e74bbc47293e23d3d147e9a6d",
+  "limitations": [
+    "These mean/fixed-random baseline scores test interoperability, not competitive models or a leaderboard submission.",
+    "Classification uses corrected upstream probability ROC-AUC; historical thresholded Matbench leaderboard scores are not interchangeable.",
+    "Fold standard deviation describes the five scores; it is not a population confidence interval.",
+    "Only aggregate results are stored in this verification record; raw benchmark rows and predictions remain local."
+  ],
+  "records": [
+    {
+      "data_sha256": "473bc4957b2ea5e6465aef84bc29bb48ac34db27d69ea4ec5f508745c6fae252",
+      "dataset": "matbench_steels",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 0.0,
+          "fold": 0,
+          "n_test": 63,
+          "n_train": 249,
+          "score": 241.45907439280927,
+          "upstream_score": 241.45907439280927
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 1,
+          "n_test": 63,
+          "n_train": 249,
+          "score": 219.37703193727293,
+          "upstream_score": 219.37703193727293
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 2,
+          "n_test": 62,
+          "n_train": 250,
+          "score": 225.79322580645163,
+          "upstream_score": 225.79322580645163
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 62,
+          "n_train": 250,
+          "score": 241.20352258064514,
+          "upstream_score": 241.20352258064514
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 4,
+          "n_test": 62,
+          "n_train": 250,
+          "score": 220.889793548387,
+          "upstream_score": 220.889793548387
+        }
+      ],
+      "metric": "mae",
+      "plb_statistics": {
+        "max": 241.45907439280927,
+        "mean": 229.74452965311315,
+        "min": 219.37703193727293,
+        "std": 9.695805689394827
+      },
+      "protocol": "plb://matbench/steels@1.0.0",
+      "strategy": "mean",
+      "target_unit": "MPa",
+      "upstream_metric": "mae",
+      "upstream_statistics": {
+        "max": 241.45907439280927,
+        "mean": 229.74452965311315,
+        "min": 219.37703193727293,
+        "std": 9.695805689394827
+      }
+    },
+    {
+      "data_sha256": "473bc4957b2ea5e6465aef84bc29bb48ac34db27d69ea4ec5f508745c6fae252",
+      "dataset": "matbench_steels",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 1.1368683772161603e-13,
+          "fold": 0,
+          "n_test": 63,
+          "n_train": 249,
+          "score": 329.2858309528264,
+          "upstream_score": 329.28583095282653
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 1,
+          "n_test": 63,
+          "n_train": 249,
+          "score": 328.0741581642584,
+          "upstream_score": 328.0741581642584
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 2,
+          "n_test": 62,
+          "n_train": 250,
+          "score": 318.1187676763148,
+          "upstream_score": 318.1187676763148
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 62,
+          "n_train": 250,
+          "score": 331.29499612824145,
+          "upstream_score": 331.29499612824145
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 4,
+          "n_test": 62,
+          "n_train": 250,
+          "score": 295.63291136618705,
+          "upstream_score": 295.63291136618705
+        }
+      ],
+      "metric": "mae",
+      "plb_statistics": {
+        "max": 331.29499612824145,
+        "mean": 320.48133285756563,
+        "min": 295.63291136618705,
+        "std": 13.229748758217838
+      },
+      "protocol": "plb://matbench/steels@1.0.0",
+      "strategy": "fixed-random",
+      "target_unit": "MPa",
+      "upstream_metric": "mae",
+      "upstream_statistics": {
+        "max": 331.29499612824145,
+        "mean": 320.48133285756563,
+        "min": 295.63291136618705,
+        "std": 13.229748758217852
+      }
+    },
+    {
+      "data_sha256": "8f2a4f9bacdcbc5c2c73615629ee7986f09d39bed40ba7db52b61b2889730887",
+      "dataset": "matbench_expt_is_metal",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 0.0,
+          "fold": 0,
+          "n_test": 985,
+          "n_train": 3936,
+          "score": 0.5,
+          "upstream_score": 0.5
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 1,
+          "n_test": 984,
+          "n_train": 3937,
+          "score": 0.5,
+          "upstream_score": 0.5
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 2,
+          "n_test": 984,
+          "n_train": 3937,
+          "score": 0.5,
+          "upstream_score": 0.5
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 984,
+          "n_train": 3937,
+          "score": 0.5,
+          "upstream_score": 0.5
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 4,
+          "n_test": 984,
+          "n_train": 3937,
+          "score": 0.5,
+          "upstream_score": 0.5
+        }
+      ],
+      "metric": "auroc",
+      "plb_statistics": {
+        "max": 0.5,
+        "mean": 0.5,
+        "min": 0.5,
+        "std": 0.0
+      },
+      "protocol": "plb://matbench/expt-is-metal@1.0.0",
+      "strategy": "mean",
+      "target_unit": null,
+      "upstream_metric": "rocauc",
+      "upstream_statistics": {
+        "max": 0.5,
+        "mean": 0.5,
+        "min": 0.5,
+        "std": 0.0
+      }
+    },
+    {
+      "data_sha256": "8f2a4f9bacdcbc5c2c73615629ee7986f09d39bed40ba7db52b61b2889730887",
+      "dataset": "matbench_expt_is_metal",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 0.0,
+          "fold": 0,
+          "n_test": 985,
+          "n_train": 3936,
+          "score": 0.45624479497349046,
+          "upstream_score": 0.45624479497349046
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 1,
+          "n_test": 984,
+          "n_train": 3937,
+          "score": 0.452697678261588,
+          "upstream_score": 0.452697678261588
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 2,
+          "n_test": 984,
+          "n_train": 3937,
+          "score": 0.49506733867636127,
+          "upstream_score": 0.49506733867636127
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 984,
+          "n_train": 3937,
+          "score": 0.5188630917954227,
+          "upstream_score": 0.5188630917954227
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 4,
+          "n_test": 984,
+          "n_train": 3937,
+          "score": 0.5143311575642403,
+          "upstream_score": 0.5143311575642403
+        }
+      ],
+      "metric": "auroc",
+      "plb_statistics": {
+        "max": 0.5188630917954227,
+        "mean": 0.48744081225422053,
+        "min": 0.452697678261588,
+        "std": 0.028102993013324362
+      },
+      "protocol": "plb://matbench/expt-is-metal@1.0.0",
+      "strategy": "fixed-random",
+      "target_unit": null,
+      "upstream_metric": "rocauc",
+      "upstream_statistics": {
+        "max": 0.5188630917954227,
+        "mean": 0.48744081225422053,
+        "min": 0.452697678261588,
+        "std": 0.028102993013324362
+      }
+    },
+    {
+      "data_sha256": "26057dc4524e193e32abffb296ce819b58b6e11d1278cae329a2f97817a4eddf",
+      "dataset": "matbench_jdft2d",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 1.4210854715202004e-14,
+          "fold": 0,
+          "n_test": 128,
+          "n_train": 508,
+          "score": 53.14474674327124,
+          "upstream_score": 53.14474674327123
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 1,
+          "n_test": 127,
+          "n_train": 509,
+          "score": 72.81179141887425,
+          "upstream_score": 72.81179141887425
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 2,
+          "n_test": 127,
+          "n_train": 509,
+          "score": 83.12200287791626,
+          "upstream_score": 83.12200287791626
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 127,
+          "n_train": 509,
+          "score": 61.317426388547496,
+          "upstream_score": 61.317426388547496
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 4,
+          "n_test": 127,
+          "n_train": 509,
+          "score": 66.0294695504642,
+          "upstream_score": 66.0294695504642
+        }
+      ],
+      "metric": "mae",
+      "plb_statistics": {
+        "max": 83.12200287791626,
+        "mean": 67.28508739581468,
+        "min": 53.14474674327124,
+        "std": 10.183232661457989
+      },
+      "protocol": "plb://matbench/jdft2d@1.0.0",
+      "strategy": "mean",
+      "target_unit": "meV/atom",
+      "upstream_metric": "mae",
+      "upstream_statistics": {
+        "max": 83.12200287791626,
+        "mean": 67.28508739581468,
+        "min": 53.14474674327123,
+        "std": 10.183232661457994
+      }
+    },
+    {
+      "data_sha256": "26057dc4524e193e32abffb296ce819b58b6e11d1278cae329a2f97817a4eddf",
+      "dataset": "matbench_jdft2d",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 0.0,
+          "fold": 0,
+          "n_test": 128,
+          "n_train": 508,
+          "score": 127.05347477080035,
+          "upstream_score": 127.05347477080035
+        },
+        {
+          "absolute_error": 2.842170943040401e-14,
+          "fold": 1,
+          "n_test": 127,
+          "n_train": 509,
+          "score": 135.80363740719162,
+          "upstream_score": 135.8036374071916
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 2,
+          "n_test": 127,
+          "n_train": 509,
+          "score": 133.46622598970234,
+          "upstream_score": 133.46622598970234
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 127,
+          "n_train": 509,
+          "score": 139.64240711122417,
+          "upstream_score": 139.64240711122417
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 4,
+          "n_test": 127,
+          "n_train": 509,
+          "score": 132.58019814126766,
+          "upstream_score": 132.58019814126766
+        }
+      ],
+      "metric": "mae",
+      "plb_statistics": {
+        "max": 139.64240711122417,
+        "mean": 133.70918868403723,
+        "min": 127.05347477080035,
+        "std": 4.128485789487239
+      },
+      "protocol": "plb://matbench/jdft2d@1.0.0",
+      "strategy": "fixed-random",
+      "target_unit": "meV/atom",
+      "upstream_metric": "mae",
+      "upstream_statistics": {
+        "max": 139.64240711122417,
+        "mean": 133.70918868403723,
+        "min": 127.05347477080035,
+        "std": 4.128485789487236
+      }
+    }
+  ],
+  "reference_commit": "35f88110a51adf817a53515780d99fc34f614bf8",
+  "reference_scorer_sha256": "f791263c675c45b6938c78d856676a6821ac6879526bc9aca7d82523303c3414",
+  "schema_version": "matbench-parity-result/v1",
+  "tolerance": 1e-12,
+  "versions": {
+    "matbench": "0.6",
+    "matminer": "0.10.1",
+    "monty": "2026.10.21",
+    "numpy": "2.5.4",
+    "pandas": "2.3.3",
+    "pymatgen": "2026.10.24",
+    "scikit-learn": "1.9.1"
+  }
+}

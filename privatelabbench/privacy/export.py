@@ -378,6 +378,10 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
         from privatelabbench.leaderboards import sanitize_leaderboard
         clean = sanitize_leaderboard(shared,policy,_mapping(candidate.get("local",{})).get("protocol_definition"))
         identifier = "leaderboard_id"
+    elif schema == "matbench-evaluation/v1":
+        from privatelabbench.integrations.matbench import sanitize_result
+        clean = sanitize_result(shared,policy)
+        identifier = "evaluation_id"
     else:
         raise ValueError("Unsupported export schema")
     if not clean.get("evaluation", clean).get("metrics", clean.get("metric")):

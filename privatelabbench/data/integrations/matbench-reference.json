@@ -1,0 +1,71 @@
+{
+  "commit": "35f88110a51adf817a53515780d99fc34f614bf8",
+  "files": [
+    {
+      "path": "setup.py",
+      "size": 1172,
+      "sha256": "af333cf1b512d06301896266766031882ff7964cba161cb7ec1e3ffc0f7cb10d",
+      "url": "https://raw.githubusercontent.com/materialsproject/matbench/35f88110a51adf817a53515780d99fc34f614bf8/setup.py"
+    },
+    {
+      "path": "LICENSE",
+      "size": 1089,
+      "sha256": "1bb3c2838fc924866eb6795fe54e1b91b9a835c21388f3aa57e7f983755ff1a5",
+      "url": "https://raw.githubusercontent.com/materialsproject/matbench/35f88110a51adf817a53515780d99fc34f614bf8/LICENSE"
+    },
+    {
+      "path": "matbench/__init__.py",
+      "size": 107,
+      "sha256": "909686a76841447490afeb69478f5ac00ad24b83e7c46d4d152444e7a1590490",
+      "url": "https://raw.githubusercontent.com/materialsproject/matbench/35f88110a51adf817a53515780d99fc34f614bf8/matbench/__init__.py"
+    },
+    {
+      "path": "matbench/bench.py",
+      "size": 22615,
+      "sha256": "dc38a5eef58375f525f59806852af588a276d91736894acafe0839a0b55c9ad8",
+      "url": "https://raw.githubusercontent.com/materialsproject/matbench/35f88110a51adf817a53515780d99fc34f614bf8/matbench/bench.py"
+    },
+    {
+      "path": "matbench/constants.py",
+      "size": 1037,
+      "sha256": "3d03ca889ce2ed7d4d393aeb56d56fb5bb7409fd29e7b43719266f330273bf58",
+      "url": "https://raw.githubusercontent.com/materialsproject/matbench/35f88110a51adf817a53515780d99fc34f614bf8/matbench/constants.py"
+    },
+    {
+      "path": "matbench/data_ops.py",
+      "size": 4725,
+      "sha256": "f791263c675c45b6938c78d856676a6821ac6879526bc9aca7d82523303c3414",
+      "url": "https://raw.githubusercontent.com/materialsproject/matbench/35f88110a51adf817a53515780d99fc34f614bf8/matbench/data_ops.py"
+    },
+    {
+      "path": "matbench/metadata.py",
+      "size": 624,
+      "sha256": "e4c38a233b8826d6e5842ad0a8f7d78d0412d8cfbb19f9a837fe1b371325fa29",
+      "url": "https://raw.githubusercontent.com/materialsproject/matbench/35f88110a51adf817a53515780d99fc34f614bf8/matbench/metadata.py"
+    },
+    {
+      "path": "matbench/task.py",
+      "size": 30181,
+      "sha256": "1e80efeeae1de89e882c5def73a2d5512e345f3aef3ef5f90f437f93f9b2a244",
+      "url": "https://raw.githubusercontent.com/materialsproject/matbench/35f88110a51adf817a53515780d99fc34f614bf8/matbench/task.py"
+    },
+    {
+      "path": "matbench/util.py",
+      "size": 4990,
+      "sha256": "391d87a8084d21e072e74342cd2c9cfa1faed6f68aaf058f6af94ae09935e971",
+      "url": "https://raw.githubusercontent.com/materialsproject/matbench/35f88110a51adf817a53515780d99fc34f614bf8/matbench/util.py"
+    },
+    {
+      "path": "matbench/matbench_v0.1_dataset_metadata.json",
+      "size": 2564,
+      "sha256": "bd8d2962406a1829bda984c38c36b4f3ce6acc20e46d34a42d3ba5294a1df787",
+      "url": "https://raw.githubusercontent.com/materialsproject/matbench/35f88110a51adf817a53515780d99fc34f614bf8/matbench/matbench_v0.1_dataset_metadata.json"
+    },
+    {
+      "path": "matbench/matbench_v0.1_validation.json",
+      "size": 46006187,
+      "sha256": "94c17bc3dac32c67d33d69289927a5fec174497e74bbc47293e23d3d147e9a6d",
+      "url": "https://raw.githubusercontent.com/materialsproject/matbench/35f88110a51adf817a53515780d99fc34f614bf8/matbench/matbench_v0.1_validation.json"
+    }
+  ]
+}
