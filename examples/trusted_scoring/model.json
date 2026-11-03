@@ -1,0 +1,1 @@
+{"schema_version":"linear-model/v1","feature_names":["molecular_weight","logp"],"coefficients":[-0.01,-0.5],"intercept":1.0}

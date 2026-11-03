@@ -107,6 +107,18 @@ def build_parser() -> argparse.ArgumentParser:
     audit_design.add_argument("--protocol", required=True, help="Local evaluation-design/v1 YAML, or an evaluation protocol containing evaluation_design.")
     audit_design.add_argument("--out", default="reports/design_audit.json")
 
+    score = sub.add_parser("score", help="Run an explicitly approved local numeric model; trusted in-process execution, without isolation.")
+    score.add_argument("--model", required=True, help="Reviewed model-manifest/v1 YAML with an immutable local artifact digest.")
+    score.add_argument("--data", required=True)
+    score.add_argument("--units", required=True, help="YAML mapping of every feature name to its declared input unit.")
+    score.add_argument("--data-version", default=None)
+    score.add_argument("--output", required=True, help="Fresh local-only prediction CSV path.")
+    score.add_argument("--target", default=None, help="Explicitly copy this separate target column for the opt-in evaluation pipeline.")
+    score.add_argument("--protocol", default=None)
+    score.add_argument("--evaluate-output-dir", default=None)
+    score.add_argument("--release-policy", default=None)
+    score.add_argument("--validation-profile", default=None)
+
     tdc_prepare = sub.add_parser("tdc-prepare", help="Verify an official TDC cache and create a fixed-test prediction template.")
     tdc_prepare.add_argument("--dataset", required=True)
     tdc_prepare.add_argument("--cache-dir", default="outputs/tdc")
@@ -842,6 +854,9 @@ def main() -> int:
         return simple_evaluation_command(args)
     if args.command == "audit-design":
         return audit_design_command(args)
+    if args.command == "score":
+        from privatelabbench.scoring import score_command
+        return score_command(args)
     if args.command in {"tdc-prepare", "tdc-evaluate"}:
         return tdc_command(args)
     if args.command == "run":

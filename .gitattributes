@@ -1,0 +1,2 @@
+# Reviewed model digests identify exact bytes on every checkout platform.
+examples/trusted_scoring/model.json -text

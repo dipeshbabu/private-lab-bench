@@ -6,9 +6,7 @@ from dataclasses import dataclass, field
 from hashlib import sha256
 from io import BytesIO
 import json
-import os
 from pathlib import Path
-import tempfile
 from typing import Any, Mapping
 
 import numpy as np
@@ -16,6 +14,7 @@ import pandas as pd
 import yaml
 
 from privatelabbench.privacy.export import atomic_write_json
+from privatelabbench.core.local_io import atomic_write_csv as _write_csv
 
 REFERENCE_VERSION = "0.4.1"
 ARCHIVE_ID = "4426004"
@@ -208,27 +207,6 @@ def align_predictions(
         "test",
         predictions=pd.to_numeric(frame[prediction_column], errors="raise").to_numpy(),
     )
-
-
-def _write_csv(path: Path, frame: pd.DataFrame) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            newline="",
-            dir=path.parent,
-            prefix=".plb-tdc-",
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            temporary = Path(handle.name)
-            frame.to_csv(handle, index=False)
-        os.replace(temporary, path)
-    finally:
-        if temporary:
-            temporary.unlink(missing_ok=True)
 
 
 def prepare_template(

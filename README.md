@@ -118,6 +118,8 @@ Evaluate real Caco2 and PGP benchmark predictions with the optional [TDC ADMET i
 
 Describe evaluations of released models with the [external-validation profile](docs/external_validation.md): immutable model identity, declared evaluator relationship and dataset provenance, plus explicitly approved aggregate receipts that can be compared across labs.
 
+When predictions need to be generated inside the lab, use the [trusted local scorer](docs/trusted_scoring.md) with a reviewed numeric model, pinned digest, and explicit feature units. Its optional evaluation pipeline reuses the normal protocol and release controls.
+
 ## Inspect Evaluation Receipts
 
 `evaluation-receipt/v1` separates local context from aggregate information intended for exchange:
