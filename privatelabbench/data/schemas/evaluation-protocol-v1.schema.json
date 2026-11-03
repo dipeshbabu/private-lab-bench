@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PrivateLabBench immutable evaluation protocol v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "version",
+    "task",
+    "task_type",
+    "input_schema",
+    "metrics",
+    "primary_metric",
+    "uncertainty",
+    "slices",
+    "comparison",
+    "quality_gate",
+    "privacy",
+    "release",
+    "artifact_versions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "evaluation-protocol/v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^plb://[a-z0-9][a-z0-9-]*(?:/[a-z0-9][a-z0-9-]*)+$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$"
+    },
+    "task": {
+      "enum": [
+        "predictions",
+        "tabular"
+      ]
+    },
+    "task_type": {
+      "enum": [
+        "regression",
+        "classification",
+        "multiclass"
+      ]
+    },
+    "input_schema": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "require_sample_id",
+        "class_labels"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "prediction-table/v1"
+        },
+        "require_sample_id": {
+          "type": "boolean"
+        },
+        "class_labels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "primary_metric": {
+      "type": "string"
+    },
+    "uncertainty": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "confidence_level",
+        "resamples",
+        "seed",
+        "min_samples",
+        "include_slices",
+        "method"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "confidence_level": {
+          "type": "number"
+        },
+        "resamples": {
+          "type": "integer"
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "min_samples": {
+          "type": "integer"
+        },
+        "include_slices": {
+          "type": "boolean"
+        },
+        "method": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "slices": {
+      "type": "object",
+      "required": [
+        "required",
+        "optional",
+        "min_size"
+      ],
+      "properties": {
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "optional": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "min_size": {
+          "type": "integer",
+          "minimum": 2
+        }
+      },
+      "additionalProperties": false
+    },
+    "comparison": {
+      "type": "object",
+      "required": [
+        "metric",
+        "confidence_level",
+        "resamples",
+        "permutations",
+        "seed",
+        "min_samples",
+        "practical_threshold",
+        "noninferiority_margin",
+        "include_slice_uncertainty",
+        "min_slice_size"
+      ],
+      "properties": {
+        "metric": {
+          "type": "string"
+        },
+        "confidence_level": {
+          "type": "number"
+        },
+        "resamples": {
+          "type": "integer"
+        },
+        "permutations": {
+          "type": "integer"
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "min_samples": {
+          "type": "integer"
+        },
+        "practical_threshold": {
+          "type": "number"
+        },
+        "noninferiority_margin": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "include_slice_uncertainty": {
+          "type": "boolean"
+        },
+        "min_slice_size": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "quality_gate": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "quality-policy-v1.schema.json"
+        }
+      ]
+    },
+    "privacy": {
+      "type": "object",
+      "required": [
+        "mode",
+        "epsilon",
+        "sensitivity",
+        "seed"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string"
+        },
+        "epsilon": {
+          "type": "number"
+        },
+        "sensitivity": {
+          "type": "number"
+        },
+        "seed": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "release": {
+      "$ref": "release-policy-v1.schema.json"
+    },
+    "artifact_versions": {
+      "const": {
+        "report": "0.2",
+        "receipt": "evaluation-receipt/v1",
+        "uncertainty": "uncertainty/v1",
+        "comparison": "paired-comparison-artifact/v1"
+      }
+    }
+  },
+  "additionalProperties": false
+}

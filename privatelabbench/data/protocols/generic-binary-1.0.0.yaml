@@ -1,0 +1,58 @@
+schema_version: evaluation-protocol/v1
+id: plb://generic/binary
+version: 1.0.0
+task: predictions
+task_type: classification
+input_schema:
+  schema_version: prediction-table/v1
+  require_sample_id: true
+  class_labels: []
+metrics:
+- auroc
+- accuracy
+- f1
+primary_metric: auroc
+uncertainty:
+  enabled: true
+  confidence_level: 0.95
+  resamples: 1000
+  seed: 13
+  min_samples: 20
+  include_slices: false
+  method: percentile_bootstrap
+slices:
+  required: []
+  optional:
+  - site
+  - batch
+  min_size: 5
+comparison:
+  metric: auroc
+  confidence_level: 0.95
+  resamples: 1000
+  permutations: 1000
+  seed: 13
+  min_samples: 20
+  practical_threshold: 0.0
+  noninferiority_margin: null
+  include_slice_uncertainty: false
+  min_slice_size: 5
+quality_gate: null
+privacy:
+  mode: none
+  epsilon: 8.0
+  sensitivity: 1.0
+  seed: 13
+release:
+  schema_version: release-policy/v1
+  id: generic-binary-v1
+  enabled: false
+  min_samples: 20
+  min_cell_size: 5
+  require_privacy_audit: false
+  include_protocol: false
+artifact_versions:
+  report: '0.2'
+  receipt: evaluation-receipt/v1
+  uncertainty: uncertainty/v1
+  comparison: paired-comparison-artifact/v1

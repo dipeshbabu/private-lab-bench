@@ -7,6 +7,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 import hashlib
 import json
+import re
 import math
 import os
 from pathlib import Path
@@ -94,11 +95,11 @@ def _statistics(value: Any) -> dict[str, Any]:
 
 def validate_policy(value: Any) -> dict[str, Any]:
     policy = dict(_mapping(value))
-    allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "include_input_schema", "include_quality_gate", "public_benchmark", "slices", "reviewed_repeat", "review_reference"}
+    allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "include_input_schema", "include_quality_gate", "include_protocol", "public_benchmark", "slices", "reviewed_repeat", "review_reference"}
     if set(policy) - allowed or policy.get("schema_version") != POLICY_SCHEMA:
         raise ValueError("Invalid release policy schema or unknown policy fields")
     _token(policy.get("id"))
-    for key in ("enabled", "require_privacy_audit", "include_input_schema", "include_quality_gate", "reviewed_repeat"):
+    for key in ("enabled", "require_privacy_audit", "include_input_schema", "include_quality_gate", "include_protocol", "reviewed_repeat"):
         if key in policy and not isinstance(policy[key], bool):
             raise ValueError(f"{key} must be boolean")
     for key, default in (("min_samples", 20), ("min_cell_size", 5)):
@@ -198,6 +199,16 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
             "artifacts": [],
         }
         identifier = "receipt_id"
+        if policy.get("include_protocol") and evaluation.get("protocol"):
+            protocol = _mapping(evaluation["protocol"])
+            # The identity is opt-in metadata. Never export paths or the private rules.
+            from privatelabbench.protocols import ID_PATTERN, VERSION_PATTERN
+            if not re.fullmatch(ID_PATTERN, str(protocol.get("id", ""))) or not re.fullmatch(VERSION_PATTERN, str(protocol.get("version", ""))) or not re.fullmatch(r"[0-9a-f]{64}", str(protocol.get("sha256", ""))):
+                raise ValueError("Invalid evaluation protocol identity")
+            metrics = protocol.get("metrics")
+            if not isinstance(metrics, list) or not metrics or any(metric not in METRICS for metric in metrics) or len(set(metrics)) != len(metrics) or protocol.get("primary_metric") not in metrics:
+                raise ValueError("Invalid evaluation protocol metrics")
+            clean["evaluation"]["protocol"] = {key: protocol[key] for key in ("id", "version", "sha256", "metrics", "primary_metric")}
         if policy.get("include_quality_gate") and evaluation.get("quality_gate"):
             gate = _mapping(evaluation["quality_gate"])
             if gate.get("schema_version") != "quality-gate/v1" or gate.get("status") not in {"pass", "fail", "investigate"}:

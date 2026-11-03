@@ -41,6 +41,8 @@ jobs:
           plb list-tasks | grep -q multi-site
           plb list-packs | grep -q community-tabular-regression
           plb list-packs | grep -q community-proteins-binary
+          plb list-protocols | grep -q plb://generic/regression@1.0.0
+          plb show-protocol plb://generic/binary@1.0.0
       - name: Smoke test prediction CLI
         run: |
           plb eval-predictions examples/predictions_demo.csv --target label --prediction-column pred --privacy metric_perturbation --epsilon 8 --report outputs/ci_prediction_report.md --json-report outputs/ci_prediction_report.json
@@ -101,6 +103,8 @@ jobs:
           /tmp/plb-wheel/bin/plb list-tasks | grep -q predictions
           /tmp/plb-wheel/bin/plb list-packs | grep -q community-molecules-regression
           /tmp/plb-wheel/bin/plb list-packs | grep -q community-proteins-binary
+          /tmp/plb-wheel/bin/plb list-protocols | grep -q plb://generic/regression@1.0.0
+          /tmp/plb-wheel/bin/plb show-protocol plb://generic/binary@1.0.0
           /tmp/plb-wheel/bin/plb run-pack community-tabular-regression@1.0.0
           /tmp/plb-wheel/bin/plb verify reports/benchmark_packs/tabular_regression_receipt.shareable.json
 

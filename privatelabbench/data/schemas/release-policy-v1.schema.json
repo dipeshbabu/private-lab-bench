@@ -12,6 +12,7 @@
     "require_privacy_audit": {"type": "boolean", "default": true},
     "include_input_schema": {"type": "boolean", "default": false},
     "include_quality_gate": {"type": "boolean", "default": false},
+    "include_protocol": {"type": "boolean", "default": false},
     "public_benchmark": {
       "type": "object",
       "properties": {"id": {"type": "string"}, "version": {"type": "string"}, "suite": {"type": "string"}, "domain": {"type": "string"}, "protocol": {"type": "string"}},

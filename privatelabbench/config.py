@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import yaml
+
+if TYPE_CHECKING:
+    from privatelabbench.protocols import EvaluationProtocol
 
 
 @dataclass(frozen=True)
@@ -13,6 +16,7 @@ class RunnerConfig:
     workflow: str
     raw: dict[str, Any]
     config_path: str | None = None
+    protocol: EvaluationProtocol | None = None
 
     @property
     def task_id(self) -> str:
@@ -21,13 +25,26 @@ class RunnerConfig:
         return self.workflow
 
 
-def load_config(path: str) -> RunnerConfig:
+def load_config(path: str, *, protocol_override: str | None = None) -> RunnerConfig:
     config_path = Path(path)
     if not config_path.exists():
         raise FileNotFoundError(f"Config file does not exist: {path}")
     payload = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError("Config must be a YAML mapping.")
+
+    protocol = None
+    reference = protocol_override or payload.get("protocol")
+    if reference is not None:
+        from privatelabbench.protocols import apply_protocol, resolve_protocol
+        if not isinstance(reference, str):
+            raise ValueError("protocol must be an exact plb:// reference or a local YAML path")
+        protocol = resolve_protocol(reference, base=Path.cwd() if protocol_override else config_path.resolve().parent)
+        if protocol_override and payload.get("protocol"):
+            configured = resolve_protocol(payload["protocol"], base=config_path.resolve().parent)
+            if configured.sha256 != protocol.sha256:
+                raise ValueError("--protocol conflicts with the protocol declared in the config")
+        payload = apply_protocol(payload, protocol)
 
     project = str(payload.get("project", config_path.stem))
     task_value = payload.get("task")
@@ -42,6 +59,7 @@ def load_config(path: str) -> RunnerConfig:
         workflow=task_id,
         raw=payload,
         config_path=str(config_path.resolve()),
+        protocol=protocol,
     )
 
 

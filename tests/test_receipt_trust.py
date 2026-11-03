@@ -108,6 +108,20 @@ def test_protocol_digest_is_pinned_independently_and_bound_to_signature(signed):
     assert result["signature_valid"] is False
 
 
+def test_protocol_identity_in_receipt_is_bound_automatically_and_cannot_conflict(signed):
+    path, payload, trust, signer = signed
+    source = deepcopy(payload)
+    source["shareable"]["evaluation"]["protocol"] = {**signer["protocol"], "metrics": ["mae"], "primary_metric": "mae"}
+    source.pop("signer_statement")
+    auto = {key: value for key, value in signer.items() if key != "protocol"}
+    bound = sign_artifact(source, auto)
+    assert bound["signer_statement"]["protocol"] == signer["protocol"]
+    assert verify_receipt(_write(path, bound), trust_store=trust, expected_protocol_sha256="a" * 64)["valid"]
+    source["shareable"]["evaluation"]["protocol"]["sha256"] = "b" * 64
+    with pytest.raises(ValueError, match="conflicts"):
+        sign_artifact(source, signer)
+
+
 def test_hmac_remains_bilateral_without_public_identity(tmp_path):
     source = json.loads(Path("examples/reports/evaluation_receipt_example.json").read_text())
     path = _write(tmp_path / "hmac.json", attach_integrity_metadata(source, signing_secret="local-test-secret"))
