@@ -94,7 +94,7 @@ pythonpath = ["."]
 target-version = "py310"
 line-length = 88
 include = ["*.py", "*.pyi", "pyproject.toml"]
-extend-exclude = ["outputs", "reports", "build", "dist", ".venv", "site"]
+extend-exclude = ["outputs", "reports/**", "build", "dist", ".venv", "site"]
 force-exclude = true
 
 [tool.ruff.lint]

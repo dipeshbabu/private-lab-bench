@@ -22,15 +22,24 @@ def sha256_file(path: str | Path) -> str:
     return digest.hexdigest()
 
 
-def _artifact(kind: str, path: str | Path | None, *, required: bool = True) -> dict[str, Any] | None:
+def _artifact(
+    kind: str, path: str | Path | None, *, required: bool = True
+) -> dict[str, Any] | None:
     if not path:
         return None
     artifact_path = Path(path)
     if not artifact_path.exists():
         if required:
-            raise FileNotFoundError(f"Manifest artifact does not exist: {artifact_path}")
+            raise FileNotFoundError(
+                f"Manifest artifact does not exist: {artifact_path}"
+            )
         return None
-    return {"kind": kind, "path": str(artifact_path), "name": artifact_path.name, "sha256": sha256_file(artifact_path)}
+    return {
+        "kind": kind,
+        "path": str(artifact_path),
+        "name": artifact_path.name,
+        "sha256": sha256_file(artifact_path),
+    }
 
 
 def build_run_manifest(
@@ -76,7 +85,10 @@ def build_run_manifest(
             "domain": summary.get("domain"),
             "protocol": summary.get("benchmark_protocol"),
         },
-        "runner": {"id": summary.get("runner_id"), "label": summary.get("runner_label")},
+        "runner": {
+            "id": summary.get("runner_id"),
+            "label": summary.get("runner_label"),
+        },
         "attestation": collect_runner_attestation(),
         "privacy": report.get("privacy", {}),
         "artifacts": artifacts,
@@ -114,7 +126,9 @@ def write_run_manifest(
         markdown_report_path=markdown_report_path,
         signing_secret=signing_secret,
     )
-    path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
     # Receipts are presentation/share artifacts layered on top of the local manifest.
     # Import locally to keep manifest verification independent and avoid a module cycle.
@@ -134,13 +148,20 @@ def write_run_manifest(
     return path
 
 
-def verify_run_manifest(path: str | Path, *, signing_secret: str | None = None) -> dict[str, Any]:
+def verify_run_manifest(
+    path: str | Path, *, signing_secret: str | None = None
+) -> dict[str, Any]:
     manifest_path = Path(path)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     integrity = manifest.get("integrity")
     if not isinstance(integrity, dict):
-        return {"valid": False, "reason": "missing_integrity_metadata", "path": str(manifest_path)}
+        return {
+            "valid": False,
+            "reason": "missing_integrity_metadata",
+            "path": str(manifest_path),
+        }
     from privatelabbench.reports.integrity import compute_payload_sha256, sign_payload
+
     expected_hash = str(integrity.get("payload_sha256", ""))
     actual_hash = compute_payload_sha256(manifest)
     hash_valid = bool(expected_hash) and hmac.compare_digest(expected_hash, actual_hash)
@@ -148,7 +169,9 @@ def verify_run_manifest(path: str | Path, *, signing_secret: str | None = None) 
     if signing_secret:
         expected_signature = str(integrity.get("signature", ""))
         actual_signature = sign_payload(manifest, signing_secret)
-        signature_valid = bool(expected_signature) and hmac.compare_digest(expected_signature, actual_signature)
+        signature_valid = bool(expected_signature) and hmac.compare_digest(
+            expected_signature, actual_signature
+        )
     artifact_results: list[dict[str, Any]] = []
     artifacts_valid = True
     report_valid = True
@@ -158,13 +181,29 @@ def verify_run_manifest(path: str | Path, *, signing_secret: str | None = None) 
         actual_artifact_hash = sha256_file(artifact_path) if exists else None
         expected_artifact_hash = artifact.get("sha256")
         valid_hash = exists and actual_artifact_hash == expected_artifact_hash
-        artifact_results.append({"kind": artifact.get("kind"), "path": str(artifact_path), "exists": exists, "hash_valid": valid_hash, "sha256": actual_artifact_hash, "expected_sha256": expected_artifact_hash})
+        artifact_results.append(
+            {
+                "kind": artifact.get("kind"),
+                "path": str(artifact_path),
+                "exists": exists,
+                "hash_valid": valid_hash,
+                "sha256": actual_artifact_hash,
+                "expected_sha256": expected_artifact_hash,
+            }
+        )
         artifacts_valid = artifacts_valid and bool(valid_hash)
         if artifact.get("kind") == "json_report" and exists:
-            report_check = verify_report(str(artifact_path), signing_secret=signing_secret)
+            report_check = verify_report(
+                str(artifact_path), signing_secret=signing_secret
+            )
             report_valid = bool(report_check["valid"])
             artifact_results[-1]["report_integrity_valid"] = report_valid
-    valid = hash_valid and artifacts_valid and report_valid and (signature_valid is not False)
+    valid = (
+        hash_valid
+        and artifacts_valid
+        and report_valid
+        and (signature_valid is not False)
+    )
     reason = "ok"
     if not hash_valid:
         reason = "manifest_hash_check_failed"
