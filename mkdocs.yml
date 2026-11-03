@@ -37,6 +37,7 @@ nav:
   - ProteinGym DMS integration: proteingym.md
   - External model validation: external_validation.md
   - Trusted local model scoring: trusted_scoring.md
+  - Sandboxed model execution: sandbox.md
   - Hidden benchmark ownership: hidden_benchmarks.md
   - Paired model comparison: paired_comparison.md
   - Tasks and plugins: tasks.md

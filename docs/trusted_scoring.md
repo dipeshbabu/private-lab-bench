@@ -49,10 +49,18 @@ The reference scorer bounds artifact size at 8 MiB, input CSV size at 64 MiB, an
 
 `TrustedModelAdapter` exposes the versioned `trusted-model-adapter/v1` interface: load approved artifact bytes, then map an explicitly ordered numeric matrix to one prediction per observation. PLB owns ID alignment, schema/unit/digest checks, local provenance, and evaluation. The current dispatcher accepts the reviewed built-in adapter only. It does not auto-discover or import a Python module named in a manifest.
 
-A future approved adapter remains trusted code with process access. Untrusted submitted models require a separate, independently reviewed executor that enforces filesystem isolation, egress denial, resource limits, and a restricted output channel, with security testing. Those controls are not implemented here. An `untrusted_isolated` request is rejected rather than dispatched to the trusted interface.
+An approved adapter remains trusted code with process access. Untrusted submitted
+scripts use the separate [Linux/gVisor executor](sandbox.md), which enforces
+runtime controls and keeps predictions local. It has its own script contract and
+does not accept this trusted manifest format. An `untrusted_isolated` request to
+the trusted scorer is still rejected.
 
 ## Hidden benchmark choices
 
-Prediction submissions require that participants have approved access to the model inputs. If the inputs must remain hidden, the benchmark owner must execute a suitably trusted model locally, or use a separately reviewed isolated runner for untrusted models once one exists. The trusted scorer does not make an adversarial model safe to run on hidden data.
+Prediction submissions require that participants have approved access to the
+model inputs. For owner-only hidden benchmarks, use the reviewed trusted scorer.
+The sandbox executor does not automatically authorize its predictions for that
+workflow; valid numeric outputs can encode hidden features and need separate
+disclosure review.
 
 Keep local inference logs and artifacts within the lab, review aggregate release separately, and pin [trusted receipt signers](receipt_trust.md) when issuer identity matters. Model digests establish which artifact was selected; they do not prove model quality, honest provenance, or evaluator independence.

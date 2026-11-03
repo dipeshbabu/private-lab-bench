@@ -173,6 +173,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
+    sandbox = sub.add_parser(
+        "sandbox-score",
+        help="Run an untrusted Python model with Linux/gVisor isolation; local outputs only.",
+    )
+    sandbox.add_argument("--model", required=True)
+    sandbox.add_argument("--model-sha256", required=True)
+    sandbox.add_argument(
+        "--runtime-image",
+        required=True,
+        help="Reviewed local Docker image ID: sha256:<digest>.",
+    )
+    sandbox.add_argument("--data", required=True)
+    sandbox.add_argument("--feature", action="append", required=True)
+    sandbox.add_argument("--sample-id", default="sample_id")
+    sandbox.add_argument(
+        "--task-type", choices=["regression", "classification"], required=True
+    )
+    sandbox.add_argument("--seconds", type=int, default=30)
+    sandbox.add_argument("--memory-mb", type=int, default=512)
+    sandbox.add_argument("--output", required=True)
+
     evaluate = sub.add_parser(
         "evaluate",
         help="Evaluate a prediction CSV and write a verifiable local receipt.",
@@ -1842,6 +1863,10 @@ def eval_predictions(args: argparse.Namespace) -> int:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
+    if args.command == "sandbox-score":
+        from privatelabbench.sandbox import sandbox_command
+
+        return sandbox_command(args)
     if args.command in {"evaluate", "init"}:
         return simple_evaluation_command(args)
     if args.command == "audit-design":
