@@ -2,7 +2,7 @@
   "created_at": "2026-11-03T00:00:00+00:00",
   "integrity": {
     "algorithm": "sha256",
-    "payload_sha256": "49472b55d3f5521dca490f384c4f4fedc91f90c13f1d482eaac3c0bd72f3a04a",
+    "payload_sha256": "ee87be8d38f22bb5327726d6d425475c4dda72f7cbde88374f0d1cf34479632f",
     "signed": false
   },
   "receipt_id": "known-good:proteins-binary@1.0.0",
@@ -68,7 +68,7 @@
       "attestation_id": "known-good",
       "package": {
         "name": "private-lab-bench",
-        "version": "0.1.0"
+        "version": "0.1.1"
       }
     },
     "run": {

@@ -15,15 +15,18 @@ Before tagging:
 Create a tag:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.1.1
+git push origin v0.1.1
 ```
 
 The release workflow refuses to publish if the tag version differs from package metadata.
+After PyPI publishing succeeds, it creates a GitHub Release with the same wheel,
+source archive, and a `SHA256SUMS.txt` checksum file. It never rebuilds the package
+between the two destinations.
 
 ## PyPI Trusted Publishing
 
-The v0.1.0 release uses PyPI's OIDC-based Trusted Publishing. The publisher configuration must match:
+The v0.1.1 release uses PyPI's OIDC-based Trusted Publishing. The publisher configuration must match:
 
 - PyPI project: `private-lab-bench`
 - repository owner: `dipeshbabu`
@@ -33,7 +36,7 @@ The v0.1.0 release uses PyPI's OIDC-based Trusted Publishing. The publisher conf
 
 No long-lived PyPI API token is stored in the repository workflow.
 
-The GitHub environment `pypi` is configured. Register the corresponding publisher on PyPI before pushing the tag. A pending publisher creates the project on its first successful upload. The workflow builds and validates distributions before publishing; verify a clean `python -m pip install private-lab-bench==0.1.0` after it succeeds. Never reuse a published version for different distribution files.
+The GitHub environment `pypi` is configured. Register the corresponding publisher on PyPI before pushing the tag. A pending publisher creates the project on its first successful upload. The workflow builds and validates distributions before publishing; verify a clean `python -m pip install private-lab-bench==0.1.1` after it succeeds. Never reuse a published version for different distribution files.
 
 ## Documentation site
 

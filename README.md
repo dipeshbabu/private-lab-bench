@@ -14,7 +14,7 @@
 <p align="center">
   <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/quickstart.md">Quickstart</a> ·
   <a href="https://github.com/dipeshbabu/private-lab-bench/tree/main/docs">Documentation</a> ·
-  <a href="https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.0">v0.1.0 release</a> ·
+  <a href="https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.1">v0.1.1 release</a> ·
   <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/CONTRIBUTING.md">Contributing</a>
 </p>
 
@@ -26,7 +26,7 @@ Evaluation runs without an account, hosted service, or data upload. A receipt re
 
 ## Installation
 
-The current release is **v0.1.0**, available on [PyPI](https://pypi.org/project/private-lab-bench/0.1.0/) and [GitHub Releases](https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.0). CI tests Python 3.10, 3.11, and 3.12.
+The current release is **v0.1.1**, available on [PyPI](https://pypi.org/project/private-lab-bench/0.1.1/) and [GitHub Releases](https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.1). CI tests Python 3.10, 3.11, and 3.12.
 
 Create a virtual environment:
 
@@ -37,11 +37,11 @@ python -m venv .venv
 Activate it with `source .venv/bin/activate` on macOS/Linux, or `.venv\Scripts\Activate.ps1` in Windows PowerShell. Then install:
 
 ```sh
-python -m pip install private-lab-bench==0.1.0
+python -m pip install private-lab-bench==0.1.1
 plb --help
 ```
 
-The longer command name, `privatelabbench`, works too. See the [installation guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/install.md) for optional dependencies and source installs, or open the [quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.0/examples/notebooks/quickstart.ipynb).
+The longer command name, `privatelabbench`, works too. See the [installation guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/install.md) for optional dependencies and source installs, or open the [quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.1/examples/notebooks/quickstart.ipynb).
 
 ## Run a first evaluation
 
@@ -55,7 +55,7 @@ plb run-pack community-tabular-regression@1.0.0
 plb verify reports/benchmark_packs/tabular_regression_receipt.shareable.json
 ```
 
-For v0.1.0, keep this folder empty before running the pack: a same-named local CSV can override the bundled fixture. The pack includes predictions, evaluation settings, and an example disclosure policy. It runs from the installed package without a checkout or model download. Other packs cover molecular regression and protein binary classification. Pack and protocol versions are independent of the package release.
+The pack includes predictions, evaluation settings, and an example disclosure policy. It runs from the installed package without a checkout or model download. Other packs cover molecular regression and protein binary classification. Pack and protocol versions are independent of the package release.
 
 ## Evaluate your predictions
 

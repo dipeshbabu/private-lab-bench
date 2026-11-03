@@ -4,13 +4,17 @@ Start with your own prediction CSV, or try a bundled synthetic pack.
 
 ## 1. Install
 
-Use the source install until the first PyPI release is live:
+Install the current release in a virtual environment:
 
 ```bash
-git clone https://github.com/dipeshbabu/private-lab-bench.git
-cd private-lab-bench
-pip install -e .
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install private-lab-bench==0.1.1
 ```
+
+On Windows, activate with `.venv\Scripts\Activate.ps1`. The [installation guide](install.md)
+covers optional dependencies and development installs. You can also run the
+[quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.1/examples/notebooks/quickstart.ipynb).
 
 ## 2. Evaluate your own model outputs
 

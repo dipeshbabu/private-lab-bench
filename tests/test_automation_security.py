@@ -15,7 +15,7 @@ def test_privileged_label_workflow_checks_out_only_the_trusted_base():
     assert job["permissions"] == {
         "contents": "read",
         "issues": "write",
-        "pull-requests": "read",
+        "pull-requests": "write",
     }
     checkout = job["steps"][0]
     assert checkout["with"]["ref"] == "${{ github.event.repository.default_branch }}"
