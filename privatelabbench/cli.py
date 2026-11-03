@@ -843,6 +843,9 @@ def run_from_config(args: argparse.Namespace) -> int:
     except DesignAuditFailure as exc:
         print(str(exc))
         return 1
+    except (ValueError, TypeError, KeyError, OSError, yaml.YAMLError) as exc:
+        print(f"Run rejected: {exc}")
+        return 2
     print_run_summary(summary)
     _print_receipt_paths(summary)
     if any(

@@ -118,6 +118,46 @@ def test_prediction_column_roles_must_be_distinct(api, changes):
             )
 
 
+@pytest.mark.parametrize(
+    "failure", ["column_overlap", "missing_input", "unknown_task", "malformed_yaml"]
+)
+def test_config_cli_rejects_invalid_input_without_tracebacks(
+    tmp_path, monkeypatch, capsys, failure
+):
+    source = tmp_path / "data.csv"
+    source.write_text(
+        "sample_id,target,prediction\na,1,1.1\nb,2,2.2\nc,3,2.8\n", encoding="utf-8"
+    )
+    payload = {
+        "task": "predictions",
+        "input": {
+            "path": str(source),
+            "target_column": "target",
+            "prediction_column": "prediction",
+            "task_type": "regression",
+        },
+    }
+    if failure == "column_overlap":
+        payload["input"]["prediction_column"] = "target"
+    elif failure == "missing_input":
+        payload["input"]["path"] = str(tmp_path / "missing.csv")
+    elif failure == "unknown_task":
+        payload["task"] = "unknown-task"
+    config = tmp_path / "run.yaml"
+    config.write_text(
+        "\tinvalid: yaml\n" if failure == "malformed_yaml" else yaml.safe_dump(payload),
+        encoding="utf-8",
+    )
+    original = source.read_bytes()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("sys.argv", ["plb", "run", str(config)])
+    assert main() == 2
+    captured = capsys.readouterr()
+    assert captured.out.startswith("Run rejected:") and "Traceback" not in captured.err
+    assert source.read_bytes() == original
+    assert not list(tmp_path.rglob("*.json"))
+
+
 def test_validation_and_runner_resolve_the_same_config_input(tmp_path, monkeypatch):
     definitions = tmp_path / "definitions"
     definitions.mkdir()
