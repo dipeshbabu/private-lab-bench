@@ -108,7 +108,12 @@ def test_public_release_workflow_uses_full_history_scanners():
     )
     assert workflow.count("fetch-depth: 0") >= 3
     assert "gitleaks/gitleaks-action@v3" in workflow
-    assert "trufflesecurity/trufflehog@v3.93.4" in workflow
+    # Accept reviewed patch/minor updates while requiring a pinned scanner release.
+    assert re.search(
+        r"uses: trufflesecurity/trufflehog@(v3\.\d+\.\d+|[0-9a-f]{40})\s*$",
+        workflow,
+        re.MULTILINE,
+    )
     assert "--results=verified" in workflow
     assert "--results=verified,unknown" not in workflow
     assert "--no-update" not in workflow
