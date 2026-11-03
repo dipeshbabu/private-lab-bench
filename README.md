@@ -75,21 +75,24 @@ s04,0.41,0.45,lab-b,b2
 Save the table as `predictions.csv`, then run:
 
 ```sh
-plb eval-predictions predictions.csv --target target --prediction-column prediction --task-type regression --require-sample-id --slice-columns site batch
+plb evaluate predictions.csv --slice site --slice batch
+plb verify reports/evaluation/evaluation_receipt.json
 ```
 
-Regression, binary classification, and multiclass probability tables are supported. Stable sample IDs enable validation and paired comparisons; metadata columns let you inspect performance by site, batch, or another subgroup. See the [prediction-table reference](docs/prediction_tables.md) for schemas and classification examples.
+Regression, binary classification, and multiclass probability tables are supported. Ambiguous columns or task types require explicit flags; binary probabilities with named labels require ordered negative/positive classes. Results stay local until a reviewed release policy permits export. This four-row example is too small for the default bootstrap interval or slice minimum. See the [5-minute quickstart](docs/quickstart.md) for defaults and the [prediction-table reference](docs/prediction_tables.md) for classification schemas.
 
 ## Make Runs Reproducible
 
 Store task, input, slice, uncertainty, and reporting settings in YAML:
 
 ```sh
+plb init predictions.csv --slice site --out evaluation.yaml
+plb run evaluation.yaml
 plb validate-config configs/tabular_uncertainty_eval.yaml
 plb run configs/tabular_uncertainty_eval.yaml
 ```
 
-Config runs write local JSON and Markdown reports, an artifact manifest, and evaluation receipts. Enable bootstrap intervals explicitly and choose a sampling method appropriate to your data. See [statistical uncertainty](docs/uncertainty.md) for assumptions and limits.
+Config runs write local JSON and Markdown reports, an artifact manifest, and evaluation receipts. Review the uncertainty settings and choose a sampling method appropriate to your data. See [statistical uncertainty](docs/uncertainty.md) for assumptions and limits.
 
 Use `plb list-protocols` and `plb run local.yaml --protocol plb://generic/regression@1.0.0` to apply fixed, versioned evaluation rules across private datasets. Receipts record the exact protocol digest. See [evaluation protocols](docs/protocols.md) for local definitions, package providers, and release controls.
 

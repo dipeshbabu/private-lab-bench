@@ -44,7 +44,11 @@ def load_config(path: str, *, protocol_override: str | None = None) -> RunnerCon
             configured = resolve_protocol(payload["protocol"], base=config_path.resolve().parent)
             if configured.sha256 != protocol.sha256:
                 raise ValueError("--protocol conflicts with the protocol declared in the config")
+        if payload.get("protocol_sha256") is not None and payload["protocol_sha256"] != protocol.sha256:
+            raise ValueError("Protocol digest changed from protocol_sha256; review the definition and pin its new version explicitly")
         payload = apply_protocol(payload, protocol)
+    elif payload.get("protocol_sha256") is not None:
+        raise ValueError("protocol_sha256 requires a protocol reference")
 
     project = str(payload.get("project", config_path.stem))
     task_value = payload.get("task")
