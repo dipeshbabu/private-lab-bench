@@ -130,6 +130,8 @@ Operate a [hidden benchmark](docs/hidden_benchmarks.md) with owner-held labels, 
 
 ## Inspect Evaluation Receipts
 
+Follow the [Caco2 model-selection case](docs/case_study.md) from a fresh environment to a paired decision, critical-group diagnosis, release check, and signed receipt. It distinguishes real public benchmark evidence from its synthetic measurement-shift proxy; independent researcher trials remain pending.
+
 `evaluation-receipt/v1` separates local context from aggregate information intended for exchange:
 
 | Artifact | Contents |

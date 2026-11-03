@@ -1,0 +1,43 @@
+{
+  "artifacts": {
+    "proxy-baseline.json": {
+      "evidence_level": "authenticated_signer_statement",
+      "execution_verified": false,
+      "hash_valid": true,
+      "protocol_bound": true,
+      "signature_valid": true,
+      "signer_trusted": true,
+      "valid": true
+    },
+    "proxy-candidate.json": {
+      "evidence_level": "authenticated_signer_statement",
+      "execution_verified": false,
+      "hash_valid": true,
+      "protocol_bound": true,
+      "signature_valid": true,
+      "signer_trusted": true,
+      "valid": true
+    },
+    "proxy-paired.json": {
+      "evidence_level": "authenticated_signer_statement",
+      "execution_verified": false,
+      "hash_valid": true,
+      "protocol_bound": true,
+      "signature_valid": true,
+      "signer_trusted": true,
+      "valid": true
+    },
+    "reference-candidate.json": {
+      "evidence_level": "authenticated_signer_statement",
+      "execution_verified": false,
+      "hash_valid": true,
+      "protocol_bound": true,
+      "signature_valid": true,
+      "signer_trusted": true,
+      "valid": true
+    }
+  },
+  "example_issuer_only": true,
+  "independent_researcher_trials_completed": 0,
+  "schema_version": "case-study-verification/v1"
+}

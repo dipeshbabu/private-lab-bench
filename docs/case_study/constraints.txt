@@ -1,0 +1,9 @@
+# Tested numerical/reference environment; install in a separate Python 3.11 venv.
+PyTDC==0.4.1
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.9.1
+scipy==1.17.1
+rdkit-pypi==2022.9.5
+huggingface-hub==0.25.2
+setuptools==80.9.0

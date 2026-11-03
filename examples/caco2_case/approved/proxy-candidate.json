@@ -1,0 +1,480 @@
+{
+  "created_at": "2026-11-03T16:44:05.205847+00:00",
+  "integrity": {
+    "algorithm": "sha256",
+    "payload_sha256": "86216f1becfe2f88e482f8c9604db84ff760461f8a2a05db920a8c53d1bdafda",
+    "signature": "4jyYqqBaQxp9wfGJ5rQ9XIhSTczuX7Pdv+p7P6sJtQFJl8LLZeQl+XlUGwKZDONefdt1J6+mSrK5XlqW/bx2Ag==",
+    "signature_algorithm": "ed25519",
+    "signed": true
+  },
+  "receipt_id": "6708f7b4-0bd6-4be4-8280-63390ec80410",
+  "schema_version": "evaluation-receipt/v1",
+  "scope": "shareable",
+  "shareable": {
+    "artifacts": [],
+    "benchmark": {},
+    "evaluation": {
+      "degradation_summary": {
+        "distributions": {
+          "prediction": {
+            "ks_distance": 0.0,
+            "mean_current": -5.190929963710506,
+            "mean_reference": -5.190929963710506,
+            "missing_current": 0,
+            "missing_reference": 0,
+            "n_current": 182,
+            "n_reference": 182,
+            "standardized_mean_change": 0.0,
+            "status": "evaluated",
+            "std_current": 0.37858648340329515,
+            "std_reference": 0.37858648340329515,
+            "type": "numeric"
+          },
+          "target": {
+            "ks_distance": 0.1923076923076924,
+            "mean_current": -5.0602907510989015,
+            "mean_reference": -5.3284226192307695,
+            "missing_current": 0,
+            "missing_reference": 0,
+            "n_current": 182,
+            "n_reference": 182,
+            "standardized_mean_change": 0.3906501454777607,
+            "status": "evaluated",
+            "std_current": 0.8841198628597488,
+            "std_reference": 0.6863733988987661,
+            "type": "numeric"
+          }
+        },
+        "limitations": [
+          "Performance changes and distribution distances are descriptive, not causal explanations.",
+          "The same model, label order, units, and scoring semantics are assumed across cohorts.",
+          "Independent-cohort bootstrap assumes independent observations within and between cohorts; repeated or clustered observations need a suitable sampling design.",
+          "Slice intervals are exploratory and unadjusted for multiple comparisons.",
+          "Changing cohort composition can change aggregate performance even when within-slice performance is stable."
+        ],
+        "metric": "mae",
+        "metric_basis": "clean_metrics",
+        "n_current": 182,
+        "n_reference": 182,
+        "overall": {
+          "mae": {
+            "current": 0.6041096014153899,
+            "degradation": 0.17095528535077792,
+            "interval": {
+              "lower": null,
+              "n_independent_units_current": 140,
+              "n_independent_units_reference": 140,
+              "status": "independence_not_declared",
+              "upper": null
+            },
+            "practical_threshold": 0.02,
+            "raw_delta_current_minus_reference": 0.17095528535077792,
+            "reference": 0.433154316064612,
+            "relative_degradation": 0.3946752439268714,
+            "status": "degraded"
+          }
+        },
+        "prevalence_threshold": 0.1,
+        "ranked_slices": [
+          {
+            "column": "regime",
+            "degradation": 0.5100633103908456,
+            "status": "degraded",
+            "value": "high-logp"
+          },
+          {
+            "column": "regime",
+            "degradation": 0.0,
+            "status": "within_threshold",
+            "value": "other"
+          }
+        ],
+        "schema_version": "degradation-summary/v1",
+        "slices": {
+          "regime": {
+            "high-logp": {
+              "material_prevalence_change": false,
+              "metrics": {
+                "mae": {
+                  "current": 0.8495515062672059,
+                  "degradation": 0.5100633103908456,
+                  "interval": {
+                    "lower": null,
+                    "n_independent_units_current": 59,
+                    "n_independent_units_reference": 59,
+                    "status": "independence_not_declared",
+                    "upper": null
+                  },
+                  "practical_threshold": 0.02,
+                  "raw_delta_current_minus_reference": 0.5100633103908456,
+                  "reference": 0.3394881958763603,
+                  "relative_degradation": 1.5024478511665478,
+                  "status": "degraded"
+                }
+              },
+              "n_current": 61,
+              "n_independent_units_current": 59,
+              "n_independent_units_reference": 59,
+              "n_reference": 61,
+              "prevalence_change": 0.0,
+              "prevalence_current": 0.33516483516483514,
+              "prevalence_reference": 0.33516483516483514,
+              "status": "evaluated"
+            },
+            "other": {
+              "material_prevalence_change": false,
+              "metrics": {
+                "mae": {
+                  "current": 0.48037442624216037,
+                  "degradation": 0.0,
+                  "interval": {
+                    "lower": null,
+                    "n_independent_units_current": 81,
+                    "n_independent_units_reference": 81,
+                    "status": "independence_not_declared",
+                    "upper": null
+                  },
+                  "practical_threshold": 0.02,
+                  "raw_delta_current_minus_reference": 0.0,
+                  "reference": 0.48037442624216037,
+                  "relative_degradation": 0.0,
+                  "status": "within_threshold"
+                }
+              },
+              "n_current": 121,
+              "n_independent_units_current": 81,
+              "n_independent_units_reference": 81,
+              "n_reference": 121,
+              "prevalence_change": 0.0,
+              "prevalence_current": 0.6648351648351648,
+              "prevalence_reference": 0.6648351648351648,
+              "status": "evaluated"
+            }
+          }
+        },
+        "uncertainty": {
+          "confidence_level": 0.95,
+          "enabled": true,
+          "include_slices": true,
+          "independent_cohorts_declared": false,
+          "method": "independent_cluster_percentile_bootstrap",
+          "min_samples": 20,
+          "resamples": 1000,
+          "sampling": "independent_clusters",
+          "schema_version": "cohort-delta-uncertainty/v1",
+          "seed": 13
+        }
+      },
+      "design_audit": {
+        "adapter": null,
+        "algorithm": "split-audit/v1",
+        "definition_sha256": "7b23d4f5ecedc52692aadcdd2108d20a23d7cf74719f1056a03f83cb018dea57",
+        "excluded_evaluation_records": 0,
+        "findings": {
+          "entity_overlap": {
+            "affected_records": 0,
+            "evidence_complete": true,
+            "policy": "forbid",
+            "status": "pass"
+          },
+          "evaluation_duplicate_ids": {
+            "affected_records": 0,
+            "evidence_complete": true,
+            "policy": "forbid",
+            "status": "pass"
+          },
+          "reference_duplicate_ids": {
+            "affected_records": 0,
+            "evidence_complete": true,
+            "policy": "warn",
+            "status": "pass"
+          },
+          "repeated_entities": {
+            "affected_records": 131,
+            "evidence_complete": true,
+            "policy": "allow",
+            "status": "pass"
+          },
+          "sample_id_overlap": {
+            "affected_records": 0,
+            "evidence_complete": true,
+            "policy": "forbid",
+            "status": "pass"
+          },
+          "training_reference_coverage": {
+            "affected_records": 0,
+            "evidence_complete": true,
+            "policy": "allow",
+            "status": "pass"
+          }
+        },
+        "limitations": [
+          "Findings apply only to the supplied records, identifiers, and declared rules.",
+          "A negative scoped audit cannot exclude undisclosed pretraining or unknown training records.",
+          "Reference completeness and dataset descriptions are declarations by the evaluator.",
+          "Scientific split checks are not privacy guarantees or proof of model execution."
+        ],
+        "n_checked_records": 819,
+        "n_evaluation_records": 182,
+        "n_input_records": 182,
+        "n_reference_records": 637,
+        "reference_declared_complete": true,
+        "schema_version": "evaluation-design-audit/v1",
+        "scope": "provided_records_only",
+        "status": "pass",
+        "training_reference_present": true
+      },
+      "external_validation": {
+        "claim_scope": "declared_external_evaluation",
+        "dataset": {
+          "provenance_statement": "Original official public Caco2 holdout plus a synthetic +0.8 target-scale offset for MolLogP>=3.0; same compounds/IDs, not new private lab data or independent cohorts. Cohort: synthetic_measurement_shift_proxy",
+          "training_overlap": "none_known",
+          "visibility": "public"
+        },
+        "evaluator_relationship": "model_developer",
+        "independence_verified": false,
+        "model": {
+          "artifact_sha256": "f5abbdfec0d5cebf2d6bfd8be749ff3b6fd29e8721b76f7eb95c8826e4d5b005",
+          "id": "caco2-rf-reference",
+          "revision": "reference-v1"
+        },
+        "schema_version": "external-validation/v1"
+      },
+      "input_schema": {
+        "schema_version": "prediction-table/v1"
+      },
+      "metric_source": "reported_metrics",
+      "metrics": {
+        "mae": 0.6041096014153899
+      },
+      "protocol": {
+        "id": "plb://examples/caco2-external-validation",
+        "metrics": [
+          "mae"
+        ],
+        "primary_metric": "mae",
+        "sha256": "575f08d63cbf36608bfb62050fbc03ee08ccd74e72d17556f2e223871b31eb26",
+        "version": "1.0.0"
+      },
+      "quality_gate": {
+        "schema_version": "quality-gate/v1",
+        "status": "fail"
+      },
+      "reference_design_audit": {
+        "adapter": null,
+        "algorithm": "split-audit/v1",
+        "definition_sha256": "7b23d4f5ecedc52692aadcdd2108d20a23d7cf74719f1056a03f83cb018dea57",
+        "excluded_evaluation_records": 0,
+        "findings": {
+          "entity_overlap": {
+            "affected_records": 0,
+            "evidence_complete": true,
+            "policy": "forbid",
+            "status": "pass"
+          },
+          "evaluation_duplicate_ids": {
+            "affected_records": 0,
+            "evidence_complete": true,
+            "policy": "forbid",
+            "status": "pass"
+          },
+          "reference_duplicate_ids": {
+            "affected_records": 0,
+            "evidence_complete": true,
+            "policy": "warn",
+            "status": "pass"
+          },
+          "repeated_entities": {
+            "affected_records": 131,
+            "evidence_complete": true,
+            "policy": "allow",
+            "status": "pass"
+          },
+          "sample_id_overlap": {
+            "affected_records": 0,
+            "evidence_complete": true,
+            "policy": "forbid",
+            "status": "pass"
+          },
+          "training_reference_coverage": {
+            "affected_records": 0,
+            "evidence_complete": true,
+            "policy": "allow",
+            "status": "pass"
+          }
+        },
+        "limitations": [
+          "Findings apply only to the supplied records, identifiers, and declared rules.",
+          "A negative scoped audit cannot exclude undisclosed pretraining or unknown training records.",
+          "Reference completeness and dataset descriptions are declarations by the evaluator.",
+          "Scientific split checks are not privacy guarantees or proof of model execution."
+        ],
+        "n_checked_records": 819,
+        "n_evaluation_records": 182,
+        "n_input_records": 182,
+        "n_reference_records": 637,
+        "reference_declared_complete": true,
+        "schema_version": "evaluation-design-audit/v1",
+        "scope": "provided_records_only",
+        "status": "pass",
+        "training_reference_present": true
+      },
+      "sample_counts": {
+        "n_samples": 182
+      },
+      "slices": {
+        "regime": {
+          "high-logp": {
+            "metrics": {
+              "mae": 0.8495515062672059
+            },
+            "n": 61,
+            "n_independent_units": 59,
+            "status": "evaluated",
+            "uncertainty": {
+              "confidence_level": 0.95,
+              "enabled": true,
+              "include_slices": false,
+              "method": "cluster_percentile_bootstrap",
+              "metric_basis": "clean_metrics",
+              "metrics": {
+                "mae": {
+                  "estimate": 0.8495515062672059,
+                  "lower": 0.7479374456379444,
+                  "status": "evaluated",
+                  "upper": 0.9636755538781536,
+                  "valid_resamples": 1000
+                }
+              },
+              "min_samples": 20,
+              "n_independent_units": 59,
+              "n_samples": 61,
+              "resamples": 1000,
+              "sampling": "independent_clusters",
+              "schema_version": "uncertainty/v1",
+              "seed": 14,
+              "status": "evaluated"
+            }
+          },
+          "other": {
+            "metrics": {
+              "mae": 0.48037442624216037
+            },
+            "n": 121,
+            "n_independent_units": 81,
+            "status": "evaluated",
+            "uncertainty": {
+              "confidence_level": 0.95,
+              "enabled": true,
+              "include_slices": false,
+              "method": "cluster_percentile_bootstrap",
+              "metric_basis": "clean_metrics",
+              "metrics": {
+                "mae": {
+                  "estimate": 0.48037442624216037,
+                  "lower": 0.4166415123901189,
+                  "status": "evaluated",
+                  "upper": 0.5399714527253856,
+                  "valid_resamples": 1000
+                }
+              },
+              "min_samples": 20,
+              "n_independent_units": 81,
+              "n_samples": 121,
+              "resamples": 1000,
+              "sampling": "independent_clusters",
+              "schema_version": "uncertainty/v1",
+              "seed": 15,
+              "status": "evaluated"
+            }
+          }
+        }
+      },
+      "task_type": "regression",
+      "uncertainty": {
+        "confidence_level": 0.95,
+        "enabled": true,
+        "include_slices": true,
+        "method": "cluster_percentile_bootstrap",
+        "metric_basis": "clean_metrics",
+        "metrics": {
+          "mae": {
+            "estimate": 0.6041096014153899,
+            "lower": 0.54066704472269,
+            "status": "evaluated",
+            "upper": 0.6631071077659687,
+            "valid_resamples": 1000
+          }
+        },
+        "min_samples": 20,
+        "n_independent_units": 140,
+        "n_samples": 182,
+        "resamples": 1000,
+        "sampling": "independent_clusters",
+        "schema_version": "uncertainty/v1",
+        "seed": 13,
+        "status": "evaluated"
+      }
+    },
+    "privacy": {
+      "audits": {
+        "status": "not_run"
+      },
+      "mechanism": {
+        "formal_dp": false,
+        "guarantee_level": "none",
+        "mode": "none"
+      },
+      "release": {
+        "audience": "external",
+        "audit_status": "not_run",
+        "decision": "allow",
+        "excluded_fields": [
+          "local",
+          "free_form_metadata",
+          "artifact_names_and_hashes",
+          "unapproved_slices",
+          "plugin_fields"
+        ],
+        "policy_id": "reviewed-caco2-case-v1",
+        "publishable": true,
+        "reason_codes": [
+          "explicit_policy_passed"
+        ],
+        "schema_version": "release-policy/v1",
+        "status": "pass"
+      }
+    },
+    "provenance": {
+      "package": {
+        "name": "private-lab-bench"
+      }
+    },
+    "run": {
+      "created_at": null,
+      "project": null,
+      "report_type": "evaluation",
+      "run_id": null,
+      "task": "predictions"
+    }
+  },
+  "signer_statement": {
+    "evaluation_code": {
+      "package_version": "0.11.0",
+      "python_version": "3.11.15"
+    },
+    "key_id": "caco2-case-example-v1",
+    "model": {
+      "id": "caco2-rf-reference",
+      "revision": "reference-v1"
+    },
+    "protocol": {
+      "id": "plb://examples/caco2-external-validation",
+      "sha256": "575f08d63cbf36608bfb62050fbc03ee08ccd74e72d17556f2e223871b31eb26",
+      "version": "1.0.0"
+    },
+    "provenance": "declared_by_signer",
+    "schema_version": "signer-profile/v1",
+    "signer_id": "caco2-case-example"
+  }
+}

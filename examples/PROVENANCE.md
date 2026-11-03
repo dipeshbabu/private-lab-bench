@@ -2,6 +2,8 @@
 
 The CSV fixtures under `examples/` are small synthetic/demo tables created for PrivateLabBench software and evaluation-workflow testing. They are not proprietary customer data and are not copied from a restricted scientific dataset. Separately, the verification records under `tdc_admet/`, `matbench/`, and `proteingym/` contain aggregate parity results from fetched public upstream benchmarks. They contain no benchmark rows or prediction tables and declare their real-data provenance explicitly.
 
+`caco2_case/approved/` contains reviewed aggregate receipts and an example public trust store for a real public Caco2 control plus an explicitly synthetic measurement-shift proxy on the same compounds. It contains no row-level data, model parameters, or private key, and does not claim independent researcher-trial evidence.
+
 ## License
 
 The tabular/CSV example fixtures under `examples/` are released as **CC0-1.0** for reuse in documentation, tests, and demonstrations.
