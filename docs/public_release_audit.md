@@ -34,7 +34,7 @@ Because unverified detector output can include intentionally fake test credentia
 
 ## Example/data review
 
-The [example provenance declarations](https://github.com/dipeshbabu/private-lab-bench/blob/v0.1.0/examples/PROVENANCE.md) document the repository fixtures. The machine-readable audit manifest lists every tracked CSV so new undeclared example data fails CI.
+The [example provenance declarations](https://github.com/dipeshbabu/private-lab-bench/blob/v0.1.1/examples/PROVENANCE.md) document the repository fixtures. The machine-readable audit manifest lists every tracked CSV so new undeclared example data fails CI.
 
 Bundled benchmark packs maintain their own license/provenance declarations and are validated independently.
 

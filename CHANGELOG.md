@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.1 — 2026-11-03
+
+### Fixed
+
+- Relative evaluation inputs now prefer files beside their configuration. Bundled packs use their own fixtures even when the working directory contains a same-named CSV. Legacy checkout-relative paths remain supported as a fallback.
+- Grant the metadata labeler the PR-label write permission required by GitHub, while keeping repository contents read-only and loading trusted default-branch code.
+
+### Changed
+
+- Refresh the README around the published package, working command sequences, scientific workflows, and receipt trust.
+- Enforce Ruff lint/format and pre-commit checks locally and in CI; clean up the existing style/import baseline.
+- Add weekly Dependabot updates for Python dependencies, Actions, Docker, and pre-commit hooks, with explicit scientific-compatibility exclusions.
+- Label new issues and PRs automatically using trusted default-branch code and metadata, including fork PRs.
+
+Upgrade from v0.1.0 to receive the input-resolution correction.
+
 ## v0.1.0 — 2026-11-03
 
 First community release of PrivateLabBench: local scientific evaluation with reviewed, shareable aggregate evidence.
