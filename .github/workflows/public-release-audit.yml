@@ -58,7 +58,7 @@ jobs:
         shell: bash
         run: echo "root=$(git rev-list --max-parents=0 HEAD | head -n 1)" >> "$GITHUB_OUTPUT"
       - name: Scan history with TruffleHog
-        uses: trufflesecurity/trufflehog@v3.93.4
+        uses: trufflesecurity/trufflehog@v3.99.7
         with:
           path: ./
           base: ${{ steps.history.outputs.root }}
