@@ -76,6 +76,28 @@ CI and the full-history public-release audit also run on pushes to these branche
 Wait for both workflows to succeed on the current commit before opening the PR,
 then confirm the PR checks pass before merging. Remove the branch after merge.
 
+## Maintenance bots
+
+Dependabot checks Python dependencies, GitHub Actions, pre-commit hooks, and the
+Docker base image every Monday morning in America/New_York. Compatible updates
+are grouped where appropriate; larger upgrades get separate PRs. Updates follow
+the same requirement for green CI and squash merging as other contributions.
+
+The pinned legacy TDC loader, Hugging Face Hub, and setuptools compatibility stack
+need a manual upstream-parity review. Major NumPy/Pandas floor changes and Python
+Docker minor-line upgrades also need explicit compatibility review. These limits
+are recorded in `.github/dependabot.yml`.
+
+New issues and PRs receive `needs-triage` and relevant type/domain labels from
+their titles and changed file names. Edits can add labels; the bot preserves
+manual labels and triage decisions. Dependabot supplies its own configured labels.
+
+The label workflow runs on trusted default-branch code, including for fork PRs;
+it uses issue/PR metadata and never executes submitted code. To change its rules,
+run `node --test .github/scripts/auto-label.test.cjs` and the repository checks.
+Maintainers can use the Auto labels workflow's manual input to label a selected
+existing issue or PR.
+
 ## Architecture in one page
 
 The important layers are:

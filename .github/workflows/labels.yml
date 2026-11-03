@@ -1,0 +1,35 @@
+name: Auto labels
+
+on:
+  issues:
+    types: [opened, reopened, edited]
+  pull_request_target:
+    types: [opened, reopened, edited, synchronize]
+  workflow_dispatch:
+    inputs:
+      number:
+        description: Issue or PR number to label
+        type: number
+        required: true
+
+permissions: {}
+
+jobs:
+  metadata-labels:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    steps:
+      # Always load the repository's trusted default branch, including for fork PRs.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { applyLabels } = require(process.env.GITHUB_WORKSPACE + '/.github/scripts/auto-label.cjs');
+            await applyLabels({ github, context, core });

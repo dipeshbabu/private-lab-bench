@@ -1,0 +1,71 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/New_York
+    open-pull-requests-limit: 2
+    labels: [dependencies, needs-triage]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      python-compatible:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    ignore:
+      # The legacy TDC reference stack needs an explicit compatibility/parity review.
+      - dependency-name: pytdc
+      - dependency-name: huggingface-hub
+      - dependency-name: setuptools
+      # Raising these major-version floors would conflict with the TDC extra.
+      - dependency-name: numpy
+        update-types: ["version-update:semver-major"]
+      - dependency-name: pandas
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:15"
+      timezone: America/New_York
+    open-pull-requests-limit: 2
+    labels: [dependencies, ci, needs-triage]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      actions-compatible:
+        patterns: ["*"]
+        update-types: [minor, patch]
+  - package-ecosystem: pre-commit
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:30"
+      timezone: America/New_York
+    open-pull-requests-limit: 1
+    labels: [dependencies, ci, needs-triage]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      hooks:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:45"
+      timezone: America/New_York
+    open-pull-requests-limit: 1
+    labels: [dependencies, ci, needs-triage]
+    commit-message:
+      prefix: "chore(deps)"
+    ignore:
+      # Keep the tested Python minor line; review runtime upgrades separately.
+      - dependency-name: python
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]

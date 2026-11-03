@@ -1,7 +1,7 @@
 name: Task or benchmark-pack proposal
 description: Propose a scientific task plugin or versioned benchmark pack.
 title: "[Task/Pack]: "
-labels: []
+labels: [task, needs-triage]
 body:
   - type: dropdown
     id: kind
