@@ -166,6 +166,7 @@ def build_evaluation_receipt(
             "design_audit": result.get("design_audit", {}),
             "reference_design_audit": result.get("reference_design_audit", {}),
             "external_validation": result.get("external_validation", {}),
+            "benchmark_submission": result.get("benchmark_submission", {}),
         },
         "privacy": _privacy_summary(report, result),
         "provenance": {"package": manifest.get("package", {}), "attestation_id": attestation.get("attestation_id")},
@@ -339,6 +340,9 @@ def render_receipt_markdown(receipt: Mapping[str, Any]) -> str:
     if evaluation.get("external_validation"):
         from privatelabbench.external_validation import render_validation
         lines.append(render_validation(evaluation["external_validation"]))
+    if evaluation.get("benchmark_submission"):
+        submission = evaluation["benchmark_submission"]
+        lines.extend(["", "## Benchmark submission", f"- Submission: {submission['id']}", f"- Model: {submission['model']['id']}@{submission['model']['revision']}", f"- Submitted prediction artifact SHA-256: `{submission['artifact_sha256']}`", f"- Evaluation mode: {submission['submission_kind']}"])
     if evaluation.get("degradation_summary", {}).get("schema_version") == "degradation-summary/v1":
         from privatelabbench.eval.degradation import render_degradation
         lines.append(render_degradation(evaluation["degradation_summary"]))

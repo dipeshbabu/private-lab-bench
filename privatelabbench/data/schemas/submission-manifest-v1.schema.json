@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Local participant submission manifest v1",
+  "type": "object", "required": ["schema_version", "id", "model"],
+  "properties": {
+    "schema_version": {"const": "submission-manifest/v1"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.@+-]{0,127}$"},
+    "model": {"type": "object", "required": ["id", "revision"], "properties": {"id": {"type": "string"}, "revision": {"type": "string"}}, "additionalProperties": false},
+    "prediction_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "citation": {"type": "string", "maxLength": 1200}, "participant": {"type": "string", "maxLength": 1200}
+  }, "additionalProperties": false
+}

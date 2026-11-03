@@ -119,6 +119,26 @@ def build_parser() -> argparse.ArgumentParser:
     score.add_argument("--release-policy", default=None)
     score.add_argument("--validation-profile", default=None)
 
+    benchmark_template = sub.add_parser("benchmark-template", help="Create an approved participant ID/prediction template without targets.")
+    benchmark_template.add_argument("spec")
+    benchmark_template.add_argument("--out", required=True)
+    benchmark_evaluate = sub.add_parser("benchmark-evaluate", help="Owner-side evaluation of prediction submissions against private labels.")
+    benchmark_evaluate.add_argument("spec")
+    benchmark_evaluate.add_argument("predictions")
+    benchmark_evaluate.add_argument("--submission-id", required=True)
+    benchmark_evaluate.add_argument("--model", required=True, help="Declared model-id@revision.")
+    benchmark_evaluate.add_argument("--submission-manifest", default=None)
+    benchmark_evaluate.add_argument("--scoring-provenance", default=None, help="Required for owner-only inputs: pinned local scorer provenance.")
+    benchmark_evaluate.add_argument("--output-dir", default="reports/hidden-submission")
+    leaderboard = sub.add_parser("benchmark-leaderboard", help="Build an owner results table from verified aggregate submission receipts.")
+    leaderboard.add_argument("inputs", nargs="+")
+    leaderboard.add_argument("--protocol", required=True)
+    leaderboard.add_argument("--release-policy", default=None)
+    leaderboard.add_argument("--trust-store", default=None)
+    leaderboard.add_argument("--require-trusted-signer", action="store_true")
+    leaderboard.add_argument("--signing-secret", default=None)
+    leaderboard.add_argument("--out", default="reports/hidden-leaderboard.json")
+
     tdc_prepare = sub.add_parser("tdc-prepare", help="Verify an official TDC cache and create a fixed-test prediction template.")
     tdc_prepare.add_argument("--dataset", required=True)
     tdc_prepare.add_argument("--cache-dir", default="outputs/tdc")
@@ -874,6 +894,12 @@ def main() -> int:
     if args.command == "score":
         from privatelabbench.scoring import score_command
         return score_command(args)
+    if args.command in {"benchmark-template", "benchmark-evaluate"}:
+        from privatelabbench.hidden_benchmarks import benchmark_command
+        return benchmark_command(args)
+    if args.command == "benchmark-leaderboard":
+        from privatelabbench.leaderboards import leaderboard_command
+        return leaderboard_command(args)
     if args.command in {"tdc-prepare", "tdc-evaluate"}:
         return tdc_command(args)
     if args.command == "run":

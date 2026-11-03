@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Aggregate benchmark submission identity v1",
+  "type": "object", "required": ["schema_version", "id", "model", "artifact_sha256", "input_access", "submission_kind"],
+  "properties": {
+    "schema_version": {"const": "benchmark-submission/v1"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.@+-]{0,127}$"},
+    "model": {"type": "object", "required": ["id", "revision"], "properties": {"id": {"type": "string"}, "revision": {"type": "string"}}, "additionalProperties": false},
+    "artifact_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "input_access": {"enum": ["approved_participant_inputs", "owner_only"]},
+    "submission_kind": {"enum": ["participant_predictions", "owner_scored_predictions"]}
+  },
+  "allOf": [{"if": {"properties": {"input_access": {"const": "owner_only"}}}, "then": {"properties": {"submission_kind": {"const": "owner_scored_predictions"}}}}],
+  "additionalProperties": false
+}

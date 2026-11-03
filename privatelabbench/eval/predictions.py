@@ -307,7 +307,7 @@ def evaluate_prediction_csv(
     from privatelabbench.eval.sampling import sampling_design as parse_design
     design = parse_design(sampling_design)
     return evaluate_prediction_table(
-        pd.read_csv(path, dtype={**({sample_id_column: "string"} if sample_id_column else {}), **({column: "string" for column in design.metadata_columns} if design else {})}), dataset_path=str(path), target=target,
+        pd.read_csv(path, dtype={**({sample_id_column: "string"} if sample_id_column else {}), **({target: "string"} if class_labels else {}), **({column: "string" for column in design.metadata_columns} if design else {})}), dataset_path=str(path), target=target,
         prediction_column=prediction_column, prediction_columns=prediction_columns,
         task_type=task_type, sample_id_column=sample_id_column, require_sample_id=require_sample_id,
         metadata_columns=metadata_columns, slice_columns=slice_columns, min_slice_size=min_slice_size,

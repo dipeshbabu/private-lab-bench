@@ -209,6 +209,7 @@ def _load_aligned_tables(
     selected_metadata = tuple(dict.fromkeys([*slices, *metadata_columns]))
     required = {sample_id_column, target, *prediction_cols, *selected_metadata}
     dtype = {sample_id_column: "string", **{column: "string" for column in metadata_columns}}
+    if class_labels: dtype[target] = "string"
     a = pd.read_csv(path_a, dtype=dtype) if frame_a is None else frame_a.copy(deep=False)
     b = pd.read_csv(path_b, dtype=dtype) if frame_b is None else frame_b.copy(deep=False)
     for frame in (a, b):

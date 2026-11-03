@@ -134,6 +134,8 @@ def prepare_validation(config, path):
                 else {}
             ),
         }
+        if inputs.get("class_labels"):
+            dtype[inputs["target_column"]] = "string"
         frame = pd.read_csv(BytesIO(content), dtype=dtype)
         basis = "input_file_bytes"
     else:

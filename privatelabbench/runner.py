@@ -154,6 +154,7 @@ def _baseline_prediction_metrics(
         target=target,
         prediction_column=str(baseline_column),
         task_type=task_type,
+        class_labels=input_cfg.get("class_labels") or None,
         sample_id_column=sample_id_column,
         require_sample_id=False,
         sampling_design=config.raw.get("sampling_design"),
@@ -191,6 +192,10 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
     split_column = input_cfg.get("split_column")
 
     validation = config.validation_context
+    submission_context = {}
+    if "benchmark_submission" in config.raw:
+        from privatelabbench.hidden_benchmarks import submission_identity
+        submission_context = submission_identity(config.raw["benchmark_submission"])
     baseline_prediction_column, baseline_metrics = _baseline_prediction_metrics(
         config,
         path=path,
@@ -250,6 +255,7 @@ def run_prediction_workflow(config: RunnerConfig) -> dict[str, Any]:
             "baseline_prediction_column": baseline_prediction_column,
             "baseline_metrics": baseline_metrics or {},
             "external_validation": validation or {},
+            "benchmark_submission": submission_context,
             "split_column": result.split_column,
             "privacy_risk": result.privacy_risk or {},
             "privacy_gate": privacy_gate,
