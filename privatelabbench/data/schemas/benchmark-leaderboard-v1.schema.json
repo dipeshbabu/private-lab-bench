@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Verified hidden benchmark leaderboard v1",
+  "type": "object", "required": ["schema_version", "leaderboard_id", "scope", "created_at", "shareable", "integrity"],
+  "properties": {
+    "schema_version": {"const": "benchmark-leaderboard/v1"}, "leaderboard_id": {"type": "string"}, "scope": {"enum": ["local", "shareable"]}, "created_at": {"type": "string"},
+    "shareable": {
+      "type": "object", "required": ["benchmark", "task_type", "n_samples", "privacy_mode", "protocol", "metric", "ranking_rules", "ranking_status", "rows", "comparison_scope", "multiplicity"],
+      "properties": {
+        "benchmark": {"type": "object", "required": ["id", "version"]}, "task_type": {"enum": ["regression", "classification", "multiclass"]}, "n_samples": {"type": "integer", "minimum": 2}, "privacy_mode": {"enum": ["none", "metric_perturbation"]},
+        "protocol": {"type": "object", "required": ["id", "version", "sha256", "metrics", "primary_metric"], "properties": {"id": {"type": "string"}, "version": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "metrics": {"type": "array", "items": {"type": "string"}}, "primary_metric": {"type": "string"}}, "additionalProperties": false},
+        "metric": {"type": "string"}, "ranking_rules": {"$ref": "evaluation-protocol-v1.schema.json#/properties/ranking"}, "ranking_status": {"enum": ["not_declared_in_protocol", "estimate_unavailable", "uncertainty_unavailable", "conservative_interval_groups", "descriptive_point_groups"]},
+        "rows": {"type": "array", "minItems": 1, "maxItems": 1000, "items": {"type": "object", "required": ["submission", "n_samples", "n_independent_units", "estimate", "interval", "rank_group"], "properties": {"submission": {"$ref": "benchmark-submission-v1.schema.json"}, "n_samples": {"type": "integer", "minimum": 2}, "n_independent_units": {"type": ["integer", "null"], "minimum": 2}, "estimate": {"type": ["number", "null"]}, "interval": {"oneOf": [{"type": "null"}, {"type": "object", "required": ["lower", "upper", "confidence_level"], "properties": {"lower": {"type": "number"}, "upper": {"type": "number"}, "confidence_level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1}}, "additionalProperties": false}]}, "rank_group": {"type": ["integer", "null"], "minimum": 1}, "source_receipt_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}, "additionalProperties": false}},
+        "comparison_scope": {"const": "marginal_receipt_intervals_not_paired_tests"}, "multiplicity": {"const": "exploratory_unadjusted"}, "release": {"type": "object"}
+      }, "additionalProperties": false
+    }, "local": {"type": "object"}, "integrity": {"type": "object"}, "signer_statement": {"type": "object"}
+  },
+  "allOf": [{"if": {"properties": {"scope": {"const": "shareable"}}}, "then": {"not": {"required": ["local"]}}}],
+  "additionalProperties": false
+}

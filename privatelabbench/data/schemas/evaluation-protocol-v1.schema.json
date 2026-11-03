@@ -20,6 +20,12 @@
     "artifact_versions"
   ],
   "properties": {
+    "ranking": {
+      "type": ["object", "null"],
+      "required": ["metric", "rule", "practical_tie_tolerance", "require_uncertainty"],
+      "properties": {"metric": {"type": "string"}, "rule": {"const": "conservative_interval_ties"}, "practical_tie_tolerance": {"type": "number", "minimum": 0}, "require_uncertainty": {"type": "boolean"}},
+      "additionalProperties": false
+    },
     "sampling_design": {
       "anyOf": [
         {

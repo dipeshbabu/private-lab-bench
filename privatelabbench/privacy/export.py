@@ -105,7 +105,7 @@ def _release_statistics(value: Any, policy: Mapping[str, Any]) -> dict[str, Any]
 def validate_policy(value: Any) -> dict[str, Any]:
     policy = dict(_mapping(value))
     allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "require_design_audit", "include_design_audit", "include_input_schema", "include_quality_gate", "include_protocol", "include_degradation", "include_slice_inference", "include_multiplicity", "public_validation", "public_shift_features", "public_benchmark", "public_sites", "public_models", "slices", "reviewed_repeat", "review_reference"}
-    allowed |= {"public_series", "public_times", "include_source_receipts"}
+    allowed |= {"public_series", "public_times", "include_source_receipts", "include_submission", "public_submission_ids"}
     if set(policy) - allowed or policy.get("schema_version") != POLICY_SCHEMA:
         raise ValueError("Invalid release policy schema or unknown policy fields")
     _token(policy.get("id"))
@@ -160,6 +160,13 @@ def validate_policy(value: Any) -> dict[str, Any]:
             raise ValueError("External-validation release requires explicit protocol identity approval")
     if "include_source_receipts" in policy and type(policy["include_source_receipts"]) is not bool:
         raise ValueError("include_source_receipts must be boolean")
+    if "include_submission" in policy and type(policy["include_submission"]) is not bool:
+        raise ValueError("include_submission must be boolean")
+    if "public_submission_ids" in policy:
+        values=policy["public_submission_ids"]
+        if not isinstance(values,list) or not values or len(set(values))!=len(values):
+            raise ValueError("Explicit unique submission IDs are required")
+        for value in values: _token(value)
     if "public_series" in policy:
         from privatelabbench.aggregate import model_identity
         model_identity(policy["public_series"])
@@ -305,6 +312,11 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
         identifier = "receipt_id"
         if policy.get("include_protocol") and evaluation.get("protocol"):
             clean["evaluation"]["protocol"] = protocol_identity(evaluation["protocol"])
+        if policy.get("include_submission"):
+            from privatelabbench.hidden_benchmarks import sanitize_submission
+            if not policy.get("include_protocol") or any(not policy.get("public_benchmark",{}).get(key) or policy["public_benchmark"][key]!=shared.get("benchmark",{}).get(key) for key in ("id","version")):
+                raise ValueError("Benchmark submissions require exact benchmark and protocol identity approval")
+            clean["evaluation"]["benchmark_submission"] = sanitize_submission(evaluation.get("benchmark_submission"),policy)
         if "public_validation" in policy:
             from privatelabbench.external_validation import sanitize_validation
             clean["evaluation"]["external_validation"] = sanitize_validation(evaluation.get("external_validation"), policy["public_validation"])
@@ -362,6 +374,10 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
         from privatelabbench.trends import sanitize_trend
         clean = sanitize_trend(shared, policy)
         identifier = "series_artifact_id"
+    elif schema == "benchmark-leaderboard/v1":
+        from privatelabbench.leaderboards import sanitize_leaderboard
+        clean = sanitize_leaderboard(shared,policy,_mapping(candidate.get("local",{})).get("protocol_definition"))
+        identifier = "leaderboard_id"
     else:
         raise ValueError("Unsupported export schema")
     if not clean.get("evaluation", clean).get("metrics", clean.get("metric")):

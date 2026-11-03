@@ -78,6 +78,7 @@ class EvaluationProtocol:
         raw = dict(value)
         design_payload = raw.pop("sampling_design", None)
         audit_payload = raw.pop("evaluation_design", None)
+        ranking_payload = raw.pop("ranking", None)
         payload = deepcopy(_object(raw, fields, "Protocol"))
         if payload["schema_version"] != PROTOCOL_SCHEMA:
             raise ValueError(f"Expected {PROTOCOL_SCHEMA}")
@@ -141,6 +142,14 @@ class EvaluationProtocol:
         if audit_payload is not None:
             from privatelabbench.design_audit import EvaluationDesign
             payload["evaluation_design"] = EvaluationDesign.from_dict(audit_payload).as_dict()
+        if ranking_payload is not None:
+            ranking = _object(ranking_payload, {"metric", "rule", "practical_tie_tolerance", "require_uncertainty"}, "ranking")
+            tolerance = ranking["practical_tie_tolerance"]
+            if ranking["metric"] != payload["primary_metric"] or ranking["rule"] != "conservative_interval_ties" or type(ranking["require_uncertainty"]) is not bool or isinstance(tolerance, bool) or not isinstance(tolerance, (int, float)) or not math.isfinite(tolerance) or tolerance < 0:
+                raise ValueError("Ranking must explicitly use the primary metric and a finite nonnegative practical tie tolerance")
+            if ranking["require_uncertainty"] and not uncertainty["enabled"]:
+                raise ValueError("Ranking with uncertainty requires enabled protocol uncertainty")
+            payload["ranking"] = deepcopy(ranking)
         return cls(json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8"))
 
     def as_dict(self) -> dict[str, Any]:
@@ -251,7 +260,7 @@ def apply_protocol(payload: Mapping[str, Any], protocol: EvaluationProtocol) -> 
     if not isinstance(release, dict):
         raise ValueError("release must be a mapping")
     release = validate_policy({**rules["release"], **release})
-    if any(release[key] < rules["release"][key] for key in ("min_samples", "min_cell_size")) or rules["release"].get("require_privacy_audit", True) and not release.get("require_privacy_audit", True):
+    if any(release[key] < rules["release"][key] for key in ("min_samples", "min_cell_size")) or rules["release"].get("require_privacy_audit", True) and not release.get("require_privacy_audit", True) or rules["release"].get("require_design_audit", False) and not release.get("require_design_audit", False):
         raise ValueError("Run release policy cannot weaken protocol disclosure thresholds or audit requirements")
     result["release"] = release
     result["protocol"] = protocol.ref

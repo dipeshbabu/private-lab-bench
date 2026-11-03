@@ -122,6 +122,8 @@ Describe evaluations of released models with the [external-validation profile](d
 
 When predictions need to be generated inside the lab, use the [trusted local scorer](docs/trusted_scoring.md) with a reviewed numeric model, pinned digest, and explicit feature units. Its optional evaluation pipeline reuses the normal protocol and release controls.
 
+Operate a [hidden benchmark](docs/hidden_benchmarks.md) with owner-held labels, strict prediction submissions, approved result receipts, and a verified results table. Ranking requires an explicit rule in the pinned scientific protocol.
+
 ## Inspect Evaluation Receipts
 
 `evaluation-receipt/v1` separates local context from aggregate information intended for exchange:

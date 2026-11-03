@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Local hidden benchmark owner specification v1",
+  "type": "object",
+  "required": ["schema_version", "id", "version", "protocol", "protocol_sha256", "private_input", "submission", "input_access"],
+  "properties": {
+    "schema_version": {"const": "hidden-benchmark/v1"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.@+-]{0,127}$"},
+    "version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+    "protocol": {"type": "string", "minLength": 1}, "protocol_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "input_access": {"enum": ["approved_participant_inputs", "owner_only"]},
+    "private_input": {"type": "object", "required": ["path", "sample_id_column", "target_column", "slice_columns"], "properties": {"path": {"type": "string", "minLength": 1}, "sample_id_column": {"type": "string", "minLength": 1}, "target_column": {"type": "string", "minLength": 1}, "slice_columns": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}}, "additionalProperties": false},
+    "submission": {"oneOf": [
+      {"type": "object", "required": ["sample_id_column", "prediction_column"], "properties": {"sample_id_column": {"type": "string", "minLength": 1}, "prediction_column": {"type": "string", "minLength": 1}}, "additionalProperties": false},
+      {"type": "object", "required": ["sample_id_column", "prediction_columns"], "properties": {"sample_id_column": {"type": "string", "minLength": 1}, "prediction_columns": {"type": "array", "minItems": 3, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}}, "additionalProperties": false}
+    ]},
+    "release": {"$ref": "release-policy-v1.schema.json"}
+  }, "additionalProperties": false
+}
