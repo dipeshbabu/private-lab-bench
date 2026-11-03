@@ -1,53 +1,60 @@
-# PrivateLabBench Roadmap
+# Roadmap
 
-PrivateLabBench is becoming a community-first evaluation harness for scientific machine learning on private data.
+PrivateLabBench evaluates scientific models where the data lives and produces
+reviewed aggregate evidence. This page separates shipped capabilities from work
+that still needs implementation or outside evidence.
 
-> **Benchmark locally. Share reproducible evaluation artifacts, not raw data.**
+## Available now
 
-## Phase 0 — Safe public release
+- A task registry and plugin entry points, prediction-table evaluation for
+  regression and classification, metadata slices, and paired comparisons.
+- Versioned protocols and receipts, declared sampling units, uncertainty,
+  design audits, quality gates, and reference/current diagnostics.
+- Explicit local and shareable outputs, fail-closed release policies, offline
+  Ed25519 verification, cross-site receipt aggregation, and longitudinal trends.
+- Reviewed numeric local model scoring and owner-controlled hidden benchmarks.
+  The trusted scorer runs in process and provides no execution sandbox.
+- Synthetic molecule, tabular, and protein packs, plus pinned TDC ADMET,
+  Matbench, and ProteinGym integrations checked against upstream implementations.
+- Bounded-query privacy reference mechanisms and sequential budget accounting.
+  These remain separate from privacy attacks and experimental metric noise.
+- PyPI and GitHub releases, a documentation site, a checkout-free quickstart,
+  a Colab notebook, Ruff/pre-commit checks, and dependency/label automation.
 
-Before changing repository visibility, scan the full Git history for credentials and sensitive material, verify example data and licenses, remove private/internal material, and rotate any credential that may ever have been committed.
+See the [changelog](https://github.com/dipeshbabu/private-lab-bench/blob/main/CHANGELOG.md)
+for version history and [project scope](project_scope.md) for the limits of these
+claims. Receipt signatures authenticate statements; they do not independently
+verify model execution or scientific validity.
 
-## Phase 1 — Domain-independent core
+## Next implementation work
 
-### Task registry
+The following extensions are approved for development after the v0.1.2 patch:
 
-Initial implementation includes stable task IDs, third-party discovery through `privatelabbench.tasks`, legacy `workflow:` compatibility, preferred `task:` configs, registry-based dispatch, and a non-molecular `tabular` task.
+- **Sandboxed execution of untrusted models:** a separate executor with enforced
+  filesystem, egress, resource, and output restrictions, adversarial runtime
+  checks, and no fallback to the trusted in-process scorer.
+- **Broader benchmark coverage:** additional pinned tasks and assays, with
+  explicit licenses, split definitions, metrics, and actual upstream parity.
+- **A vetted differential-privacy backend:** optional OpenDP measurements for
+  supported bounded queries, with explicit adjacency, sensitivity, and budget
+  composition. Adding noise to arbitrary metrics is not sufficient.
 
-Next: task-owned config schemas, richer plugin metadata/versioning, and plugin compatibility tests.
+These are development commitments, not features of v0.1.2. Their documentation
+and release notes will describe the tested scope when they ship.
 
-### Extension protocols
+## Independent researcher evidence
 
-Common protocols cover tasks, dataset adapters, model adapters, metrics, slices, privacy audits, and artifact writers.
+The [public Caco2 case](case_study.md) is reproducible, but independent onboarding
+trials remain **0 of at least 3**. Issues
+[#40](https://github.com/dipeshbabu/private-lab-bench/issues/40) and
+[#47](https://github.com/dipeshbabu/private-lab-bench/issues/47) stay open until
+voluntary trials, redacted findings, and at least two changes based on observed
+friction are documented. See the [trial guide](case_study/trial_guide.md) and
+[findings](case_study/findings.md). Automated runs do not count as trials.
 
-Next: remove remaining molecule assumptions from multi-site evaluation.
+## Further work
 
-### Prediction-table interface
-
-Next: stable `sample_id,target,prediction` schema, multiclass classification, arbitrary metadata/group columns, first-class slices, and clearer validation errors.
-
-## Phase 2 — Evaluation receipt
-
-Define a stable versioned artifact containing task/benchmark identity, run ID, input schema summary, sample counts, metrics, uncertainty, slices, privacy audits, provenance/config hashes, runtime version, artifact hashes, optional signatures, and explicit local/private vs shareable fields.
-
-## Phase 3 — Privacy rigor
-
-Clearly separate privacy attacks/audits, experimental metric perturbation, and formal privacy mechanisms. Priorities include stronger attacks, bounded queries, metric-specific sensitivity, composition/accounting, and privacy/utility diagnostics.
-
-## Phase 4 — Researcher usability
-
-- PyPI releases;
-- documentation site;
-- 5-minute quickstart;
-- notebook/Colab example;
-- task/plugin authoring tutorial;
-- improved errors;
-- good-first-issue contribution surface.
-
-## Phase 5 — Community task packs
-
-Start with molecules, generic tabular science, and one additional scientific domain such as proteins or materials. Each pack should include versioned task IDs, public/synthetic demos, baseline predictions, known-good artifacts, and contribution docs.
-
-## Research directions
-
-Calibration and uncertainty, distribution shift, subgroup diagnostics, cross-site reproducibility, proteins, microscopy, materials, reactions, lab automation/robotics, and evaluation-artifact interoperability.
+Task-owned configuration schemas, richer plugin compatibility metadata, and
+additional scientific domains remain candidates for later releases. The legacy
+raw-input multi-site workflow is molecule-specific; general cross-site evidence
+currently uses aggregate receipts.

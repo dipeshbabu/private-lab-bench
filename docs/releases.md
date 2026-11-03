@@ -6,17 +6,25 @@ PrivateLabBench uses the version in both `pyproject.toml` and `privatelabbench/_
 
 Before tagging:
 
-1. CI is green on supported Python versions, package build, docs build, and Docker.
-2. The version is updated consistently in `pyproject.toml`, `privatelabbench.__version__`, and `CITATION.cff`.
-3. `CHANGELOG.md` describes the release.
-4. `python -m build` and `python -m twine check dist/*` pass.
-5. The public-release security/history audit is complete for the first public release.
+1. Every check on each release PR has passed. Squash merge using the checked head
+   commit, then confirm CI and the full-history audit pass on the resulting main
+   commit. Do not tag an untested merge.
+2. Update `pyproject.toml`, `privatelabbench.__version__`, `CITATION.cff`, current
+   install instructions, and the notebook together. Preserve historical release
+   notes and independently versioned protocols, schemas, and dependencies.
+3. Recompute unsigned example receipt integrity and regenerate signed examples
+   under the new package version; never edit signed payloads without re-signing.
+4. Describe the changes in `CHANGELOG.md`. Run the tests, pre-commit checks,
+   strict docs build, `python -m build`, and `python -m twine check dist/*`.
+5. Install both distributions in clean environments outside the checkout. Run the
+   bundled packs, receipt verification, relevant regressions, and notebook using
+   the installed package. Scientific integration changes also need upstream parity.
 
 Create a tag:
 
 ```bash
-git tag v0.1.1
-git push origin v0.1.1
+git tag v0.1.2
+git push origin v0.1.2
 ```
 
 The release workflow refuses to publish if the tag version differs from package metadata.
@@ -26,7 +34,7 @@ between the two destinations.
 
 ## PyPI Trusted Publishing
 
-The v0.1.1 release uses PyPI's OIDC-based Trusted Publishing. The publisher configuration must match:
+Releases use PyPI's OIDC-based Trusted Publishing. The active publisher configuration is:
 
 - PyPI project: `private-lab-bench`
 - repository owner: `dipeshbabu`
@@ -36,7 +44,16 @@ The v0.1.1 release uses PyPI's OIDC-based Trusted Publishing. The publisher conf
 
 No long-lived PyPI API token is stored in the repository workflow.
 
-The GitHub environment `pypi` is configured. Register the corresponding publisher on PyPI before pushing the tag. A pending publisher creates the project on its first successful upload. The workflow builds and validates distributions before publishing; verify a clean `python -m pip install private-lab-bench==0.1.1` after it succeeds. Never reuse a published version for different distribution files.
+The GitHub environment `pypi` and PyPI publisher are configured. The workflow has
+successfully published this project; no first-upload registration is needed.
+
+After publishing, verify a clean
+`python -m pip install private-lab-bench==0.1.2` outside the checkout. Compare the
+PyPI distribution hashes, GitHub Release assets, and `SHA256SUMS.txt`. Keep the
+GitHub Release title equal to the tag, such as `v0.1.2`, and edit the generated
+notes to explain the changes and upgrade guidance. Confirm the README's PyPI
+badge resolves to the published version. Never reuse a published version for
+different distribution files; publish a new version for corrections.
 
 ## Documentation site
 

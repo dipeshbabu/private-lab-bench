@@ -2,7 +2,7 @@
   "created_at": "2026-11-03T00:00:00+00:00",
   "integrity": {
     "algorithm": "sha256",
-    "payload_sha256": "2518ccbba4c137753a5597eefcfcbb5338ff85d319c0ad0a4c002dfea9c64de8",
+    "payload_sha256": "3d96499d775e36f51b73ab368d145f1f1ab5fdcc70222efe553bc1f6851ee2c7",
     "signed": false
   },
   "receipt_id": "known-good:tabular-regression@1.0.0",
@@ -65,7 +65,7 @@
       "attestation_id": "known-good",
       "package": {
         "name": "private-lab-bench",
-        "version": "0.1.1"
+        "version": "0.1.2"
       }
     },
     "run": {
