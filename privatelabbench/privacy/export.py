@@ -105,6 +105,7 @@ def _release_statistics(value: Any, policy: Mapping[str, Any]) -> dict[str, Any]
 def validate_policy(value: Any) -> dict[str, Any]:
     policy = dict(_mapping(value))
     allowed = {"schema_version", "id", "enabled", "min_samples", "min_cell_size", "require_privacy_audit", "require_design_audit", "include_design_audit", "include_input_schema", "include_quality_gate", "include_protocol", "include_degradation", "include_slice_inference", "include_multiplicity", "public_validation", "public_shift_features", "public_benchmark", "public_sites", "public_models", "slices", "reviewed_repeat", "review_reference"}
+    allowed |= {"public_series", "public_times", "include_source_receipts"}
     if set(policy) - allowed or policy.get("schema_version") != POLICY_SCHEMA:
         raise ValueError("Invalid release policy schema or unknown policy fields")
     _token(policy.get("id"))
@@ -157,6 +158,19 @@ def validate_policy(value: Any) -> dict[str, Any]:
         public_approval(policy["public_validation"])
         if not policy.get("include_protocol"):
             raise ValueError("External-validation release requires explicit protocol identity approval")
+    if "include_source_receipts" in policy and type(policy["include_source_receipts"]) is not bool:
+        raise ValueError("include_source_receipts must be boolean")
+    if "public_series" in policy:
+        from privatelabbench.aggregate import model_identity
+        model_identity(policy["public_series"])
+    if "public_times" in policy:
+        from privatelabbench.trends import _time
+        values = policy["public_times"]
+        if not isinstance(values,list) or not 2 <= len(values) <= 1000:
+            raise ValueError("Approve every collection time in chronological order")
+        times = [_time(value) for value in values]
+        if times != sorted(times) or len(set(times)) != len(times):
+            raise ValueError("Approved times must be unique and chronological")
     return policy
 
 
@@ -344,6 +358,10 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
         from privatelabbench.aggregate import sanitize_aggregate
         clean = sanitize_aggregate(shared, policy)
         identifier = "aggregate_id"
+    elif schema == "longitudinal-series/v1":
+        from privatelabbench.trends import sanitize_trend
+        clean = sanitize_trend(shared, policy)
+        identifier = "series_artifact_id"
     else:
         raise ValueError("Unsupported export schema")
     if not clean.get("evaluation", clean).get("metrics", clean.get("metric")):

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://privatelabbench.org/schemas/longitudinal-series-v1.schema.json",
+  "title": "Receipt-based longitudinal evaluation series v1",
+  "type": "object",
+  "required": ["schema_version", "series_artifact_id", "scope", "created_at", "shareable", "integrity"],
+  "properties": {
+    "schema_version": {"const": "longitudinal-series/v1"},
+    "series_artifact_id": {"type": "string"},
+    "scope": {"enum": ["local", "shareable"]},
+    "created_at": {"type": "string"},
+    "shareable": {
+      "type": "object",
+      "required": ["series", "model", "protocol", "metric", "task_type", "benchmark", "privacy_mode", "reference_index", "practical_threshold", "prevalence_threshold", "critical_slices", "periods", "statistical_scope", "multiplicity", "causal_drift_claim"],
+      "properties": {
+        "series": {"$ref": "#/$defs/identity"}, "model": {"$ref": "#/$defs/identity"},
+        "protocol": {"type": "object", "required": ["id", "version", "sha256", "metrics", "primary_metric"], "properties": {"id": {"type": "string", "pattern": "^plb://"}, "version": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "metrics": {"type": "array", "items": {"type": "string"}}, "primary_metric": {"type": "string"}}, "additionalProperties": false},
+        "metric": {"type": "string"}, "task_type": {"enum": ["regression", "classification", "multiclass"]},
+        "benchmark": {"type": "object"}, "privacy_mode": {"enum": ["none", "metric_perturbation"]},
+        "reference_index": {"type": "integer", "minimum": 0}, "practical_threshold": {"type": "number", "minimum": 0}, "prevalence_threshold": {"type": "number", "minimum": 0, "maximum": 1},
+        "critical_slices": {"type": "array", "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "string"}}},
+        "periods": {"type": "array", "minItems": 2, "maxItems": 1000, "items": {"$ref": "#/$defs/period"}},
+        "statistical_scope": {"const": "descriptive_changes_with_marginal_interval_bounds"}, "multiplicity": {"const": "exploratory_unadjusted"}, "causal_drift_claim": {"const": false}, "release": {"type": "object"}
+      }, "additionalProperties": false
+    },
+    "local": {"type": "object"}, "integrity": {"type": "object"}, "signer_statement": {"type": "object"}
+  },
+  "allOf": [{"if": {"properties": {"scope": {"const": "shareable"}}}, "then": {"not": {"required": ["local"]}}}],
+  "additionalProperties": false,
+  "$defs": {
+    "identity": {"type": "object", "required": ["id", "revision"], "properties": {"id": {"type": "string"}, "revision": {"type": "string"}}, "additionalProperties": false},
+    "interval": {"oneOf": [{"type": "null"}, {"type": "object", "required": ["lower", "upper", "confidence_level"], "properties": {"lower": {"type": "number"}, "upper": {"type": "number"}, "confidence_level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1}}, "additionalProperties": false}]},
+    "change": {"type": "object", "required": ["raw_delta", "degradation", "relative_degradation", "practical_threshold", "point_change", "uncertainty_assessment", "difference_bounds"], "properties": {"raw_delta": {"type": ["number", "null"]}, "degradation": {"type": ["number", "null"]}, "relative_degradation": {"type": ["number", "null"]}, "practical_threshold": {"type": "number", "minimum": 0}, "point_change": {"enum": ["unavailable", "degradation", "improvement", "within_threshold"]}, "uncertainty_assessment": {"enum": ["unavailable", "bounds_exclude_threshold", "bounds_exclude_negative_threshold", "compatible_with_no_material_change"]}, "difference_bounds": {"type": ["object", "null"]}}, "additionalProperties": false},
+    "period": {
+      "type": "object", "required": ["time", "n_samples", "n_independent_units", "estimate", "interval", "slices", "quality_gate", "cohort_diagnostics", "from_reference", "from_previous", "slice_changes", "largest_degradations"],
+      "properties": {
+        "time": {"type": "string", "format": "date-time"}, "n_samples": {"type": "integer", "minimum": 2}, "n_independent_units": {"type": ["integer", "null"], "minimum": 2}, "estimate": {"type": ["number", "null"]}, "interval": {"$ref": "#/$defs/interval"}, "slices": {"type": "object"},
+        "quality_gate": {"enum": ["not_available", "pass", "fail", "investigate"]}, "cohort_diagnostics": {"enum": ["available_in_source_receipt", "not_in_source_receipt", "withheld"]}, "source_receipt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "from_reference": {"$ref": "#/$defs/change"}, "from_previous": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/change"}]}, "slice_changes": {"type": "array", "items": {"type": "object"}}, "largest_degradations": {"type": "array", "items": {"type": "object"}}
+      }, "additionalProperties": false
+    }
+  }
+}
