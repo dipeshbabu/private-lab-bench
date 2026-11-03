@@ -11,6 +11,8 @@
 ### Fixed
 
 - Reject nonfinite privacy budgets and spends; remove absolute comparison slack that could exceed very small budgets.
+- Account for exact binary privacy spends, conservatively round usage/remaining totals, reject invalid restored ledgers, and normalize large finite weights without overflow.
+- Exclude exact means from reference release serialization, label seeded outputs as deterministic tests without a DP guarantee, and reject unrepresentable noise scales.
 - Explain how to use `sandbox-score` when the trusted scorer rejects untrusted scripts.
 
 ### Changed

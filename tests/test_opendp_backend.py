@@ -7,6 +7,7 @@ import pytest
 from privatelabbench.privacy.formal import (
     BoundedMeanQuery,
     PrivacyBudget,
+    PrivacySpend,
     release_bounded_means,
 )
 from privatelabbench.privacy.opendp_backend import OpenDPBoundedMean
@@ -30,15 +31,71 @@ def test_budget_never_uses_absolute_slack_to_exceed_a_small_limit():
     ledger = PrivacyBudget(1e-15)
     with pytest.raises(ValueError, match="exceeded"):
         ledger.spend(label="query", epsilon=1e-13)
-    ledger = PrivacyBudget(0.3)
-    ledger.spend(label="a", epsilon=0.1)
-    ledger.spend(label="b", epsilon=0.2)
+    ledger = PrivacyBudget(0.25)
+    ledger.spend(label="a", epsilon=0.125)
+    ledger.spend(label="b", epsilon=0.125)
     with pytest.raises(ValueError, match="exceeded"):
         ledger.spend(label="c", epsilon=1e-16)
     ledger = PrivacyBudget(1e100)
     ledger.spend(label="large", epsilon=1e100)
     with pytest.raises(ValueError, match="exceeded"):
         ledger.spend(label="tiny", epsilon=1e-100)
+
+
+def test_binary_rounding_never_admits_an_overspend():
+    ledger = PrivacyBudget(0.3)
+    ledger.spend(label="a", epsilon=0.1)
+    with pytest.raises(ValueError, match="budget exceeded"):
+        ledger.spend(label="b", epsilon=0.2)
+    assert len(ledger.spends) == 1
+    assert ledger.epsilon_spent <= ledger.epsilon_limit
+
+
+def test_usage_rounds_up_and_remaining_rounds_down():
+    ledger = PrivacyBudget(2.0)
+    ledger.spend(label="a", epsilon=1.0)
+    ledger.spend(label="b", epsilon=2.0**-54)
+    assert ledger.epsilon_spent > 1.0
+    assert ledger.epsilon_remaining < 1.0
+
+
+@pytest.mark.parametrize(
+    "spends",
+    [
+        [PrivacySpend("bad", -1.0)],
+        [PrivacySpend("bad", 1.0, -0.1)],
+        [PrivacySpend("a", 0.1), PrivacySpend("b", 0.2)],
+    ],
+)
+def test_invalid_restored_ledger_is_rejected(spends):
+    with pytest.raises(ValueError):
+        PrivacyBudget(0.3, spends=spends)
+
+
+def test_budget_guard_agrees_with_actual_upstream_composition_rounding():
+    dp = require_opendp()
+    a = OpenDPBoundedMean("a", 0.0, 1.0, 3, 0.1)
+    b = OpenDPBoundedMean("b", 0.0, 1.0, 3, 0.2)
+    composed = dp.c.make_composition([a.measurement()[0], b.measurement()[0]])
+    assert composed.map(2) > 0.3 and not composed.check(2, 0.3)
+    ledger = PrivacyBudget(0.3)
+    a.release([0.0, 0.5, 1.0], budget=ledger)
+    with pytest.raises(ValueError, match="budget exceeded"):
+        b.release([0.0, 0.5, 1.0], budget=ledger)
+    assert len(ledger.spends) == 1
+
+
+def test_large_finite_weights_normalize_without_overflow():
+    result = release_bounded_means(
+        [
+            BoundedMeanQuery("a", [0.0, 1.0], 0.0, 1.0),
+            BoundedMeanQuery("b", [0.0, 1.0], 0.0, 1.0),
+        ],
+        epsilon_total=1.0,
+        weights=[1e308, 1e308],
+        seed=5,
+    )
+    assert result["budget"]["epsilon_spent"] == 1.0
 
 
 def test_reference_batch_rounds_allocations_down_instead_of_relaxing_budget():

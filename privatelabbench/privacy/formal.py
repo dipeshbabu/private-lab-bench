@@ -2,12 +2,26 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from fractions import Fraction
-from math import isfinite, nextafter
+from math import inf, isfinite, nextafter
 from typing import Iterable, Sequence
 
 import numpy as np
 
 ADJACENCY_MODEL = "fixed_size_replace_one"
+
+
+def _fraction(value):
+    """Preserve the actual binary float used by a mechanism, not its display text."""
+    return Fraction.from_float(float(value))
+
+
+def _rounded(value, *, upper):
+    result = float(value)
+    if upper and _fraction(result) < value:
+        return nextafter(result, inf)
+    if not upper and _fraction(result) > value:
+        return nextafter(result, -inf)
+    return result
 
 
 @dataclass(frozen=True)
@@ -31,6 +45,8 @@ class BoundedMeanQuery:
             raise ValueError("query bounds must be finite")
         if self.lower >= self.upper:
             raise ValueError("query lower bound must be smaller than upper bound")
+        if not np.isfinite(self.upper - self.lower):
+            raise ValueError("query bound range must be finite")
         if len(self.values) == 0:
             raise ValueError("bounded mean query requires at least one value")
         values = np.asarray(self.values, dtype=float)
@@ -49,7 +65,8 @@ class BoundedMeanQuery:
     def clipped_mean(self) -> float:
         self.validate()
         values = np.asarray(self.values, dtype=float)
-        return float(np.mean(np.clip(values, self.lower, self.upper)))
+        # Divide before summing so a finite mean does not overflow its numerator.
+        return float(np.sum(np.clip(values, self.lower, self.upper) / values.size))
 
 
 @dataclass(frozen=True)
@@ -76,22 +93,42 @@ class PrivacyBudget:
             or self.delta_limit >= 1
         ):
             raise ValueError("delta_limit must satisfy 0 <= delta < 1")
+        for spend in self.spends:
+            if (
+                not isinstance(spend, PrivacySpend)
+                or not isfinite(spend.epsilon)
+                or spend.epsilon <= 0
+                or not isfinite(spend.delta)
+                or not 0 <= spend.delta < 1
+            ):
+                raise ValueError("Existing privacy spends must be finite and valid")
+        if self._total("epsilon") > _fraction(self.epsilon_limit):
+            raise ValueError("privacy epsilon budget exceeded")
+        if self._total("delta") > _fraction(self.delta_limit):
+            raise ValueError("privacy delta budget exceeded")
+
+    def _total(self, field):
+        return sum(
+            (_fraction(getattr(spend, field)) for spend in self.spends), Fraction()
+        )
 
     @property
     def epsilon_spent(self) -> float:
-        return float(sum(spend.epsilon for spend in self.spends))
+        return _rounded(self._total("epsilon"), upper=True)
 
     @property
     def delta_spent(self) -> float:
-        return float(sum(spend.delta for spend in self.spends))
+        return _rounded(self._total("delta"), upper=True)
 
     @property
     def epsilon_remaining(self) -> float:
-        return float(self.epsilon_limit - self.epsilon_spent)
+        return _rounded(
+            _fraction(self.epsilon_limit) - self._total("epsilon"), upper=False
+        )
 
     @property
     def delta_remaining(self) -> float:
-        return float(self.delta_limit - self.delta_spent)
+        return _rounded(_fraction(self.delta_limit) - self._total("delta"), upper=False)
 
     def spend(self, *, label: str, epsilon: float, delta: float = 0.0) -> None:
         self.__post_init__()
@@ -101,11 +138,11 @@ class PrivacyBudget:
             raise ValueError("delta spend must satisfy 0 <= delta < 1")
         # Compare declared spends exactly. An absolute tolerance can admit many
         # times the entire budget when epsilon_limit is very small.
-        epsilon_total = sum(Fraction(str(x.epsilon)) for x in self.spends)
-        delta_total = sum(Fraction(str(x.delta)) for x in self.spends)
-        if epsilon_total + Fraction(str(epsilon)) > Fraction(str(self.epsilon_limit)):
+        epsilon_total = self._total("epsilon")
+        delta_total = self._total("delta")
+        if epsilon_total + _fraction(epsilon) > _fraction(self.epsilon_limit):
             raise ValueError("privacy epsilon budget exceeded")
-        if delta_total + Fraction(str(delta)) > Fraction(str(self.delta_limit)):
+        if delta_total + _fraction(delta) > _fraction(self.delta_limit):
             raise ValueError("privacy delta budget exceeded")
         self.spends.append(
             PrivacySpend(label=label, epsilon=float(epsilon), delta=float(delta))
@@ -140,7 +177,11 @@ class BoundedMeanRelease:
     guarantee: str = "pure_epsilon_dp_mathematical_model"
 
     def as_dict(self) -> dict[str, object]:
-        return self.__dict__.copy()
+        # The exact center remains available for LOCAL inspection only. Including
+        # it beside the noisy value would undo the intended release protection.
+        return {
+            key: value for key, value in self.__dict__.items() if key != "clipped_mean"
+        }
 
 
 def release_bounded_mean(
@@ -164,13 +205,19 @@ def release_bounded_mean(
     query.validate()
     if not isfinite(epsilon) or epsilon <= 0:
         raise ValueError("epsilon must be finite and positive")
-    if budget is not None:
-        budget.spend(label=query.name, epsilon=epsilon, delta=0.0)
     sensitivity = query.sensitivity
     scale = sensitivity / epsilon
+    if not isfinite(scale) or scale <= 0:
+        raise ValueError("reference noise scale must be finite and positive")
     rng = np.random.default_rng(seed)
     center = query.clipped_mean()
+    if budget is not None:
+        budget.spend(label=query.name, epsilon=epsilon, delta=0.0)
     value = float(center + rng.laplace(0.0, scale))
+    if not isfinite(value):
+        raise ValueError(
+            "reference sampler returned a nonfinite release; budget remains spent"
+        )
     return BoundedMeanRelease(
         name=query.name,
         value=value,
@@ -182,6 +229,11 @@ def release_bounded_mean(
         epsilon=float(epsilon),
         delta=0.0,
         noise_scale=float(scale),
+        guarantee=(
+            "none_deterministic_test_seed"
+            if seed is not None
+            else "pure_epsilon_dp_mathematical_model"
+        ),
     )
 
 
@@ -207,22 +259,21 @@ def release_bounded_means(
         raise ValueError("bounded mean query names must be unique")
 
     if weights is None:
-        allocations = [epsilon_total / len(query_list)] * len(query_list)
+        exact_weights = [Fraction(1)] * len(query_list)
     else:
         if len(weights) != len(query_list):
             raise ValueError("weights must contain one value per query")
         if any(not isfinite(weight) or weight <= 0 for weight in weights):
             raise ValueError("weights must all be finite and positive")
-        total_weight = float(sum(weights))
-        if not isfinite(total_weight):
-            raise ValueError("total weight must be finite")
-        allocations = [
-            epsilon_total * (float(weight) / total_weight) for weight in weights
-        ]
+        exact_weights = [_fraction(weight) for weight in weights]
 
-    # Rounded equal/weighted allocations may sum above the declared total.
-    # Round each allocation down, rather than relaxing the ledger's hard bound.
-    allocations = [nextafter(float(epsilon), 0.0) for epsilon in allocations]
+    # Normalize exact weights without overflowing their sum, and round each
+    # allocation downward so the hard cap also holds for binary mechanism inputs.
+    total_weight = sum(exact_weights)
+    allocations = [
+        _rounded(_fraction(epsilon_total) * weight / total_weight, upper=False)
+        for weight in exact_weights
+    ]
     if any(epsilon <= 0 for epsilon in allocations):
         raise ValueError("allocated epsilon is too small to represent")
 
@@ -233,7 +284,11 @@ def release_bounded_means(
     for query, epsilon, child_seed in zip(
         query_list, allocations, child_seeds, strict=True
     ):
-        child_int = int(child_seed.generate_state(1, dtype=np.uint64)[0])
+        child_int = (
+            int(child_seed.generate_state(1, dtype=np.uint64)[0])
+            if seed is not None
+            else None
+        )
         releases.append(
             release_bounded_mean(query, epsilon=epsilon, seed=child_int, budget=budget)
         )
@@ -241,7 +296,11 @@ def release_bounded_means(
     return {
         "mechanism": "bounded_mean_laplace",
         "adjacency": ADJACENCY_MODEL,
-        "guarantee": "pure_epsilon_dp_mathematical_model",
+        "guarantee": (
+            "none_deterministic_test_seed"
+            if seed is not None
+            else "pure_epsilon_dp_mathematical_model"
+        ),
         "implementation_note": (
             "Reference NumPy implementation. For high-assurance numerical guarantees, "
             "use a vetted DP backend such as OpenDP."

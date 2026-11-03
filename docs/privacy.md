@@ -169,6 +169,11 @@ The ledger reports both total spend and per-query spends.
 
 The built-in bounded-mean mechanism is a small reference implementation using NumPy floating-point arithmetic and random sampling. It is useful for making query contracts, bounds, sensitivity, and accounting explicit.
 
+Its serialized release excludes the exact clipped mean; that attribute is for
+local inspection only. A supplied `seed` enables deterministic tests and labels
+the result `none_deterministic_test_seed`, with no DP guarantee. Never publish a
+known-seed result as a private release. The optional OpenDP API has no seed.
+
 For high-assurance deployment where numerical details and end-to-end transformations must be inside a vetted privacy proof, use a specialized DP system such as **OpenDP** rather than treating this reference implementation as the final production backend.
 
 ## Optional OpenDP backend
@@ -199,8 +204,11 @@ one row. Calibration uses the upstream numerical sensitivity bound, including
 floating-point effects. OpenDP supplies the randomness; this API has no seed and
 does not fall back to NumPy if the optional dependency is missing.
 
-The ledger rejects nonfinite spends and compares declared budgets without
-absolute slack. A spend is charged before sampling, including when sampling
+The ledger rejects nonfinite spends and compares the exact binary floating-point
+spends without absolute slack. Usage rounds upward and remaining budget rounds
+downward. Boundary allocations may need headroom: `0.1 + 0.2` exceeds the binary
+float `0.3`, so that combination is rejected. Batch reference allocations are
+normalized exactly and rounded down. A spend is charged before sampling, including when sampling
 fails. This ledger is **in memory and sequential**: retain it for every query on
 the population. Applications must provide durable accounting and synchronization
 across restarts, processes, exports, and other systems. Starting a new ledger does

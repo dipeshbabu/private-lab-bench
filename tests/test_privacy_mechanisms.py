@@ -71,7 +71,7 @@ def test_bounded_mean_release_records_formal_query_contract():
     query = BoundedMeanQuery(
         name="bounded-score", values=[0.0, 1.0, 2.0, 3.0], lower=0.0, upper=4.0
     )
-    release = release_bounded_mean(query, epsilon=2.0, seed=11)
+    release = release_bounded_mean(query, epsilon=2.0)
 
     assert release.adjacency == "fixed_size_replace_one"
     assert release.guarantee == "pure_epsilon_dp_mathematical_model"
@@ -88,6 +88,32 @@ def test_bounded_mean_release_is_reproducible_given_seed():
     a = release_bounded_mean(query, epsilon=1.0, seed=42)
     b = release_bounded_mean(query, epsilon=1.0, seed=42)
     assert a.value == b.value
+    assert a.guarantee == b.guarantee == "none_deterministic_test_seed"
+
+
+def test_reference_serialization_excludes_exact_private_center():
+    query = BoundedMeanQuery("private-score", [0.0, 1.0, 2.0], 0.0, 2.0)
+    release = release_bounded_mean(query, epsilon=1.0, seed=5)
+    assert release.clipped_mean == 1.0  # Explicit local inspection remains possible.
+    assert "clipped_mean" not in release.as_dict()
+    batch = release_bounded_means([query], epsilon_total=1.0, seed=5)
+    assert "clipped_mean" not in batch["releases"][0]
+    assert batch["guarantee"] == "none_deterministic_test_seed"
+    assert batch["releases"][0]["guarantee"] == "none_deterministic_test_seed"
+
+
+def test_reference_mean_stays_finite_when_the_unscaled_sum_would_overflow():
+    query = BoundedMeanQuery("large-public-range", [1e308] * 3, 0.0, 1e308)
+    assert np.isfinite(query.clipped_mean())
+    assert query.clipped_mean() == pytest.approx(1e308)
+
+
+def test_reference_rejects_unrepresentable_scale_without_charging_budget():
+    query = BoundedMeanQuery("score", [0.0, 1.0], 0.0, 1.0)
+    budget = PrivacyBudget(1.0)
+    with pytest.raises(ValueError, match="scale"):
+        release_bounded_mean(query, epsilon=1e-320, budget=budget)
+    assert not budget.spends
 
 
 def test_privacy_budget_enforces_sequential_composition():
