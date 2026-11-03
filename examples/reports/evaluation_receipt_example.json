@@ -1,8 +1,8 @@
 {
-  "created_at": "2026-08-17T00:00:00+00:00",
+  "created_at": "2026-11-03T00:00:00+00:00",
   "integrity": {
     "algorithm": "sha256",
-    "payload_sha256": "1e2766161def71342c95adc8c2e9f08baf478fc10b6b4550f0b9e9c203072d27",
+    "payload_sha256": "311bf56d5c57b2a01f3765b7dcd17b966d379399d640db15f271b30b7e06f162",
     "signed": false
   },
   "receipt_id": "example-receipt-v1",
@@ -31,12 +31,18 @@
     "evaluation": {
       "input_schema": {
         "class_labels": [],
-        "metadata_columns": ["site"],
-        "prediction_columns": ["prediction"],
+        "metadata_columns": [
+          "site"
+        ],
+        "prediction_columns": [
+          "prediction"
+        ],
         "sample_id_column": "sample_id",
         "sample_id_status": "present",
         "schema_version": "prediction-table/v1",
-        "slice_columns": ["site"],
+        "slice_columns": [
+          "site"
+        ],
         "split_column": null,
         "target_column": "target"
       },
@@ -85,11 +91,11 @@
       "attestation_id": "example-attestation",
       "package": {
         "name": "private-lab-bench",
-        "version": "0.11.0"
+        "version": "0.1.0"
       }
     },
     "run": {
-      "created_at": "2026-08-17T00:00:00+00:00",
+      "created_at": "2026-11-03T00:00:00+00:00",
       "project": "example-tabular",
       "report_type": "prediction_evaluation",
       "run_id": "example-run",

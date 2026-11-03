@@ -2,4 +2,4 @@ schema_version: receipt-trust-store/v1
 keys:
   caco2-case-example-v1:
     signer_id: caco2-case-example
-    public_key: 03CrdZf09kaEB9sPopc8k+g6U4KwKPJGufLxy9JPmjg=
+    public_key: rWoy/cotDHoiNgaB22QKDahzUm+ASBF4zZDIS/dFwS8=

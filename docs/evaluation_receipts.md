@@ -2,7 +2,7 @@
 
 PrivateLabBench evaluation receipts are stable artifacts for communicating the result of a local evaluation without making the local run directory or private dataset part of the sharing protocol.
 
-The current schema is **`evaluation-receipt/v1`**. A machine-readable JSON Schema is checked in at [`schemas/evaluation-receipt-v1.schema.json`](../schemas/evaluation-receipt-v1.schema.json).
+The current schema is **`evaluation-receipt/v1`**. Its [machine-readable JSON Schema](https://github.com/dipeshbabu/private-lab-bench/blob/v0.1.0/privatelabbench/data/schemas/evaluation-receipt-v1.schema.json) ships with the package.
 
 ## Three local outputs
 
@@ -122,4 +122,4 @@ inserted back into the source manifest, avoiding circular artifact hashing.
 
 ## Example
 
-See [`examples/reports/evaluation_receipt_example.json`](../examples/reports/evaluation_receipt_example.json) for a fixed, valid shareable receipt.
+See the [v0.1.0 example receipt](https://github.com/dipeshbabu/private-lab-bench/blob/v0.1.0/examples/reports/evaluation_receipt_example.json) for a fixed, valid shareable receipt.

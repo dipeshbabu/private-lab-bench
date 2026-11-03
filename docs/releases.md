@@ -15,16 +15,17 @@ Before tagging:
 Create a tag:
 
 ```bash
-git tag v0.11.0
-git push origin v0.11.0
+git tag v0.1.0
+git push origin v0.1.0
 ```
 
 The release workflow refuses to publish if the tag version differs from package metadata.
 
 ## PyPI Trusted Publishing
 
-The repository is configured for PyPI's OIDC-based trusted-publishing workflow. A maintainer still needs to create/configure the matching Trusted Publisher on PyPI for:
+The v0.1.0 release uses PyPI's OIDC-based Trusted Publishing. The publisher configuration must match:
 
+- PyPI project: `private-lab-bench`
 - repository owner: `dipeshbabu`
 - repository: `private-lab-bench`
 - workflow: `release.yml`
@@ -32,7 +33,7 @@ The repository is configured for PyPI's OIDC-based trusted-publishing workflow. 
 
 No long-lived PyPI API token is stored in the repository workflow.
 
-Until that external PyPI configuration and a successful release run exist, documentation should not claim that `pip install private-lab-bench` is live.
+The GitHub environment `pypi` is configured. Register the corresponding publisher on PyPI before pushing the tag. A pending publisher creates the project on its first successful upload. The workflow builds and validates distributions before publishing; verify a clean `python -m pip install private-lab-bench==0.1.0` after it succeeds. Never reuse a published version for different distribution files.
 
 ## Documentation site
 
@@ -43,4 +44,4 @@ pip install -e '.[docs]'
 mkdocs build
 ```
 
-CI verifies the site builds. Hosting/deployment can be enabled once the repository is public and GitHub Pages settings are configured.
+CI verifies the site builds. The documentation source is public; hosted-site deployment remains separate from the package release.

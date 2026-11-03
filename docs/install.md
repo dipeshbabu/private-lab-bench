@@ -1,11 +1,27 @@
 # Installation
 
-## Current repository install
+## Install v0.1.0
 
-Until the first PyPI release is actually published, install from a checkout:
+Use Python 3.10 or later in an activated virtual environment:
 
 ```bash
-git clone https://github.com/dipeshbabu/private-lab-bench.git
+python -m pip install private-lab-bench==0.1.0
+```
+
+Optional RDKit support:
+
+```bash
+python -m pip install 'private-lab-bench[rdkit]==0.1.0'
+```
+
+The [quickstart notebook](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.0/examples/notebooks/quickstart.ipynb) installs the same release and runs a bundled synthetic benchmark without a repository checkout.
+
+## Source and development installs
+
+To reproduce the release from source:
+
+```bash
+git clone --branch v0.1.0 https://github.com/dipeshbabu/private-lab-bench.git
 cd private-lab-bench
 python -m pip install -e .
 ```
@@ -28,16 +44,6 @@ Documentation tooling:
 python -m pip install -e '.[docs]'
 mkdocs serve
 ```
-
-## PyPI release path
-
-The package metadata and release workflow are prepared for:
-
-```bash
-pip install private-lab-bench
-```
-
-Do not treat that command as live until a real release appears on PyPI. The release maintainer must first configure PyPI Trusted Publishing for this repository/environment and push a version tag that matches `pyproject.toml` and `privatelabbench.__version__`.
 
 ## Supported Python
 

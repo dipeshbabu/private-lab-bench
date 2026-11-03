@@ -16,13 +16,22 @@ def main() -> int:
     with Path("pyproject.toml").open("rb") as handle:
         project_version = str(tomllib.load(handle)["project"]["version"])
     init_text = Path("privatelabbench/__init__.py").read_text(encoding="utf-8")
-    match = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', init_text, re.MULTILINE)
+    match = re.search(
+        r'^__version__\s*=\s*["\']([^"\']+)["\']', init_text, re.MULTILINE
+    )
     if not match:
         raise SystemExit("could not find __version__ in privatelabbench/__init__.py")
     module_version = match.group(1)
-    if tag_version != project_version or tag_version != module_version:
+    citation_text = Path("CITATION.cff").read_text(encoding="utf-8")
+    citation_match = re.search(
+        r'^version:\s*["\']?([^"\'\s]+)', citation_text, re.MULTILINE
+    )
+    if not citation_match:
+        raise SystemExit("could not find version in CITATION.cff")
+    citation_version = citation_match.group(1)
+    if len({tag_version, project_version, module_version, citation_version}) != 1:
         raise SystemExit(
-            f"release version mismatch: tag={tag_version}, pyproject={project_version}, module={module_version}"
+            f"release version mismatch: tag={tag_version}, pyproject={project_version}, module={module_version}, citation={citation_version}"
         )
     print(f"release version verified: {tag_version}")
     return 0
