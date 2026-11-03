@@ -1,7 +1,7 @@
 name: Privacy method proposal
 description: Propose a privacy audit, release mechanism, or privacy-policy change.
 title: "[Privacy]: "
-labels: []
+labels: [privacy, needs-triage]
 body:
   - type: dropdown
     id: kind

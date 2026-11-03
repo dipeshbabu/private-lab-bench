@@ -43,6 +43,10 @@ benchmark-pack
 schema
 artifact
 breaking-change
+dependencies
+ci
+tests
+needs-triage
 ```
 
 Use GitHub's standard `bug`, `enhancement`, and `documentation` labels where available.
@@ -53,4 +57,4 @@ Enable GitHub private vulnerability reporting before broad public launch so `SEC
 
 ## Branch/review policy
 
-For a public community repository, prefer pull requests with CI passing before merge. Schema/privacy/security changes should receive explicit maintainer review even when tests pass.
+Use pull requests and squash merge only after all checks on the current commit pass. Dependency updates follow this rule too. Schema/privacy/security changes need explicit maintainer review even when tests pass. See the maintenance-bot section in `CONTRIBUTING.md` for schedules and automatic labels.
