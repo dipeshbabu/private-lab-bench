@@ -379,9 +379,10 @@ def run_from_config(args: argparse.Namespace) -> int:
 def gate_command(args: argparse.Namespace) -> int:
     try:
         source = Path(args.artifact)
-        if args.out and source.resolve() == Path(args.out).resolve():
-            raise ValueError("Choose a different output path to preserve evaluation evidence")
         if args.out:
+            from privatelabbench.core.local_io import validate_output_paths
+
+            validate_output_paths([source, args.policy, args.trust_store], [args.out])
             Path(args.out).unlink(missing_ok=True)
         trust = _read_release_policy(args.trust_store) if args.trust_store else None
         verification = verify_report(str(source), signing_secret=_secret(args), trust_store=trust, require_trusted_signer=args.require_trusted_signer)
@@ -528,10 +529,22 @@ def aggregate_command(args: argparse.Namespace) -> int:
     output = Path(args.out)
     public = output.with_name(f"{output.stem}.shareable{output.suffix}")
     markdown = output.with_suffix(".md")
-    protected = {Path(path).resolve() for path in args.inputs}
-    related = (output, public, markdown, public.with_suffix(".release-audit.json"), output.parent / ".plb-release-ledger.json", output.parent / ".plb-release.lock")
-    if any(path.resolve() in protected for path in related):
-        raise ValueError("Choose aggregate output paths separate from every input receipt")
+    protected = {
+        Path(path).resolve()
+        for path in [*args.inputs, args.release_policy, args.trust_store]
+        if path
+    }
+    related = (
+        output,
+        public,
+        markdown,
+        public.with_suffix(".release-audit.json"),
+        output.parent / ".plb-release-ledger.json",
+        output.parent / ".plb-release.lock",
+    )
+    from privatelabbench.core.local_io import validate_output_paths
+
+    validate_output_paths(protected, related)
     public.unlink(missing_ok=True)
     markdown.unlink(missing_ok=True)
     try:
@@ -620,6 +633,21 @@ def run_pack_command(args: argparse.Namespace) -> int:
 
 
 def compare_command(args: argparse.Namespace) -> int:
+    from privatelabbench.compare import _comparison_output_paths
+    from privatelabbench.core.local_io import validate_output_paths
+
+    sources = [
+        *args.inputs,
+        args.release_policy,
+        args.sampling_design,
+        args.evaluation_design,
+        args.training_reference,
+    ]
+    if args.protocol and not args.protocol.startswith("plb://"):
+        sources.append(args.protocol)
+    validate_output_paths(
+        sources, _comparison_output_paths(args.json_report, args.report)
+    )
     if args.target is None and len(args.inputs) == 2 and all(Path(path).suffix.lower() == ".csv" for path in args.inputs):
         from privatelabbench.evaluate import prediction_bindings
         from privatelabbench.protocols import resolve_protocol
@@ -798,8 +826,17 @@ def verify_any_command(args: argparse.Namespace) -> int:
 
 def sign_command(args: argparse.Namespace) -> int:
     source = Path(args.artifact)
-    if source.resolve() == Path(args.out).resolve():
-        raise ValueError("Choose a separate signed output path; the local source must be preserved")
+    from privatelabbench.core.local_io import validate_output_paths
+    output = Path(args.out)
+    validate_output_paths(
+        [source, args.policy, args.private_key],
+        [
+            output,
+            output.with_suffix(".release-audit.json"),
+            output.parent / ".plb-release-ledger.json",
+            output.parent / ".plb-release.lock",
+        ],
+    )
     Path(args.out).unlink(missing_ok=True)
     check = verify_report(str(source), signing_secret=_secret(args))
     if not check.get("valid"):

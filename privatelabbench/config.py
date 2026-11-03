@@ -20,6 +20,7 @@ class RunnerConfig:
     prepared_input: Any = field(default=None, repr=False, compare=False)
     design_audits: tuple[dict[str, Any], ...] = field(default=(), repr=False, compare=False)
     validation_context: dict[str, Any] | None = field(default=None, repr=False, compare=False)
+    definition_paths: tuple[str, ...] = ()
 
     @property
     def task_id(self) -> str:
@@ -33,13 +34,16 @@ def load_config(path: str, *, protocol_override: str | None = None) -> RunnerCon
     if not config_path.exists():
         raise FileNotFoundError(f"Config file does not exist: {path}")
     payload = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    definition_paths = [str(config_path.resolve())]
     if not isinstance(payload, dict):
         raise ValueError("Config must be a YAML mapping.")
     if payload.get("evaluation_design") is not None:
         from privatelabbench.design_audit import EvaluationDesign
         value = payload["evaluation_design"]
         if isinstance(value, str):
-            value = yaml.safe_load((config_path.resolve().parent / value).read_text(encoding="utf-8"))
+            design_path = config_path.resolve().parent / value
+            definition_paths.append(str(design_path.resolve()))
+            value = yaml.safe_load(design_path.read_text(encoding="utf-8"))
         payload["evaluation_design"] = EvaluationDesign.from_dict(value).as_dict()
 
     protocol = None
@@ -47,10 +51,24 @@ def load_config(path: str, *, protocol_override: str | None = None) -> RunnerCon
     if reference is not None:
         from privatelabbench.protocols import apply_protocol, resolve_protocol
         if not isinstance(reference, str):
-            raise ValueError("protocol must be an exact plb:// reference or a local YAML path")
-        protocol = resolve_protocol(reference, base=Path.cwd() if protocol_override else config_path.resolve().parent)
+            raise ValueError(
+                "protocol must be an exact plb:// reference or a local YAML path"
+            )
+        protocol = resolve_protocol(
+            reference,
+            base=Path.cwd() if protocol_override else config_path.resolve().parent,
+        )
+        if not reference.startswith("plb://"):
+            base = Path.cwd() if protocol_override else config_path.resolve().parent
+            definition_paths.append(str((base / reference).resolve()))
         if protocol_override and payload.get("protocol"):
-            configured = resolve_protocol(payload["protocol"], base=config_path.resolve().parent)
+            configured = resolve_protocol(
+                payload["protocol"], base=config_path.resolve().parent
+            )
+            if not payload["protocol"].startswith("plb://"):
+                definition_paths.append(
+                    str((config_path.resolve().parent / payload["protocol"]).resolve())
+                )
             if configured.sha256 != protocol.sha256:
                 raise ValueError("--protocol conflicts with the protocol declared in the config")
         if payload.get("protocol_sha256") is not None and payload["protocol_sha256"] != protocol.sha256:
@@ -86,6 +104,7 @@ def load_config(path: str, *, protocol_override: str | None = None) -> RunnerCon
         raw=payload,
         config_path=str(config_path.resolve()),
         protocol=protocol,
+        definition_paths=tuple(definition_paths),
     )
 
 

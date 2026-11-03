@@ -13,6 +13,23 @@ from privatelabbench.reports.paired_comparison import write_paired_comparison_ar
 from privatelabbench.runner import run_config
 
 
+def _comparison_output_paths(json_path: str, markdown_path: str) -> list[Path]:
+    local = Path(json_path)
+    public = local.with_name(f"{local.stem}.shareable{local.suffix}")
+    return [
+        local,
+        public,
+        Path(markdown_path),
+        public.with_suffix(".release-audit.json"),
+        local.parent / ".plb-release-ledger.json",
+        local.parent / ".plb-release.lock",
+        *[
+            local.with_name(f"{local.stem}_{role}_design_audit.json")
+            for role in ("model_a", "model_b")
+        ],
+    ]
+
+
 def compare_prediction_files(
     path_a: str,
     path_b: str,
@@ -49,9 +66,8 @@ def compare_prediction_files(
     local_path = Path(json_path)
     public_path = local_path.with_name(f"{local_path.stem}.shareable{local_path.suffix}")
     protected = {Path(path_a).resolve(), Path(path_b).resolve(), *([Path(options["training_reference"]).resolve()] if options.get("training_reference") else []), *([Path(protocol).resolve()] if protocol and not protocol.startswith("plb://") else [])}
-    outputs = [local_path, public_path, Path(markdown_path), public_path.with_suffix(".release-audit.json"), local_path.parent/".plb-release-ledger.json", local_path.parent/".plb-release.lock", *[local_path.with_name(f"{local_path.stem}_{role}_design_audit.json") for role in ("model_a", "model_b")]]
-    if any(output.resolve() in protected for output in outputs):
-        raise ValueError("Choose comparison outputs separate from every input")
+    from privatelabbench.core.local_io import validate_output_paths
+    validate_output_paths(protected, _comparison_output_paths(json_path, markdown_path))
     local_path.with_name(f"{local_path.stem}.shareable{local_path.suffix}").unlink(missing_ok=True)
     Path(markdown_path).unlink(missing_ok=True)
     settings = {"metric": metric, "confidence_level": confidence_level, "resamples": resamples, "permutations": permutations, "seed": seed, "min_samples": min_samples, "practical_threshold": practical_threshold, "noninferiority_margin": noninferiority_margin, "include_slice_uncertainty": include_slice_uncertainty, "min_slice_size": min_slice_size}
