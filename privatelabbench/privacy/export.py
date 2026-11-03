@@ -208,9 +208,13 @@ def _sanitize(candidate: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[s
         clean = {"n_samples": n, "metric": metric, "task_type": shared["task_type"], "direction": shared["direction"], "class_labels": [], "sample_id_column": None, "target_column": None, "comparison_schema": "paired-comparison/v1", "alignment": {"status": "exact_sample_id_match", "n_model_a": n, "n_model_b": n, "dropped_samples": 0}, "slices": _slices(shared.get("slices", {}), policy)}
         for key in ("raw_delta_a_minus_b", "improvement_a_over_b"):
             clean[key] = _number(shared.get(key))
+            if clean[key] is None:
+                raise ValueError("Undefined comparison estimate")
         for key in ("model_a", "model_b"):
             model = _mapping(shared.get(key))
             clean[key] = {"name": key, "metrics": _metrics(model.get("metrics")), "selected_metric": _number(model.get("selected_metric"))}
+            if clean[key]["selected_metric"] is None:
+                raise ValueError("Undefined selected metric")
         for key in ("paired_interval", "randomization_test", "decision"):
             clean[key] = _statistics(shared.get(key, {}))
         identifier = "comparison_id"
@@ -304,7 +308,7 @@ def publish_shareable_artifact(candidate: Any, policy: Any, path: str | Path, *,
             if previous is not None and previous != digest and not policy.get("reviewed_repeat", False):
                 decision = ReleaseDecision("needs_review", ("changed_repeated_release_requires_review",), decision.policy_id)
             else:
-                # Commit the disclosure budget first: a failed export consumes approval safely.
+                # Record approval first: a failed export conservatively retains it.
                 ledger[decision.policy_id] = digest
                 atomic_write_json(ledger_path, ledger)
                 atomic_write_json(output, attach_integrity_metadata(payload, signing_secret=signing_secret))

@@ -59,11 +59,13 @@ This section is explicitly marked `sharing: local_only`.
 
 ## Metric selection
 
-The shareable receipt prefers released metrics in this order:
+The exporter accepts explicitly released metrics in this order:
 
 1. `reported_metrics`;
-2. `aggregate_reported_metrics`;
-3. exact metrics only when no separate reported-metric field exists.
+2. `aggregate_reported_metrics`.
+
+A candidate containing only clean metrics cannot be exported. Exact reporting is
+still supported when the evaluator explicitly records it as `reported_metrics`.
 
 Exact `clean_metrics`/`aggregate_clean_metrics` remain in the local section when available.
 
@@ -109,9 +111,10 @@ A receipt is **not** a replacement for the local run manifest.
 
 - the manifest binds concrete local files and paths for reproducibility/verification;
 - the receipt presents a stable evaluation/result schema;
-- the shareable receipt removes local-only material while preserving artifact hashes and independently verifiable integrity metadata.
+- the shareable receipt selects approved aggregate material and receives its own integrity metadata; source artifact names/hashes remain local.
 
-This avoids circular artifact hashing: receipts reference manifest-bound artifact hashes, but receipts are not themselves inserted back into the source manifest.
+The full local receipt retains manifest-bound artifact hashes. Receipts are not
+inserted back into the source manifest, avoiding circular artifact hashing.
 
 ## Example
 
