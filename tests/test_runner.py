@@ -111,7 +111,9 @@ report:
     assert manifest_path.exists()
 
 
-def test_prediction_runner_writes_privacy_risk_when_split_column_is_configured(tmp_path):
+def test_prediction_runner_writes_privacy_risk_when_split_column_is_configured(
+    tmp_path,
+):
     csv_path = tmp_path / "predictions_with_split.csv"
     config_path = tmp_path / "prediction_eval.yaml"
     md_path = tmp_path / "prediction.md"
@@ -167,7 +169,10 @@ report:
     assert "Privacy attack risk" in md_path.read_text(encoding="utf-8")
     payload = json.loads(json_path.read_text(encoding="utf-8"))
     assert payload["result"]["split_column"] == "split"
-    assert payload["result"]["privacy_risk"]["attack"] == "loss_threshold_membership_inference"
+    assert (
+        payload["result"]["privacy_risk"]["attack"]
+        == "loss_threshold_membership_inference"
+    )
     assert payload["result"]["privacy_gate"]["status"] == "fail"
 
 

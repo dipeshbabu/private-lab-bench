@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
 
-from privatelabbench.eval.metrics import classification_metrics, multiclass_metrics, regression_metrics
+from privatelabbench.eval.metrics import (
+    classification_metrics,
+    multiclass_metrics,
+    regression_metrics,
+)
 from privatelabbench.tasks.molecules import infer_task_type
-
 
 PAIRED_COMPARISON_SCHEMA_VERSION = "paired-comparison/v1"
 LOWER_IS_BETTER = frozenset({"mae", "rmse", "log_loss"})
@@ -82,10 +85,14 @@ def _validate_ids(df: pd.DataFrame, *, sample_id_column: str, label: str) -> Non
         raise ValueError(f"{label} is missing sample ID column '{sample_id_column}'")
     ids = df[sample_id_column]
     if ids.isna().any() or ids.astype(str).str.strip().eq("").any():
-        raise ValueError(f"{label} sample ID column '{sample_id_column}' contains missing/empty values")
+        raise ValueError(
+            f"{label} sample ID column '{sample_id_column}' contains missing/empty values"
+        )
     duplicated = ids[ids.duplicated()].astype(str).head(3).tolist()
     if duplicated:
-        raise ValueError(f"{label} contains duplicate sample IDs: {', '.join(duplicated)}")
+        raise ValueError(
+            f"{label} contains duplicate sample IDs: {', '.join(duplicated)}"
+        )
 
 
 def _equal_series(left: pd.Series, right: pd.Series) -> np.ndarray:
@@ -108,13 +115,17 @@ def _resolve_task_type(
         try:
             resolved = infer_task_type(targets.astype(float))
         except (TypeError, ValueError):
-            resolved = "classification" if len(pd.unique(targets)) == 2 else "multiclass"
+            resolved = (
+                "classification" if len(pd.unique(targets)) == 2 else "multiclass"
+            )
     if resolved not in {"regression", "classification", "multiclass"}:
         raise ValueError("task_type must be regression, classification, or multiclass")
     if resolved == "multiclass" and len(prediction_columns) < 2:
         raise ValueError("multiclass comparison requires multiple probability columns")
     if resolved != "multiclass" and len(prediction_columns) != 1:
-        raise ValueError(f"{resolved} comparison requires exactly one prediction column")
+        raise ValueError(
+            f"{resolved} comparison requires exactly one prediction column"
+        )
     return resolved
 
 
@@ -137,14 +148,22 @@ def _encode_targets(
         except (TypeError, ValueError) as exc:
             raise ValueError("Regression targets must be numeric") from exc
 
-    labels = tuple(str(value) for value in class_labels) if class_labels else _default_labels(targets)
+    labels = (
+        tuple(str(value) for value in class_labels)
+        if class_labels
+        else _default_labels(targets)
+    )
     expected = 2 if task_type == "classification" else n_prediction_columns
     if len(labels) != expected or len(set(labels)) != len(labels):
-        raise ValueError(f"{task_type} comparison requires exactly {expected} unique class labels")
+        raise ValueError(
+            f"{task_type} comparison requires exactly {expected} unique class labels"
+        )
     mapping = {label: index for index, label in enumerate(labels)}
     unknown = sorted({str(value) for value in targets if str(value) not in mapping})
     if unknown:
-        raise ValueError(f"Target contains labels not present in class_labels: {', '.join(unknown)}")
+        raise ValueError(
+            f"Target contains labels not present in class_labels: {', '.join(unknown)}"
+        )
     return np.asarray([mapping[str(value)] for value in targets], dtype=int), labels
 
 
@@ -192,28 +211,53 @@ def _load_aligned_tables(
     slices = tuple(str(column) for column in (slice_columns or ()))
     if len(set(slices)) != len(slices):
         raise ValueError("slice_columns cannot contain duplicates")
-    selected_metadata = tuple(dict.fromkeys([*slices, *metadata_columns,*([evaluation_group["column"]] if evaluation_group else [])]))
+    selected_metadata = tuple(
+        dict.fromkeys(
+            [
+                *slices,
+                *metadata_columns,
+                *([evaluation_group["column"]] if evaluation_group else []),
+            ]
+        )
+    )
     required = {sample_id_column, target, *prediction_cols, *selected_metadata}
     dtype = {
         sample_id_column: "string",
         **{column: "string" for column in selected_metadata},
     }
-    if class_labels: dtype[target] = "string"
-    if evaluation_group: dtype[evaluation_group["column"]]="string"
-    a = pd.read_csv(path_a, dtype=dtype) if frame_a is None else frame_a.copy(deep=False)
-    b = pd.read_csv(path_b, dtype=dtype) if frame_b is None else frame_b.copy(deep=False)
+    if class_labels:
+        dtype[target] = "string"
+    if evaluation_group:
+        dtype[evaluation_group["column"]] = "string"
+    a = (
+        pd.read_csv(path_a, dtype=dtype)
+        if frame_a is None
+        else frame_a.copy(deep=False)
+    )
+    b = (
+        pd.read_csv(path_b, dtype=dtype)
+        if frame_b is None
+        else frame_b.copy(deep=False)
+    )
     for frame in (a, b):
         for column in dtype:
-            if column in frame: frame[column] = frame[column].astype("string")
+            if column in frame:
+                frame[column] = frame[column].astype("string")
 
     for frame, label in ((a, "Model A table"), (b, "Model B table")):
         from privatelabbench.eval.predictions import validate_evaluation_group
-        validate_evaluation_group(frame,evaluation_group)
+
+        validate_evaluation_group(frame, evaluation_group)
         missing = required - set(frame.columns)
         if missing:
-            raise ValueError(f"{label} is missing required column(s): {', '.join(sorted(missing))}")
+            raise ValueError(
+                f"{label} is missing required column(s): {', '.join(sorted(missing))}"
+            )
         _validate_ids(frame, sample_id_column=sample_id_column, label=label)
-        if frame[target].isna().any() or frame[list(prediction_cols)].isna().any().any():
+        if (
+            frame[target].isna().any()
+            or frame[list(prediction_cols)].isna().any().any()
+        ):
             raise ValueError(
                 f"{label} contains missing targets or predictions; paired comparison does not drop rows"
             )
@@ -260,7 +304,9 @@ def _load_aligned_tables(
     if resolved_task == "classification":
         for values, label in ((predictions_a, "Model A"), (predictions_b, "Model B")):
             if np.any(values < 0.0) or np.any(values > 1.0):
-                raise ValueError(f"{label} binary probabilities must be between 0 and 1")
+                raise ValueError(
+                    f"{label} binary probabilities must be between 0 and 1"
+                )
 
     metadata = (
         a[list(selected_metadata)].reset_index(drop=True)
@@ -285,9 +331,13 @@ def _metric_values(
     metric_names=None,
 ) -> dict[str, float]:
     if task_type == "regression":
-        return regression_metrics(y_true.astype(float), predictions.astype(float),metric_names=metric_names)
+        return regression_metrics(
+            y_true.astype(float), predictions.astype(float), metric_names=metric_names
+        )
     if task_type == "classification":
-        return classification_metrics(y_true.astype(int), predictions.astype(float),metric_names=metric_names)
+        return classification_metrics(
+            y_true.astype(int), predictions.astype(float), metric_names=metric_names
+        )
     return multiclass_metrics(
         y_true.astype(int),
         predictions.astype(float),
@@ -329,7 +379,11 @@ def _metric_at(
     y_true: np.ndarray,
     predictions: np.ndarray,
 ) -> float:
-    return float(_metric_values(task_type, y_true, predictions,metric_names=[metric]).get(metric, float("nan")))
+    return float(
+        _metric_values(task_type, y_true, predictions, metric_names=[metric]).get(
+            metric, float("nan")
+        )
+    )
 
 
 def _regression_metric_batch(
@@ -393,13 +447,22 @@ def _bootstrap_improvements(
 ) -> dict[str, object]:
     if sampling_design is not None:
         from privatelabbench.eval.sampling import paired_interval
-        return paired_interval(data, metric=metric, direction=direction, config=config, design=sampling_design)
+
+        return paired_interval(
+            data,
+            metric=metric,
+            direction=direction,
+            config=config,
+            design=sampling_design,
+        )
     metadata: dict[str, object] = {
         "method": "paired_percentile_bootstrap",
         "confidence_level": config.confidence_level,
         "resamples": config.resamples,
         "seed": config.seed,
-        "sampling": "iid_rows" if data.task_type == "regression" else "stratified_by_target",
+        "sampling": "iid_rows"
+        if data.task_type == "regression"
+        else "stratified_by_target",
         "n_samples": data.n_samples,
     }
     if data.n_samples < config.min_samples:
@@ -412,7 +475,7 @@ def _bootstrap_improvements(
         }
 
     rng = np.random.default_rng(config.seed)
-    if data.task_type == "regression" and metric in {"mae","rmse","r2"}:
+    if data.task_type == "regression" and metric in {"mae", "rmse", "r2"}:
         values = _regression_bootstrap_improvements(
             data.y_true,
             data.predictions_a,
@@ -424,12 +487,22 @@ def _bootstrap_improvements(
     else:
         values = np.full(config.resamples, np.nan, dtype=float)
         for index in range(config.resamples):
-            indices = rng.integers(0,data.n_samples,size=data.n_samples) if data.task_type=="regression" else _stratified_indices(data.y_true, rng)
+            indices = (
+                rng.integers(0, data.n_samples, size=data.n_samples)
+                if data.task_type == "regression"
+                else _stratified_indices(data.y_true, rng)
+            )
             value_a = _metric_at(
-                data.task_type, metric, data.y_true[indices], data.predictions_a[indices]
+                data.task_type,
+                metric,
+                data.y_true[indices],
+                data.predictions_a[indices],
             )
             value_b = _metric_at(
-                data.task_type, metric, data.y_true[indices], data.predictions_b[indices]
+                data.task_type,
+                metric,
+                data.y_true[indices],
+                data.predictions_b[indices],
             )
             if math.isfinite(value_a) and math.isfinite(value_b):
                 values[index] = _improvement(value_a, value_b, direction=direction)
@@ -497,7 +570,15 @@ def _randomization_test(
 ) -> dict[str, object]:
     if sampling_design is not None:
         from privatelabbench.eval.sampling import paired_randomization
-        return paired_randomization(data, metric=metric, direction=direction, observed_improvement=observed_improvement, config=config, design=sampling_design)
+
+        return paired_randomization(
+            data,
+            metric=metric,
+            direction=direction,
+            observed_improvement=observed_improvement,
+            config=config,
+            design=sampling_design,
+        )
     metadata: dict[str, object] = {
         "method": "paired_randomization_swap",
         "alternative": "two_sided",
@@ -510,7 +591,7 @@ def _randomization_test(
         return {**metadata, "status": "skipped_min_samples", "p_value": None}
 
     rng = np.random.default_rng(config.seed + 1)
-    if data.task_type == "regression" and metric in {"mae","rmse","r2"}:
+    if data.task_type == "regression" and metric in {"mae", "rmse", "r2"}:
         values = _regression_randomization_improvements(
             data,
             metric=metric,
@@ -525,7 +606,9 @@ def _randomization_test(
                 "p_value": None,
                 "valid_permutations": 0,
             }
-        extreme = int(np.count_nonzero(np.abs(finite) >= abs(observed_improvement) - 1e-15))
+        extreme = int(
+            np.count_nonzero(np.abs(finite) >= abs(observed_improvement) - 1e-15)
+        )
         return {
             **metadata,
             "status": "evaluated",
@@ -594,7 +677,11 @@ def _decisions(
     confidence = "insufficient_evidence"
     lower = interval.get("lower")
     upper = interval.get("upper")
-    if interval.get("status") == "evaluated" and lower is not None and upper is not None:
+    if (
+        interval.get("status") == "evaluated"
+        and lower is not None
+        and upper is not None
+    ):
         lower_value = float(lower)
         upper_value = float(upper)
         if threshold == 0.0:
@@ -643,13 +730,18 @@ def _slice_results(
     slice_seed = 0
     for column in slice_columns or ():
         groups: dict[str, dict[str, object]] = {}
-        for value, indices in data.metadata.groupby(column, dropna=False, sort=True).indices.items():
+        for value, indices in data.metadata.groupby(
+            column, dropna=False, sort=True
+        ).indices.items():
             idx = np.asarray(indices, dtype=int)
             key = "<NA>" if pd.isna(value) else str(value)
             entry: dict[str, object] = {"n": int(len(idx))}
             if sampling_design:
                 from privatelabbench.eval.sampling import plan_sampling
-                entry["n_independent_units"] = plan_sampling(data.metadata.iloc[idx], sampling_design).n_units
+
+                entry["n_independent_units"] = plan_sampling(
+                    data.metadata.iloc[idx], sampling_design
+                ).n_units
             if len(idx) < config.min_slice_size:
                 entry["status"] = "skipped_min_slice_size"
                 groups[key] = entry
@@ -664,8 +756,18 @@ def _slice_results(
                 metadata=data.metadata.iloc[idx].reset_index(drop=True),
                 n_samples=len(idx),
             )
-            metrics_a = _metric_values(data.task_type, subset.y_true, subset.predictions_a,metric_names=[metric] if metric=="spearman" else None)
-            metrics_b = _metric_values(data.task_type, subset.y_true, subset.predictions_b,metric_names=[metric] if metric=="spearman" else None)
+            metrics_a = _metric_values(
+                data.task_type,
+                subset.y_true,
+                subset.predictions_a,
+                metric_names=[metric] if metric == "spearman" else None,
+            )
+            metrics_b = _metric_values(
+                data.task_type,
+                subset.y_true,
+                subset.predictions_b,
+                metric_names=[metric] if metric == "spearman" else None,
+            )
             value_a = float(metrics_a[metric])
             value_b = float(metrics_b[metric])
             if not (math.isfinite(value_a) and math.isfinite(value_b)):
@@ -686,16 +788,26 @@ def _slice_results(
                     "metric_a": value_a,
                     "metric_b": value_b,
                     "improvement": improvement,
-                    "winner": "a" if improvement > 0 else "b" if improvement < 0 else "tie",
+                    "winner": "a"
+                    if improvement > 0
+                    else "b"
+                    if improvement < 0
+                    else "tie",
                 }
             )
-            if config.include_slice_uncertainty or sampling_design and sampling_design.multiplicity:
+            if (
+                config.include_slice_uncertainty
+                or sampling_design
+                and sampling_design.multiplicity
+            ):
                 slice_seed += 1
                 slice_config = PairedComparisonConfig(
                     metric=metric,
                     confidence_level=config.confidence_level,
                     resamples=config.resamples,
-                    permutations=config.permutations if sampling_design and sampling_design.multiplicity else 0,
+                    permutations=config.permutations
+                    if sampling_design and sampling_design.multiplicity
+                    else 0,
                     seed=config.seed + slice_seed,
                     min_samples=config.min_samples,
                     practical_threshold=config.practical_threshold,
@@ -704,9 +816,22 @@ def _slice_results(
                     min_slice_size=config.min_slice_size,
                 )
                 if config.include_slice_uncertainty:
-                    entry["paired_interval"] = _bootstrap_improvements(subset, metric=metric, direction=direction, config=slice_config, sampling_design=sampling_design)
+                    entry["paired_interval"] = _bootstrap_improvements(
+                        subset,
+                        metric=metric,
+                        direction=direction,
+                        config=slice_config,
+                        sampling_design=sampling_design,
+                    )
                 if sampling_design and sampling_design.multiplicity:
-                    entry["randomization_test"] = _randomization_test(subset, metric=metric, direction=direction, observed_improvement=improvement, config=slice_config, sampling_design=sampling_design)
+                    entry["randomization_test"] = _randomization_test(
+                        subset,
+                        metric=metric,
+                        direction=direction,
+                        observed_improvement=improvement,
+                        config=slice_config,
+                        sampling_design=sampling_design,
+                    )
             groups[key] = entry
         results[str(column)] = groups
     return results
@@ -731,9 +856,22 @@ def compare_prediction_tables(
     frame_b: Any = None,
     evaluation_group=None,
 ) -> dict[str, Any]:
-    from privatelabbench.eval.sampling import sampling_design as parse_design, apply_multiplicity
+    from privatelabbench.eval.sampling import apply_multiplicity
+    from privatelabbench.eval.sampling import sampling_design as parse_design
+
     design = parse_design(sampling_design)
-    slices = tuple(dict.fromkeys([*(slice_columns or ()), *[column for column, value in design.critical_slices]])) if design else slice_columns
+    slices = (
+        tuple(
+            dict.fromkeys(
+                [
+                    *(slice_columns or ()),
+                    *[column for column, value in design.critical_slices],
+                ]
+            )
+        )
+        if design
+        else slice_columns
+    )
     resolved_config = config or PairedComparisonConfig()
     resolved_config.validate()
     data = _load_aligned_tables(
@@ -752,8 +890,18 @@ def compare_prediction_tables(
         evaluation_group=evaluation_group,
     )
     metric = resolved_config.metric or _default_metric(data.task_type)
-    metrics_a = _metric_values(data.task_type, data.y_true, data.predictions_a,metric_names=[metric] if metric=="spearman" else None)
-    metrics_b = _metric_values(data.task_type, data.y_true, data.predictions_b,metric_names=[metric] if metric=="spearman" else None)
+    metrics_a = _metric_values(
+        data.task_type,
+        data.y_true,
+        data.predictions_a,
+        metric_names=[metric] if metric == "spearman" else None,
+    )
+    metrics_b = _metric_values(
+        data.task_type,
+        data.y_true,
+        data.predictions_b,
+        metric_names=[metric] if metric == "spearman" else None,
+    )
     if metric not in metrics_a or metric not in metrics_b:
         available = ", ".join(sorted(set(metrics_a) & set(metrics_b)))
         raise ValueError(
@@ -762,7 +910,9 @@ def compare_prediction_tables(
     value_a = float(metrics_a[metric])
     value_b = float(metrics_b[metric])
     if not (math.isfinite(value_a) and math.isfinite(value_b)):
-        raise ValueError(f"Metric '{metric}' is undefined on the aligned evaluation data")
+        raise ValueError(
+            f"Metric '{metric}' is undefined on the aligned evaluation data"
+        )
 
     direction = _direction(metric)
     raw_delta = value_a - value_b
@@ -783,7 +933,14 @@ def compare_prediction_tables(
         config=resolved_config,
         sampling_design=design,
     )
-    slice_results = _slice_results(data, metric=metric, direction=direction, slice_columns=slices, config=resolved_config, sampling_design=design)
+    slice_results = _slice_results(
+        data,
+        metric=metric,
+        direction=direction,
+        slice_columns=slices,
+        config=resolved_config,
+        sampling_design=design,
+    )
     multiplicity = apply_multiplicity(slice_results, design) if design else {}
     return {
         "schema_version": PAIRED_COMPARISON_SCHEMA_VERSION,

@@ -1,7 +1,7 @@
-from itertools import product
 import json
-from pathlib import Path
 import warnings
+from itertools import product
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -16,8 +16,8 @@ from privatelabbench.eval.paired_comparison import (
 from privatelabbench.eval.predictions import evaluate_prediction_table
 from privatelabbench.eval.sampling import (
     MultiplicityPolicy,
-    SamplingDesign,
     ResampleLimit,
+    SamplingDesign,
     adjust_pvalues,
     bootstrap_samples,
     plan_sampling,
@@ -294,13 +294,14 @@ def test_slice_test_family_retains_unavailable_tests_and_marks_critical_slices(
 
 
 def test_protocol_identity_changes_with_design_and_baseline_hash_is_preserved():
+    from jsonschema import Draft202012Validator
+    from referencing import Registry, Resource
+
     from privatelabbench.protocols import (
         EvaluationProtocol,
         apply_protocol,
         resolve_protocol,
     )
-    from jsonschema import Draft202012Validator
-    from referencing import Registry, Resource
 
     original = resolve_protocol("plb://generic/regression@1.0.0")
     assert (
@@ -397,6 +398,7 @@ def test_public_inference_uses_approved_complete_family_and_recomputes_adjustmen
     tmp_path,
 ):
     from copy import deepcopy
+
     from privatelabbench.privacy.export import check_release
     from privatelabbench.reports.paired_comparison import (
         build_paired_comparison_artifact,
@@ -475,9 +477,10 @@ def test_public_inference_uses_approved_complete_family_and_recomputes_adjustmen
 def test_cli_generation_receipts_and_identifier_spelling_preserve_design(
     tmp_path, monkeypatch, capsys
 ):
+    import yaml
+
     from privatelabbench.cli import main
     from privatelabbench.reports.receipt import verify_receipt
-    import yaml
 
     frame, _ = clustered_frame(n_units=30, size=2)
     frame.loc[:2, "sample_id"] = ["001", "01", "1"]

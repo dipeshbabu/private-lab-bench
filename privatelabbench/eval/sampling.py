@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
 import re
+from dataclasses import dataclass
 from typing import Any, Mapping
 
 import numpy as np
@@ -335,9 +335,11 @@ class SamplingPlan:
 
 
 def plan_sampling(frame: pd.DataFrame, design: SamplingDesign) -> SamplingPlan:
-    empty = lambda status: SamplingPlan(
-        design, (), (), np.empty(0, dtype=int), frozenset(), status, len(frame)
-    )
+    def empty(status):
+        return SamplingPlan(
+            design, (), (), np.empty(0, dtype=int), frozenset(), status, len(frame)
+        )
+
     if any(column not in frame for column in design.metadata_columns):
         return empty("not_supported_missing_cluster_columns")
     data = frame[list(design.metadata_columns)]
@@ -422,7 +424,9 @@ def bootstrap_samples(
     values = {name: np.full(resamples, np.nan, dtype=float) for name in metric_names}
     for index in range(resamples):
         selected = plan.draw(rng)
-        scores = _metrics_for_task(task_type, y[selected], predictions[selected],metric_names=metric_names)
+        scores = _metrics_for_task(
+            task_type, y[selected], predictions[selected], metric_names=metric_names
+        )
         for name in metric_names:
             value = float(scores.get(name, float("nan")))
             if math.isfinite(value):
@@ -533,7 +537,14 @@ def adjust_pvalues(
 
 
 def metric_intervals(
-    y, predictions, *, task_type, config, design: SamplingDesign, metadata: pd.DataFrame,metric_names=None
+    y,
+    predictions,
+    *,
+    task_type,
+    config,
+    design: SamplingDesign,
+    metadata: pd.DataFrame,
+    metric_names=None,
 ) -> dict[str, Any]:
     from privatelabbench.eval.uncertainty import _interval_entry, _metrics_for_task
 
@@ -560,12 +571,14 @@ def metric_intervals(
         else (
             plan.status
             if plan.status != "evaluated"
-            else "skipped_min_samples" if len(y) < config.min_samples else "evaluated"
+            else "skipped_min_samples"
+            if len(y) < config.min_samples
+            else "evaluated"
         )
     )
     if status != "evaluated":
         return {**output, "status": status}
-    points = _metrics_for_task(task_type, y, predictions,metric_names=metric_names)
+    points = _metrics_for_task(task_type, y, predictions, metric_names=metric_names)
     try:
         samples = bootstrap_samples(
             y,

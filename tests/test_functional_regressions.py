@@ -294,6 +294,7 @@ def test_evidence_commands_preserve_policy_files(tmp_path, monkeypatch, command)
 
 def test_runner_rejects_report_aliases_and_hardlinked_inputs(tmp_path):
     import os
+
     from privatelabbench.core.local_io import validate_output_paths
 
     source = tmp_path / "data.csv"

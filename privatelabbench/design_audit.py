@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from copy import deepcopy
 import csv
+import json
+import math
+import re
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date
 from hashlib import sha256
 from io import BytesIO, TextIOWrapper
-import json
-import math
 from pathlib import Path
-import re
 from typing import Any, Mapping
 
 import numpy as np
@@ -602,7 +602,9 @@ def prepare_evaluation(
             else (
                 "warn"
                 if indices and policy == "warn"
-                else "not_testable" if not available else "pass"
+                else "not_testable"
+                if not available
+                else "pass"
             )
         )
         findings[name] = {
@@ -614,7 +616,9 @@ def prepare_evaluation(
             or (
                 "within_declared_policy"
                 if status == "pass"
-                else "declared_rule_violated" if indices else "evidence_unavailable"
+                else "declared_rule_violated"
+                if indices
+                else "evidence_unavailable"
             ),
         }
         if indices:
@@ -781,7 +785,9 @@ def prepare_evaluation(
             "not_testable"
             if "not_testable" in statuses
             or any(not item["evidence_complete"] for item in findings.values())
-            else "warn" if "warn" in statuses else "pass"
+            else "warn"
+            if "warn" in statuses
+            else "pass"
         )
     )
     summary = {
@@ -1005,7 +1011,9 @@ def validate_audit_summary(value: Any) -> dict[str, Any]:
             else (
                 "warn"
                 if count and entry["policy"] == "warn"
-                else "not_testable" if not complete else "pass"
+                else "not_testable"
+                if not complete
+                else "pass"
             )
         )
         if entry.get("status") != expected or complete and count is None:
@@ -1024,7 +1032,11 @@ def validate_audit_summary(value: Any) -> dict[str, Any]:
     expected = (
         "fail"
         if "fail" in statuses
-        else "not_testable" if incomplete else "warn" if "warn" in statuses else "pass"
+        else "not_testable"
+        if incomplete
+        else "warn"
+        if "warn" in statuses
+        else "pass"
     )
     if audit.get("status") != expected:
         raise ValueError("Inconsistent overall design-audit status")

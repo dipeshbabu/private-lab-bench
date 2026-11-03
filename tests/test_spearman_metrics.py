@@ -1,4 +1,3 @@
-from pathlib import Path
 import json
 
 import numpy as np
@@ -6,18 +5,17 @@ import pandas as pd
 import pytest
 from scipy.stats import spearmanr
 
+from privatelabbench.eval.degradation import diagnose_shift
 from privatelabbench.eval.metrics import regression_metrics, spearman_correlation
+from privatelabbench.eval.paired_comparison import (
+    PairedComparisonConfig,
+    compare_prediction_tables,
+)
 from privatelabbench.eval.predictions import (
     evaluate_prediction_table,
-    evaluate_prediction_csv,
 )
-from privatelabbench.eval.paired_comparison import (
-    compare_prediction_tables,
-    PairedComparisonConfig,
-)
-from privatelabbench.eval.uncertainty import BootstrapConfig, bootstrap_metric_intervals
 from privatelabbench.eval.sampling import SamplingDesign
-from privatelabbench.eval.degradation import diagnose_shift
+from privatelabbench.eval.uncertainty import BootstrapConfig, bootstrap_metric_intervals
 
 
 def test_average_tied_ranks_match_scipy_and_input_arrays_are_immutable():

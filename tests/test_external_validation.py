@@ -1,6 +1,5 @@
-from copy import deepcopy
-from hashlib import sha256
 import json
+from hashlib import sha256
 from pathlib import Path
 
 import pandas as pd
@@ -9,9 +8,8 @@ import yaml
 
 from privatelabbench.aggregate import aggregate_receipts
 from privatelabbench.external_validation import (
-    validate_profile,
-    sanitize_validation,
     render_validation,
+    validate_profile,
 )
 from privatelabbench.privacy.export import check_release
 from privatelabbench.reports.receipt import verify_receipt
@@ -239,8 +237,9 @@ def test_renderer_escapes_declared_markup():
 
 def test_schema_and_runnable_synthetic_walkthrough(tmp_path):
     from jsonschema import Draft202012Validator
-    from scripts.external_validation_example import run
+
     from privatelabbench import external_validation
+    from scripts.external_validation_example import run
 
     schema = json.loads(
         (
@@ -280,6 +279,7 @@ def test_unapproved_model_citation_is_not_copied(tmp_path):
 def test_release_and_summary_schemas_resolve_packaged_definitions(tmp_path):
     from jsonschema import Draft202012Validator
     from referencing import Registry, Resource
+
     from privatelabbench import external_validation
 
     directory = Path(external_validation.__file__).parent / "data/schemas"

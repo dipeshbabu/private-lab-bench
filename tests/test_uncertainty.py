@@ -57,7 +57,9 @@ def test_binary_bootstrap_is_stratified_and_keeps_auroc_defined(tmp_path):
         task_type="classification",
         class_labels=["negative", "positive"],
         require_sample_id=True,
-        uncertainty_config=BootstrapConfig(enabled=True, resamples=100, seed=3, min_samples=10),
+        uncertainty_config=BootstrapConfig(
+            enabled=True, resamples=100, seed=3, min_samples=10
+        ),
     )
 
     assert result.uncertainty["sampling"] == "stratified_by_target"
@@ -167,15 +169,25 @@ def test_config_run_puts_uncertainty_in_report_and_shareable_receipt(tmp_path):
 
     assert report["result"]["uncertainty"]["status"] == "evaluated"
     assert shareable["shareable"]["evaluation"]["uncertainty"]["status"] == "evaluated"
-    assert shareable["shareable"]["evaluation"]["uncertainty"]["metrics"]["rmse"]["lower"] is not None
-    assert shareable["shareable"]["evaluation"]["input_schema"]["sample_id_column"] == "sample_id"
+    assert (
+        shareable["shareable"]["evaluation"]["uncertainty"]["metrics"]["rmse"]["lower"]
+        is not None
+    )
+    assert (
+        shareable["shareable"]["evaluation"]["input_schema"]["sample_id_column"]
+        == "sample_id"
+    )
     assert "s01" not in json.dumps(shareable)
 
 
 def test_shareable_receipt_does_not_attach_clean_ci_to_perturbed_metric(tmp_path):
-    config_path = _write_uncertainty_config(tmp_path, privacy_mode="metric_perturbation")
+    config_path = _write_uncertainty_config(
+        tmp_path, privacy_mode="metric_perturbation"
+    )
     summary = run_config(str(config_path))
-    shareable_path = Path(summary["manifest"]).with_name("metric_perturbation_receipt.shareable.json")
+    shareable_path = Path(summary["manifest"]).with_name(
+        "metric_perturbation_receipt.shareable.json"
+    )
     shareable = json.loads(shareable_path.read_text(encoding="utf-8"))
     uncertainty = shareable["shareable"]["evaluation"]["uncertainty"]
 
@@ -185,8 +197,13 @@ def test_shareable_receipt_does_not_attach_clean_ci_to_perturbed_metric(tmp_path
 
 def test_invalid_uncertainty_config_fails_validation(tmp_path):
     config_path = _write_uncertainty_config(tmp_path)
-    content = config_path.read_text(encoding="utf-8").replace("resamples: 100", "resamples: 10")
+    content = config_path.read_text(encoding="utf-8").replace(
+        "resamples: 100", "resamples: 10"
+    )
     config_path.write_text(content, encoding="utf-8")
     validation = validate_config(str(config_path))
     assert not validation.valid
-    assert any("uncertainty.resamples must be at least 100" in error for error in validation.errors)
+    assert any(
+        "uncertainty.resamples must be at least 100" in error
+        for error in validation.errors
+    )

@@ -3,7 +3,10 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 
 
-def aggregate_client_metrics(client_metrics: Iterable[Mapping[str, float]], weights: Iterable[float] | None = None) -> dict[str, float]:
+def aggregate_client_metrics(
+    client_metrics: Iterable[Mapping[str, float]],
+    weights: Iterable[float] | None = None,
+) -> dict[str, float]:
     metrics = list(client_metrics)
     if not metrics:
         raise ValueError("client_metrics must contain at least one client")

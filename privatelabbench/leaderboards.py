@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
 import math
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Mapping
 from uuid import uuid4
 
 from privatelabbench.eval.metrics import METRIC_DIRECTIONS
-from privatelabbench.hidden_benchmarks import submission_identity, sanitize_submission
+from privatelabbench.hidden_benchmarks import sanitize_submission, submission_identity
 from privatelabbench.privacy.export import _mapping, protocol_identity
 from privatelabbench.protocols import EvaluationProtocol, resolve_protocol
 from privatelabbench.reports.integrity import attach_integrity_metadata, verify_payload
@@ -57,11 +57,14 @@ def _interval(value, metric, point, mode):
 
 def rank_rows(rows, rules, metric):
     rows = [{**row, "rank_group": None} for row in rows]
-    label = lambda row: (
-        row["submission"]["model"]["id"],
-        row["submission"]["model"]["revision"],
-        row["submission"]["id"],
-    )
+
+    def label(row):
+        return (
+            row["submission"]["model"]["id"],
+            row["submission"]["model"]["revision"],
+            row["submission"]["id"],
+        )
+
     if rules is None:
         return sorted(rows, key=label), "not_declared_in_protocol"
     if any(row["estimate"] is None for row in rows):
@@ -392,6 +395,7 @@ def render_leaderboard(artifact):
 
 def leaderboard_command(args):
     import yaml
+
     from privatelabbench.privacy.export import (
         atomic_write_json,
         publish_shareable_artifact,

@@ -145,6 +145,8 @@ Keeping rows local limits data movement, but aggregates can still disclose sensi
 git clone https://github.com/dipeshbabu/private-lab-bench.git
 cd private-lab-bench
 python -m pip install -e '.[dev,docs]' build twine
+python -m pre_commit install
+python -m pre_commit run --all-files
 python -m pytest -q
 python -m mkdocs build --strict
 ```

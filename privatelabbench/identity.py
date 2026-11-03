@@ -6,7 +6,6 @@ from typing import Any
 
 from privatelabbench.config import RunnerConfig, section
 
-
 RUNNER_ID_ENV = "PRIVATELABBENCH_RUNNER_ID"
 RUNNER_LABEL_ENV = "PRIVATELABBENCH_RUNNER_LABEL"
 
@@ -20,7 +19,9 @@ def benchmark_metadata(config: RunnerConfig) -> dict[str, Any]:
     """Return shareable benchmark/task identity metadata from a run config."""
 
     benchmark = section(config, "benchmark")
-    benchmark_id = str(benchmark.get("id") or f"{config.workflow}-{_safe_slug(config.project)}")
+    benchmark_id = str(
+        benchmark.get("id") or f"{config.workflow}-{_safe_slug(config.project)}"
+    )
     metadata: dict[str, Any] = {
         "benchmark_id": benchmark_id,
         "benchmark_version": str(benchmark.get("version", "local")),

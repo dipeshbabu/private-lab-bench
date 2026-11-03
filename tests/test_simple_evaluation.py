@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 
 import pytest
 import yaml
@@ -17,7 +16,7 @@ def table(tmp_path, *, targets=None, extra="", extra_row=""):
         + extra
         + "\n"
         + "".join(
-            f"private-sample-{i},{target},{target+0.1}{extra_row}\n"
+            f"private-sample-{i},{target},{target + 0.1}{extra_row}\n"
             for i, target in enumerate(targets)
         )
     )

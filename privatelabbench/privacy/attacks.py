@@ -6,14 +6,18 @@ from typing import Literal
 import numpy as np
 from sklearn.metrics import roc_auc_score
 
-from privatelabbench.privacy.attack_registry import has_privacy_attack, register_privacy_attack
-
+from privatelabbench.privacy.attack_registry import (
+    has_privacy_attack,
+    register_privacy_attack,
+)
 
 RiskLevel = Literal["low", "moderate", "high"]
 LOSS_THRESHOLD_ATTACK_ID = "loss-threshold-membership-inference"
 
 
-def _prediction_loss(y_true: np.ndarray, y_score: np.ndarray, task_type: str) -> np.ndarray:
+def _prediction_loss(
+    y_true: np.ndarray, y_score: np.ndarray, task_type: str
+) -> np.ndarray:
     if task_type == "classification":
         clipped = np.clip(y_score.astype(float), 1e-6, 1.0 - 1e-6)
         labels = y_true.astype(int)
@@ -50,7 +54,9 @@ def membership_inference_risk(
     member_loss = _prediction_loss(train_y, train_score, task_type)
     nonmember_loss = _prediction_loss(test_y, test_score, task_type)
     losses = np.concatenate([member_loss, nonmember_loss])
-    labels = np.concatenate([np.ones(len(member_loss), dtype=int), np.zeros(len(nonmember_loss), dtype=int)])
+    labels = np.concatenate(
+        [np.ones(len(member_loss), dtype=int), np.zeros(len(nonmember_loss), dtype=int)]
+    )
 
     candidates = np.unique(losses)
     best_accuracy = 0.5

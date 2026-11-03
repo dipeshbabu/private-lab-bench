@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
@@ -18,8 +18,12 @@ class RunnerConfig:
     config_path: str | None = None
     protocol: EvaluationProtocol | None = None
     prepared_input: Any = field(default=None, repr=False, compare=False)
-    design_audits: tuple[dict[str, Any], ...] = field(default=(), repr=False, compare=False)
-    validation_context: dict[str, Any] | None = field(default=None, repr=False, compare=False)
+    design_audits: tuple[dict[str, Any], ...] = field(
+        default=(), repr=False, compare=False
+    )
+    validation_context: dict[str, Any] | None = field(
+        default=None, repr=False, compare=False
+    )
     definition_paths: tuple[str, ...] = ()
 
     @property
@@ -39,6 +43,7 @@ def load_config(path: str, *, protocol_override: str | None = None) -> RunnerCon
         raise ValueError("Config must be a YAML mapping.")
     if payload.get("evaluation_design") is not None:
         from privatelabbench.design_audit import EvaluationDesign
+
         value = payload["evaluation_design"]
         if isinstance(value, str):
             design_path = config_path.resolve().parent / value
@@ -50,6 +55,7 @@ def load_config(path: str, *, protocol_override: str | None = None) -> RunnerCon
     reference = protocol_override or payload.get("protocol")
     if reference is not None:
         from privatelabbench.protocols import apply_protocol, resolve_protocol
+
         if not isinstance(reference, str):
             raise ValueError(
                 "protocol must be an exact plb:// reference or a local YAML path"
@@ -70,31 +76,59 @@ def load_config(path: str, *, protocol_override: str | None = None) -> RunnerCon
                     str((config_path.resolve().parent / payload["protocol"]).resolve())
                 )
             if configured.sha256 != protocol.sha256:
-                raise ValueError("--protocol conflicts with the protocol declared in the config")
-        if payload.get("protocol_sha256") is not None and payload["protocol_sha256"] != protocol.sha256:
-            raise ValueError("Protocol digest changed from protocol_sha256; review the definition and pin its new version explicitly")
+                raise ValueError(
+                    "--protocol conflicts with the protocol declared in the config"
+                )
+        if (
+            payload.get("protocol_sha256") is not None
+            and payload["protocol_sha256"] != protocol.sha256
+        ):
+            raise ValueError(
+                "Protocol digest changed from protocol_sha256; review the definition and pin its new version explicitly"
+            )
         payload = apply_protocol(payload, protocol)
     elif payload.get("protocol_sha256") is not None:
         raise ValueError("protocol_sha256 requires a protocol reference")
     if payload.get("sampling_design") is not None:
         from privatelabbench.eval.sampling import sampling_design
-        payload["sampling_design"] = sampling_design(payload["sampling_design"]).as_dict()
+
+        payload["sampling_design"] = sampling_design(
+            payload["sampling_design"]
+        ).as_dict()
     if payload.get("evaluation_design") is not None:
         rules = payload["evaluation_design"]
         input_cfg = payload.setdefault("input", {})
-        if not isinstance(input_cfg, dict): raise ValueError("input must be a mapping")
-        if input_cfg.get("sample_id_column", rules["sample_id_column"]) != rules["sample_id_column"] or input_cfg.get("require_sample_id", True) is not True:
-            raise ValueError("Evaluation-design runs require the declared stable sample-ID column")
+        if not isinstance(input_cfg, dict):
+            raise ValueError("input must be a mapping")
+        if (
+            input_cfg.get("sample_id_column", rules["sample_id_column"])
+            != rules["sample_id_column"]
+            or input_cfg.get("require_sample_id", True) is not True
+        ):
+            raise ValueError(
+                "Evaluation-design runs require the declared stable sample-ID column"
+            )
         input_cfg["sample_id_column"] = rules["sample_id_column"]
         input_cfg["require_sample_id"] = True
-        if rules["label_column"] is not None and input_cfg.get("target_column") != rules["label_column"]:
-            raise ValueError("evaluation_design.label_column must match input.target_column")
+        if (
+            rules["label_column"] is not None
+            and input_cfg.get("target_column") != rules["label_column"]
+        ):
+            raise ValueError(
+                "evaluation_design.label_column must match input.target_column"
+            )
 
     project = str(payload.get("project", config_path.stem))
     task_value = payload.get("task")
     workflow_value = payload.get("workflow")
-    if task_value and workflow_value and str(task_value).strip().lower() != str(workflow_value).strip().lower():
-        raise ValueError("Config cannot set different values for 'task' and legacy 'workflow'.")
+    if (
+        task_value
+        and workflow_value
+        and str(task_value).strip().lower() != str(workflow_value).strip().lower()
+    ):
+        raise ValueError(
+            "Config cannot set different values for 'task' and legacy 'workflow'."
+        )
     task_id = str(task_value or workflow_value or "").strip().lower()
     if not task_id:
         raise ValueError("Config must define 'task' (preferred) or legacy 'workflow'.")

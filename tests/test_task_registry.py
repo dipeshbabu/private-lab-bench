@@ -43,7 +43,9 @@ def test_custom_task_can_be_registered_and_resolved() -> None:
     assert spec.description == "test task"
 
 
-def test_third_party_task_is_discovered_from_entry_point(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_third_party_task_is_discovered_from_entry_point(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     task_id = "test-entrypoint-task"
 
     def task_runner(config):

@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from scripts.caco2_case_study import evaluate_case, case_protocol
+from scripts.caco2_case_study import case_protocol, evaluate_case
 
 
 def fixture_data():
@@ -101,6 +101,7 @@ def test_fast_fixture_does_not_redefine_the_published_case_protocol():
 
 def test_checked_in_examples_verify_and_contain_only_approved_artifacts():
     import yaml
+
     from privatelabbench.reports.integrity import verify_payload
 
     root = Path(__file__).resolve().parents[1] / "examples/caco2_case/approved"

@@ -57,12 +57,16 @@ def load_manifest(path: Path = DEFAULT_MANIFEST) -> dict[str, Any]:
     return payload
 
 
-def check_current_tree(payload: dict[str, Any], failures: list[str], info: dict[str, Any]) -> None:
+def check_current_tree(
+    payload: dict[str, Any], failures: list[str], info: dict[str, Any]
+) -> None:
     tracked = {line.strip() for line in _git("ls-files").splitlines() if line.strip()}
     forbidden_hits: list[str] = []
     for forbidden in payload.get("forbidden_current_paths", []):
         normalized = str(forbidden).rstrip("/")
-        if normalized in tracked or any(path.startswith(normalized + "/") for path in tracked):
+        if normalized in tracked or any(
+            path.startswith(normalized + "/") for path in tracked
+        ):
             forbidden_hits.append(normalized)
     if forbidden_hits:
         failures.append("forbidden current-tree commercial/service paths remain")
@@ -72,9 +76,14 @@ def check_current_tree(payload: dict[str, Any], failures: list[str], info: dict[
     }
 
 
-def check_examples(payload: dict[str, Any], failures: list[str], info: dict[str, Any]) -> None:
+def check_examples(
+    payload: dict[str, Any], failures: list[str], info: dict[str, Any]
+) -> None:
     declared = {
-        str(item["path"]): {"provenance": str(item.get("provenance", "")), "license": str(item.get("license", ""))}
+        str(item["path"]): {
+            "provenance": str(item.get("provenance", "")),
+            "license": str(item.get("license", "")),
+        }
         for item in payload.get("examples", [])
         if isinstance(item, dict) and item.get("path")
     }
@@ -106,7 +115,11 @@ def check_examples(payload: dict[str, Any], failures: list[str], info: dict[str,
         provenance = pack.get("provenance", {}) if isinstance(pack, dict) else {}
         if not isinstance(pack, dict) or pack.get("license") != "CC0-1.0":
             pack_errors.append(manifest.relative_to(ROOT).as_posix() + ":license")
-        if not isinstance(provenance, dict) or provenance.get("type") != "synthetic" or provenance.get("derived_from") != "none":
+        if (
+            not isinstance(provenance, dict)
+            or provenance.get("type") != "synthetic"
+            or provenance.get("derived_from") != "none"
+        ):
             pack_errors.append(manifest.relative_to(ROOT).as_posix() + ":provenance")
     if pack_errors:
         failures.append("benchmark-pack provenance/license checks failed")
@@ -122,7 +135,9 @@ def check_examples(payload: dict[str, Any], failures: list[str], info: dict[str,
     }
 
 
-def check_direct_dependencies(payload: dict[str, Any], failures: list[str], info: dict[str, Any]) -> None:
+def check_direct_dependencies(
+    payload: dict[str, Any], failures: list[str], info: dict[str, Any]
+) -> None:
     with (ROOT / "pyproject.toml").open("rb") as handle:
         project = tomllib.load(handle)["project"]
     dependencies = {_dependency_name(spec) for spec in project.get("dependencies", [])}
@@ -143,7 +158,9 @@ def check_direct_dependencies(payload: dict[str, Any], failures: list[str], info
     if missing:
         failures.append("direct dependencies are missing license review entries")
     if incompatible:
-        failures.append("direct dependency license review has unresolved/incompatible entries")
+        failures.append(
+            "direct dependency license review has unresolved/incompatible entries"
+        )
     info["direct_dependencies"] = {
         "project_dependencies": sorted(dependencies),
         "reviewed_dependencies": sorted(reviewed_names),
@@ -153,19 +170,39 @@ def check_direct_dependencies(payload: dict[str, Any], failures: list[str], info
     }
 
 
-def check_git_history(payload: dict[str, Any], failures: list[str], info: dict[str, Any]) -> None:
+def check_git_history(
+    payload: dict[str, Any], failures: list[str], info: dict[str, Any]
+) -> None:
     commit_count = int(_git("rev-list", "--all", "--count").strip())
-    root_commits = [line for line in _git("rev-list", "--max-parents=0", "--all").splitlines() if line.strip()]
+    root_commits = [
+        line
+        for line in _git("rev-list", "--max-parents=0", "--all").splitlines()
+        if line.strip()
+    ]
 
     exact = {str(value).lower() for value in payload.get("allowed_author_emails", [])}
-    suffixes = tuple(str(value).lower() for value in payload.get("allowed_author_email_suffixes", []))
+    suffixes = tuple(
+        str(value).lower() for value in payload.get("allowed_author_email_suffixes", [])
+    )
     raw_emails = _git("log", "--all", "--format=%ae%n%ce").splitlines()
     unique_emails = sorted({email.strip() for email in raw_emails if email.strip()})
-    exposed = [email for email in unique_emails if not _email_allowed(email, exact=exact, suffixes=suffixes)]
+    exposed = [
+        email
+        for email in unique_emails
+        if not _email_allowed(email, exact=exact, suffixes=suffixes)
+    ]
     if payload.get("require_reviewed_author_emails", False) and exposed:
         failures.append("unreviewed author/committer email exposure in Git history")
 
-    all_paths = sorted({line.strip() for line in _git("log", "--all", "--name-only", "--pretty=format:").splitlines() if line.strip()})
+    all_paths = sorted(
+        {
+            line.strip()
+            for line in _git(
+                "log", "--all", "--name-only", "--pretty=format:"
+            ).splitlines()
+            if line.strip()
+        }
+    )
     sensitive_matches: dict[str, list[str]] = {}
     for pattern in payload.get("historical_sensitive_path_patterns", []):
         regex = re.compile(str(pattern), re.IGNORECASE)
@@ -185,7 +222,9 @@ def check_git_history(payload: dict[str, Any], failures: list[str], info: dict[s
     }
 
 
-def run_audit(manifest_path: Path = DEFAULT_MANIFEST) -> tuple[dict[str, Any], list[str]]:
+def run_audit(
+    manifest_path: Path = DEFAULT_MANIFEST,
+) -> tuple[dict[str, Any], list[str]]:
     payload = load_manifest(manifest_path)
     failures: list[str] = []
     info: dict[str, Any] = {
@@ -202,7 +241,9 @@ def run_audit(manifest_path: Path = DEFAULT_MANIFEST) -> tuple[dict[str, Any], l
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run deterministic PrivateLabBench public-release repository checks.")
+    parser = argparse.ArgumentParser(
+        description="Run deterministic PrivateLabBench public-release repository checks."
+    )
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--json-out", type=Path, default=None)
     args = parser.parse_args()
@@ -214,9 +255,14 @@ def main() -> int:
         args.json_out.write_text(serialized, encoding="utf-8")
     print(serialized, end="")
     if failures:
-        print("Public-release audit failed. See failure categories above; secret values are intentionally never printed.", file=sys.stderr)
+        print(
+            "Public-release audit failed. See failure categories above; secret values are intentionally never printed.",
+            file=sys.stderr,
+        )
         return 1
-    print("Public-release deterministic audit passed. Historical non-noreply emails, if any, remain a manual privacy review item.")
+    print(
+        "Public-release deterministic audit passed. Historical non-noreply emails, if any, remain a manual privacy review item."
+    )
     return 0
 
 

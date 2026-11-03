@@ -30,7 +30,9 @@ def infer_task_type(values: Iterable[float]) -> str:
     return "regression"
 
 
-def load_molecule_csv(path: str, target: str, smiles_column: str = "smiles", task_type: str | None = None) -> MoleculeDataset:
+def load_molecule_csv(
+    path: str, target: str, smiles_column: str = "smiles", task_type: str | None = None
+) -> MoleculeDataset:
     df = pd.read_csv(path)
     required = {smiles_column, target}
     missing = required - set(df.columns)
@@ -52,7 +54,9 @@ def load_molecule_csv(path: str, target: str, smiles_column: str = "smiles", tas
     return MoleculeDataset(smiles=smiles, y=y, task_type=inferred, target_column=target)
 
 
-def hashed_smiles_fingerprints(smiles: list[str], n_bits: int = 256, ngram_min: int = 1, ngram_max: int = 4) -> np.ndarray:
+def hashed_smiles_fingerprints(
+    smiles: list[str], n_bits: int = 256, ngram_min: int = 1, ngram_max: int = 4
+) -> np.ndarray:
     """Stable hashed character n-gram baseline for SMILES-like strings."""
     if n_bits <= 0:
         raise ValueError("n_bits must be positive")

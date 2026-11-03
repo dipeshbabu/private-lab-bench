@@ -1,4 +1,5 @@
 """Reproducible model-quality decisions, separate from disclosure permission."""
+
 from __future__ import annotations
 
 import math
@@ -18,7 +19,11 @@ def _object(value: Any, name: str) -> Mapping[str, Any]:
 
 
 def _finite(value: Any) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+    )
 
 
 def _limits(value: Any, label: str) -> None:
@@ -33,11 +38,25 @@ def _limits(value: Any, label: str) -> None:
 
 def validate_quality_policy(value: Any) -> dict[str, Any]:
     policy = dict(_object(value, "quality policy"))
-    if policy.get("schema_version") != POLICY_SCHEMA or set(policy) - {"schema_version", "metric_basis", "min_samples", "metric", "baseline", "comparison", "slices", "privacy", "design"}:
+    if policy.get("schema_version") != POLICY_SCHEMA or set(policy) - {
+        "schema_version",
+        "metric_basis",
+        "min_samples",
+        "metric",
+        "baseline",
+        "comparison",
+        "slices",
+        "privacy",
+        "design",
+    }:
         raise ValueError(f"Expected {POLICY_SCHEMA} and supported policy fields")
     if policy.get("metric_basis", "clean") not in {"clean", "reported"}:
         raise ValueError("metric_basis must be clean or reported")
-    if "min_samples" in policy and (isinstance(policy["min_samples"], bool) or not isinstance(policy["min_samples"], int) or policy["min_samples"] < 1):
+    if "min_samples" in policy and (
+        isinstance(policy["min_samples"], bool)
+        or not isinstance(policy["min_samples"], int)
+        or policy["min_samples"] < 1
+    ):
         raise ValueError("min_samples must be a positive integer")
     metrics = _object(policy.get("metric", {}), "metric")
     for name, limits in metrics.items():
@@ -46,14 +65,29 @@ def validate_quality_policy(value: Any) -> dict[str, Any]:
         _limits(limits, f"metric.{name}")
     baseline = _object(policy.get("baseline", {}), "baseline")
     if baseline:
-        if set(baseline) - {"metric", "allow_relative_regression", "allow_absolute_regression"} or baseline.get("metric") not in METRIC_DIRECTIONS or not set(baseline) & {"allow_relative_regression", "allow_absolute_regression"}:
-            raise ValueError("baseline requires a supported metric and a regression allowance")
+        if (
+            set(baseline)
+            - {"metric", "allow_relative_regression", "allow_absolute_regression"}
+            or baseline.get("metric") not in METRIC_DIRECTIONS
+            or not set(baseline)
+            & {"allow_relative_regression", "allow_absolute_regression"}
+        ):
+            raise ValueError(
+                "baseline requires a supported metric and a regression allowance"
+            )
         for key in ("allow_relative_regression", "allow_absolute_regression"):
             if key in baseline and (not _finite(baseline[key]) or baseline[key] < 0):
                 raise ValueError("Regression allowances must be finite and nonnegative")
     comparison = _object(policy.get("comparison", {}), "comparison")
-    if comparison and (set(comparison) - {"min_improvement", "require_confident"} or "min_improvement" not in comparison or not _finite(comparison["min_improvement"]) or not isinstance(comparison.get("require_confident", False), bool)):
-        raise ValueError("comparison needs finite min_improvement and optional boolean require_confident")
+    if comparison and (
+        set(comparison) - {"min_improvement", "require_confident"}
+        or "min_improvement" not in comparison
+        or not _finite(comparison["min_improvement"])
+        or not isinstance(comparison.get("require_confident", False), bool)
+    ):
+        raise ValueError(
+            "comparison needs finite min_improvement and optional boolean require_confident"
+        )
     slices = _object(policy.get("slices", {}), "slices")
     for key, threshold in slices.items():
         if key == "critical":
@@ -63,32 +97,88 @@ def validate_quality_policy(value: Any) -> dict[str, Any]:
                 if not isinstance(alias, str) or not alias:
                     raise ValueError("Critical slice names must be nonempty strings")
                 entry = _object(entry, f"critical.{alias}")
-                if not isinstance(entry.get("column"), str) or not entry["column"] or not isinstance(entry.get("value"), str) or not entry["value"]:
-                    raise ValueError("Critical slices require explicit column and value")
-                if set(entry) - {"column", "value", "metric", "min", "max", "min_ci_lower", "max_ci_upper"} or entry.get("metric") not in METRIC_DIRECTIONS:
+                if (
+                    not isinstance(entry.get("column"), str)
+                    or not entry["column"]
+                    or not isinstance(entry.get("value"), str)
+                    or not entry["value"]
+                ):
+                    raise ValueError(
+                        "Critical slices require explicit column and value"
+                    )
+                if (
+                    set(entry)
+                    - {
+                        "column",
+                        "value",
+                        "metric",
+                        "min",
+                        "max",
+                        "min_ci_lower",
+                        "max_ci_upper",
+                    }
+                    or entry.get("metric") not in METRIC_DIRECTIONS
+                ):
                     raise ValueError("Critical slice requires a supported metric")
-                _limits({k: v for k, v in entry.items() if k not in {"column", "value", "metric"}}, f"critical.{alias}")
+                _limits(
+                    {
+                        k: v
+                        for k, v in entry.items()
+                        if k not in {"column", "value", "metric"}
+                    },
+                    f"critical.{alias}",
+                )
         else:
             parts = key.split("_")
-            if len(parts) < 3 or parts[0] != "worst" or "_".join(parts[1:-1]) not in METRIC_DIRECTIONS or parts[-1] not in {"min", "max"} or not _finite(threshold):
-                raise ValueError("Worst-slice fields use worst_<metric>_min/max and a finite threshold")
+            if (
+                len(parts) < 3
+                or parts[0] != "worst"
+                or "_".join(parts[1:-1]) not in METRIC_DIRECTIONS
+                or parts[-1] not in {"min", "max"}
+                or not _finite(threshold)
+            ):
+                raise ValueError(
+                    "Worst-slice fields use worst_<metric>_min/max and a finite threshold"
+                )
     privacy = _object(policy.get("privacy", {}), "privacy")
     if set(privacy) - {"require_audit", "require_release", "max_level"}:
         raise ValueError("Unsupported privacy quality requirement")
-    if any(not isinstance(privacy[key], bool) for key in ("require_audit", "require_release") if key in privacy):
+    if any(
+        not isinstance(privacy[key], bool)
+        for key in ("require_audit", "require_release")
+        if key in privacy
+    ):
         raise ValueError("Privacy requirements must be boolean")
-    if "max_level" in privacy and privacy["max_level"] not in {"low", "moderate", "high"}:
+    if "max_level" in privacy and privacy["max_level"] not in {
+        "low",
+        "moderate",
+        "high",
+    }:
         raise ValueError("Privacy max_level must be low, moderate, or high")
     design = _object(policy.get("design", {}), "design requirements")
-    if set(design)-{"require_pass", "max_overlap_records", "max_duplicate_records", "max_conflicting_labels"}:
+    if set(design) - {
+        "require_pass",
+        "max_overlap_records",
+        "max_duplicate_records",
+        "max_conflicting_labels",
+    }:
         raise ValueError("Unsupported evaluation-design quality rule")
     for key, value in design.items():
         if key == "require_pass":
-            if type(value) is not bool: raise ValueError("design.require_pass must be boolean")
+            if type(value) is not bool:
+                raise ValueError("design.require_pass must be boolean")
         elif type(value) is not int or value < 0:
             raise ValueError("Design finding thresholds must be nonnegative integers")
     active_design = any(key != "require_pass" or value for key, value in design.items())
-    if not metrics and not baseline and not comparison and not slices and not any(privacy.values()) and not active_design and "min_samples" not in policy:
+    if (
+        not metrics
+        and not baseline
+        and not comparison
+        and not slices
+        and not any(privacy.values())
+        and not active_design
+        and "min_samples" not in policy
+    ):
         raise ValueError("A quality policy must contain at least one decision rule")
     return policy
 
@@ -99,77 +189,241 @@ def _evidence(artifact: Mapping[str, Any], basis: str) -> dict[str, Any]:
         evaluation = shared.get("evaluation", {})
         local = artifact.get("local", {}) if artifact.get("scope") == "local" else {}
         mode = shared.get("privacy", {}).get("mechanism", {}).get("mode", "none")
-        metrics = local.get("exact_metrics", {}) if basis == "clean" and local else evaluation.get("metrics", {})
+        metrics = (
+            local.get("exact_metrics", {})
+            if basis == "clean" and local
+            else evaluation.get("metrics", {})
+        )
         if basis == "clean" and not local and mode != "none":
             metrics = {}
-        return {"metrics": metrics, "baseline": local.get("baseline_metrics", {}), "uncertainty": local.get("uncertainty", evaluation.get("uncertainty", {})), "slices": evaluation.get("slices", {}), "n": evaluation.get("sample_counts", {}).get("n_samples", evaluation.get("sample_counts", {}).get("total_samples")), "privacy": shared.get("privacy", {}), "mode": mode}
+        return {
+            "metrics": metrics,
+            "baseline": local.get("baseline_metrics", {}),
+            "uncertainty": local.get("uncertainty", evaluation.get("uncertainty", {})),
+            "slices": evaluation.get("slices", {}),
+            "n": evaluation.get("sample_counts", {}).get(
+                "n_samples", evaluation.get("sample_counts", {}).get("total_samples")
+            ),
+            "privacy": shared.get("privacy", {}),
+            "mode": mode,
+        }
     if artifact.get("schema_version") == "paired-comparison-artifact/v1":
         comparison = artifact.get("shareable", {})
-        return {"metrics": comparison.get("model_a", {}).get("metrics", {}), "baseline": comparison.get("model_b", {}).get("metrics", {}), "n": comparison.get("n_samples"), "comparison": comparison, "slices": {}, "uncertainty": {}, "privacy": {}, "mode": "none"}
+        return {
+            "metrics": comparison.get("model_a", {}).get("metrics", {}),
+            "baseline": comparison.get("model_b", {}).get("metrics", {}),
+            "n": comparison.get("n_samples"),
+            "comparison": comparison,
+            "slices": {},
+            "uncertainty": {},
+            "privacy": {},
+            "mode": "none",
+        }
     result = artifact.get("result", {})
-    return {"metrics": result.get("clean_metrics", result.get("aggregate_clean_metrics", {})) if basis == "clean" else result.get("reported_metrics", result.get("aggregate_reported_metrics", {})), "baseline": result.get("baseline_metrics", {}), "uncertainty": result.get("uncertainty", {}), "slices": result.get("slice_metrics", {}), "n": result.get("n_samples", result.get("total_samples")), "privacy": {"audits": {"membership_inference": result.get("privacy_risk", {})}, "release": result.get("privacy_gate", result.get("aggregate_release", {}))}, "mode": artifact.get("privacy", {}).get("mode", "none")}
+    return {
+        "metrics": result.get(
+            "clean_metrics", result.get("aggregate_clean_metrics", {})
+        )
+        if basis == "clean"
+        else result.get(
+            "reported_metrics", result.get("aggregate_reported_metrics", {})
+        ),
+        "baseline": result.get("baseline_metrics", {}),
+        "uncertainty": result.get("uncertainty", {}),
+        "slices": result.get("slice_metrics", {}),
+        "n": result.get("n_samples", result.get("total_samples")),
+        "privacy": {
+            "audits": {"membership_inference": result.get("privacy_risk", {})},
+            "release": result.get("privacy_gate", result.get("aggregate_release", {})),
+        },
+        "mode": artifact.get("privacy", {}).get("mode", "none"),
+    }
 
 
-def evaluate_quality_gate(artifact: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[str, Any]:
+def evaluate_quality_gate(
+    artifact: Mapping[str, Any], policy: Mapping[str, Any]
+) -> dict[str, Any]:
     policy = validate_quality_policy(policy)
     basis = policy.get("metric_basis", "clean")
     evidence = _evidence(_object(artifact, "artifact"), basis)
     if artifact.get("schema_version") == "evaluation-design-audit/v1":
-        evidence = {"metrics": {}, "baseline": {}, "n": artifact.get("audit", {}).get("n_evaluation_records"), "slices": {}, "uncertainty": {}, "privacy": {}, "mode": "none"}
+        evidence = {
+            "metrics": {},
+            "baseline": {},
+            "n": artifact.get("audit", {}).get("n_evaluation_records"),
+            "slices": {},
+            "uncertainty": {},
+            "privacy": {},
+            "mode": "none",
+        }
     rules: list[dict[str, Any]] = []
 
-    def rule(name: str, observed: Any, threshold: Any, operator: str, missing: str = "evidence_missing") -> None:
+    def rule(
+        name: str,
+        observed: Any,
+        threshold: Any,
+        operator: str,
+        missing: str = "evidence_missing",
+    ) -> None:
         valid = _finite(observed)
-        passes = valid and (observed <= threshold if operator == "max" else observed >= threshold)
-        rules.append({"name": name, "status": "pass" if passes else "fail" if valid else "investigate", "observed": observed if valid else None, "operator": operator, "threshold": threshold, "reason": "threshold_met" if passes else "threshold_violated" if valid else missing})
+        passes = valid and (
+            observed <= threshold if operator == "max" else observed >= threshold
+        )
+        rules.append(
+            {
+                "name": name,
+                "status": "pass" if passes else "fail" if valid else "investigate",
+                "observed": observed if valid else None,
+                "operator": operator,
+                "threshold": threshold,
+                "reason": "threshold_met"
+                if passes
+                else "threshold_violated"
+                if valid
+                else missing,
+            }
+        )
 
-    def limits(name: str, metric: str, entries: Mapping[str, Any], metrics: Mapping[str, Any], uncertainty: Mapping[str, Any]) -> None:
+    def limits(
+        name: str,
+        metric: str,
+        entries: Mapping[str, Any],
+        metrics: Mapping[str, Any],
+        uncertainty: Mapping[str, Any],
+    ) -> None:
         for bound, threshold in entries.items():
             value = metrics.get(metric)
             reason = "metric_missing_or_undefined"
             if bound in {"min_ci_lower", "max_ci_upper"}:
                 interval = uncertainty.get("metrics", {}).get(metric, {})
-                compatible = uncertainty.get("metric_basis", "clean_metrics") == ("clean_metrics" if basis == "clean" or evidence["mode"] == "none" else "reported_metrics")
-                value = interval.get("lower" if bound == "min_ci_lower" else "upper") if compatible and interval.get("status") == "evaluated" else None
+                compatible = uncertainty.get("metric_basis", "clean_metrics") == (
+                    "clean_metrics"
+                    if basis == "clean" or evidence["mode"] == "none"
+                    else "reported_metrics"
+                )
+                value = (
+                    interval.get("lower" if bound == "min_ci_lower" else "upper")
+                    if compatible and interval.get("status") == "evaluated"
+                    else None
+                )
                 reason = "uncertainty_missing_or_incompatible"
-            rule(f"{name}.{bound}", value, threshold, "min" if bound.startswith("min") else "max", reason)
+            rule(
+                f"{name}.{bound}",
+                value,
+                threshold,
+                "min" if bound.startswith("min") else "max",
+                reason,
+            )
 
     if "min_samples" in policy:
         rule("min_samples", evidence["n"], policy["min_samples"], "min")
     for metric, entries in policy.get("metric", {}).items():
-        limits(f"metric.{metric}", metric, entries, evidence["metrics"], evidence["uncertainty"])
+        limits(
+            f"metric.{metric}",
+            metric,
+            entries,
+            evidence["metrics"],
+            evidence["uncertainty"],
+        )
     baseline = policy.get("baseline", {})
     if baseline:
         metric = baseline["metric"]
-        candidate, reference = evidence["metrics"].get(metric), evidence["baseline"].get(metric)
-        regression = (candidate - reference) * (1 if METRIC_DIRECTIONS[metric] == "lower_is_better" else -1) if _finite(candidate) and _finite(reference) else None
+        candidate, reference = (
+            evidence["metrics"].get(metric),
+            evidence["baseline"].get(metric),
+        )
+        regression = (
+            (candidate - reference)
+            * (1 if METRIC_DIRECTIONS[metric] == "lower_is_better" else -1)
+            if _finite(candidate) and _finite(reference)
+            else None
+        )
         if "allow_absolute_regression" in baseline:
-            rule("baseline.absolute_regression", regression, baseline["allow_absolute_regression"], "max")
+            rule(
+                "baseline.absolute_regression",
+                regression,
+                baseline["allow_absolute_regression"],
+                "max",
+            )
         if "allow_relative_regression" in baseline:
-            relative = regression / abs(reference) if regression is not None and reference != 0 else None
-            rule("baseline.relative_regression", relative, baseline["allow_relative_regression"], "max", "baseline_missing_undefined_or_zero")
+            relative = (
+                regression / abs(reference)
+                if regression is not None and reference != 0
+                else None
+            )
+            rule(
+                "baseline.relative_regression",
+                relative,
+                baseline["allow_relative_regression"],
+                "max",
+                "baseline_missing_undefined_or_zero",
+            )
     comparison = policy.get("comparison", {})
     if comparison:
         paired = evidence.get("comparison", {})
         interval = paired.get("paired_interval", {})
         if comparison.get("require_confident"):
-            observed = interval.get("lower") if interval.get("status") == "evaluated" else None
+            observed = (
+                interval.get("lower") if interval.get("status") == "evaluated" else None
+            )
         else:
             observed = paired.get("improvement_a_over_b")
-        rule("comparison.improvement", observed, comparison["min_improvement"], "min", "paired_evidence_missing_or_underpowered")
+        rule(
+            "comparison.improvement",
+            observed,
+            comparison["min_improvement"],
+            "min",
+            "paired_evidence_missing_or_underpowered",
+        )
     for key, threshold in policy.get("slices", {}).items():
         if key == "critical":
             for alias, entry in threshold.items():
-                group = evidence["slices"].get(entry["column"], {}).get(entry["value"], {})
-                usable = group.get("status") == "evaluated" and (basis == "clean" or evidence["mode"] == "none")
-                limits(f"slice.{alias}", entry["metric"], {k: v for k, v in entry.items() if k not in {"column", "value", "metric"}}, group.get("metrics", {}) if usable else {}, group.get("uncertainty", {}))
+                group = (
+                    evidence["slices"].get(entry["column"], {}).get(entry["value"], {})
+                )
+                usable = group.get("status") == "evaluated" and (
+                    basis == "clean" or evidence["mode"] == "none"
+                )
+                limits(
+                    f"slice.{alias}",
+                    entry["metric"],
+                    {
+                        k: v
+                        for k, v in entry.items()
+                        if k not in {"column", "value", "metric"}
+                    },
+                    group.get("metrics", {}) if usable else {},
+                    group.get("uncertainty", {}),
+                )
         else:
-            metric, operator = key[len("worst_"):].rsplit("_", 1)
-            groups = [group for partition in evidence["slices"].values() for group in partition.values()]
-            available = bool(groups) and all(group.get("status") == "evaluated" and _finite(group.get("metrics", {}).get(metric)) for group in groups) and (basis == "clean" or evidence["mode"] == "none")
+            metric, operator = key[len("worst_") :].rsplit("_", 1)
+            groups = [
+                group
+                for partition in evidence["slices"].values()
+                for group in partition.values()
+            ]
+            available = (
+                bool(groups)
+                and all(
+                    group.get("status") == "evaluated"
+                    and _finite(group.get("metrics", {}).get(metric))
+                    for group in groups
+                )
+                and (basis == "clean" or evidence["mode"] == "none")
+            )
             worst = max if METRIC_DIRECTIONS[metric] == "lower_is_better" else min
-            extreme = worst(group["metrics"][metric] for group in groups) if available else None
-            rule(f"slices.{key}", extreme, threshold, operator, "slice_missing_suppressed_or_undefined")
+            extreme = (
+                worst(group["metrics"][metric] for group in groups)
+                if available
+                else None
+            )
+            rule(
+                f"slices.{key}",
+                extreme,
+                threshold,
+                operator,
+                "slice_missing_suppressed_or_undefined",
+            )
     privacy = evidence["privacy"]
     if policy.get("design"):
         if artifact.get("schema_version") == "evaluation-design-audit/v1":
@@ -177,9 +431,18 @@ def evaluate_quality_gate(artifact: Mapping[str, Any], policy: Mapping[str, Any]
         elif artifact.get("schema_version") == "paired-comparison-artifact/v1":
             design_audits = artifact.get("shareable", {}).get("design_audits", [])
         else:
-            source = artifact.get("shareable", {}).get("evaluation", {}) if artifact.get("schema_version") == "evaluation-receipt/v1" else artifact.get("result", {})
-            design_audits = [source[key] for key in ("design_audit", "reference_design_audit") if source.get(key)]
+            source = (
+                artifact.get("shareable", {}).get("evaluation", {})
+                if artifact.get("schema_version") == "evaluation-receipt/v1"
+                else artifact.get("result", {})
+            )
+            design_audits = [
+                source[key]
+                for key in ("design_audit", "reference_design_audit")
+                if source.get(key)
+            ]
         from privatelabbench.design_audit import validate_audit_summary
+
         checked_audits = []
         for audit in design_audits:
             try:
@@ -189,31 +452,129 @@ def evaluate_quality_gate(artifact: Mapping[str, Any], policy: Mapping[str, Any]
         design_audits = checked_audits
         requirements = policy["design"]
         if requirements.get("require_pass"):
-            observed = 0 if any(audit.get("status") == "fail" for audit in design_audits) else 1 if design_audits and all(audit.get("status") == "pass" for audit in design_audits) else None
-            rule("design.pass", observed, 1, "min", "design_evidence_missing_incomplete_or_withheld")
-        families = {"max_overlap_records": {"sample_id_overlap", "entity_overlap", "group_overlap", "molecular_identity", "scaffold_overlap", "near_duplicates"}, "max_duplicate_records": {"evaluation_duplicate_ids", "reference_duplicate_ids"}, "max_conflicting_labels": {"conflicting_labels"}}
+            observed = (
+                0
+                if any(audit.get("status") == "fail" for audit in design_audits)
+                else 1
+                if design_audits
+                and all(audit.get("status") == "pass" for audit in design_audits)
+                else None
+            )
+            rule(
+                "design.pass",
+                observed,
+                1,
+                "min",
+                "design_evidence_missing_incomplete_or_withheld",
+            )
+        families = {
+            "max_overlap_records": {
+                "sample_id_overlap",
+                "entity_overlap",
+                "group_overlap",
+                "molecular_identity",
+                "scaffold_overlap",
+                "near_duplicates",
+            },
+            "max_duplicate_records": {
+                "evaluation_duplicate_ids",
+                "reference_duplicate_ids",
+            },
+            "max_conflicting_labels": {"conflicting_labels"},
+        }
         for key, names in families.items():
-            if key not in requirements: continue
-            findings = [entry for audit in design_audits for name, entry in audit.get("findings", {}).items() if name in names]
-            known = [entry["affected_records"] for entry in findings if _finite(entry.get("affected_records"))]
+            if key not in requirements:
+                continue
+            findings = [
+                entry
+                for audit in design_audits
+                for name, entry in audit.get("findings", {}).items()
+                if name in names
+            ]
+            known = [
+                entry["affected_records"]
+                for entry in findings
+                if _finite(entry.get("affected_records"))
+            ]
             maximum = max(known) if known else None
-            complete = bool(findings) and all(any(name in names for name in audit.get("findings", {})) for audit in design_audits) and all(entry.get("evidence_complete") is True and _finite(entry.get("affected_records")) for entry in findings)
-            observed = maximum if complete or maximum is not None and maximum > requirements[key] else None
-            rule(f"design.{key}", observed, requirements[key], "max", "design_check_not_requested_or_not_testable")
+            complete = (
+                bool(findings)
+                and all(
+                    any(name in names for name in audit.get("findings", {}))
+                    for audit in design_audits
+                )
+                and all(
+                    entry.get("evidence_complete") is True
+                    and _finite(entry.get("affected_records"))
+                    for entry in findings
+                )
+            )
+            observed = (
+                maximum
+                if complete or maximum is not None and maximum > requirements[key]
+                else None
+            )
+            rule(
+                f"design.{key}",
+                observed,
+                requirements[key],
+                "max",
+                "design_check_not_requested_or_not_testable",
+            )
     audits = privacy.get("audits", {})
     audit = audits.get("membership_inference", {})
     for name, wanted in policy.get("privacy", {}).items():
         if name == "require_audit" and wanted:
-            ran = audit.get("risk_level") in {"low", "moderate", "high"} or audits.get("status") == "pass_under_policy"
-            rule("privacy.audit", 1 if ran else None, 1, "min", "privacy_audit_not_run_or_inconclusive")
+            ran = (
+                audit.get("risk_level") in {"low", "moderate", "high"}
+                or audits.get("status") == "pass_under_policy"
+            )
+            rule(
+                "privacy.audit",
+                1 if ran else None,
+                1,
+                "min",
+                "privacy_audit_not_run_or_inconclusive",
+            )
         elif name == "require_release" and wanted:
             release = privacy.get("release", {})
-            observed = 1 if release.get("status") == "pass" and release.get("publishable") is True else 0 if release.get("status") in {"fail", "deny", "blocked"} else None
+            observed = (
+                1
+                if release.get("status") == "pass"
+                and release.get("publishable") is True
+                else 0
+                if release.get("status") in {"fail", "deny", "blocked"}
+                else None
+            )
             rule("privacy.release_gate", observed, 1, "min", "release_gate_missing")
         elif name == "max_level":
             ranks = {"low": 0, "moderate": 1, "high": 2}
-            rule("privacy.risk_level", ranks.get(audit.get("risk_level")), ranks[wanted], "max", "risk_level_not_disclosed")
+            rule(
+                "privacy.risk_level",
+                ranks.get(audit.get("risk_level")),
+                ranks[wanted],
+                "max",
+                "risk_level_not_disclosed",
+            )
     if not rules:
         raise ValueError("A quality policy must contain at least one decision rule")
-    status = "fail" if any(item["status"] == "fail" for item in rules) else "investigate" if any(item["status"] == "investigate" for item in rules) else "pass"
-    return {"schema_version": RESULT_SCHEMA, "status": status, "metric_basis": basis, "rules": rules, "policy": policy, "scope": "local", "limitations": ["Thresholds are user policy, not universal scientific validity.", "Missing or suppressed evidence cannot satisfy a rule.", "Quality gates do not authorize disclosure."]}
+    status = (
+        "fail"
+        if any(item["status"] == "fail" for item in rules)
+        else "investigate"
+        if any(item["status"] == "investigate" for item in rules)
+        else "pass"
+    )
+    return {
+        "schema_version": RESULT_SCHEMA,
+        "status": status,
+        "metric_basis": basis,
+        "rules": rules,
+        "policy": policy,
+        "scope": "local",
+        "limitations": [
+            "Thresholds are user policy, not universal scientific validity.",
+            "Missing or suppressed evidence cannot satisfy a rule.",
+            "Quality gates do not authorize disclosure.",
+        ],
+    }

@@ -2,7 +2,6 @@ from pathlib import Path
 
 import yaml
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -29,7 +28,9 @@ def test_citation_metadata_is_parseable_and_points_to_repository():
     assert payload["cff-version"] == "1.2.0"
     assert payload["title"] == "PrivateLabBench"
     assert payload["license"] == "MIT"
-    assert payload["repository-code"] == "https://github.com/dipeshbabu/private-lab-bench"
+    assert (
+        payload["repository-code"] == "https://github.com/dipeshbabu/private-lab-bench"
+    )
     author = payload["authors"][0]
     assert f"{author['given-names']} {author['family-names']}" == "Dipesh Tharu Mahato"
 
@@ -53,7 +54,9 @@ def test_contributor_docs_cover_extension_and_privacy_paths():
     assert "privacy audit" in contributing.lower()
     assert "Artifact/schema changes" in contributing
 
-    privacy_template = (ROOT / ".github" / "ISSUE_TEMPLATE" / "privacy_method.yml").read_text(encoding="utf-8")
+    privacy_template = (
+        ROOT / ".github" / "ISSUE_TEMPLATE" / "privacy_method.yml"
+    ).read_text(encoding="utf-8")
     assert "Threat model" in privacy_template
     assert "guarantee" in privacy_template.lower()
 

@@ -59,6 +59,7 @@ dev = [
   "pytest>=7.0",
   "jsonschema>=4.0",
   "cryptography>=41.0",
+  "pre-commit>=4,<5",
 ]
 docs = [
   "mkdocs>=1.6,<2",
@@ -88,3 +89,13 @@ privatelabbench = [
 testpaths = ["tests"]
 addopts = "--basetemp=.pytest-tmp"
 pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+include = ["*.py", "*.pyi", "pyproject.toml"]
+extend-exclude = ["outputs", "reports", "build", "dist", ".venv", "site"]
+force-exclude = true
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

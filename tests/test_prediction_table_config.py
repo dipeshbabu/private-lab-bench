@@ -55,12 +55,16 @@ privacy:
     )
     result = validate_config(str(config_path))
     assert not result.valid
-    assert any("Stable sample IDs are strongly recommended" in error for error in result.errors)
+    assert any(
+        "Stable sample IDs are strongly recommended" in error for error in result.errors
+    )
 
 
 def test_missing_slice_column_fails_validation(tmp_path):
     csv_path = tmp_path / "table.csv"
-    csv_path.write_text("sample_id,target,prediction\na,0.1,0.1\nb,0.2,0.2\n", encoding="utf-8")
+    csv_path.write_text(
+        "sample_id,target,prediction\na,0.1,0.1\nb,0.2,0.2\n", encoding="utf-8"
+    )
     config_path = tmp_path / "table.yaml"
     config_path.write_text(
         f"""

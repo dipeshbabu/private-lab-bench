@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from hashlib import sha256
 from io import BytesIO
-import json
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -13,8 +13,8 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from privatelabbench.privacy.export import atomic_write_json
 from privatelabbench.core.local_io import atomic_write_csv as _write_csv
+from privatelabbench.privacy.export import atomic_write_json
 
 REFERENCE_VERSION = "0.4.1"
 ARCHIVE_ID = "4426004"
@@ -75,7 +75,7 @@ class TDCBenchmark:
 
     def identity(self) -> dict[str, str]:
         return {
-            "id": f"tdc-{self.task.id.replace('_','-')}",
+            "id": f"tdc-{self.task.id.replace('_', '-')}",
             "version": BENCHMARK_VERSION,
             "suite": "tdc-admet-group",
             "domain": "therapeutics",

@@ -28,6 +28,8 @@ python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 python -m pip install --upgrade pip
 pip install -e '.[dev]'
+python -m pre_commit install
+python -m pre_commit run --all-files
 pytest -q
 ```
 
@@ -54,7 +56,20 @@ docker build -t privatelabbench:dev .
 docker run --rm privatelabbench:dev list-tasks
 ```
 
-CI runs tests on Python 3.10, 3.11, and 3.12 plus a Docker smoke test.
+CI runs tests on Python 3.10, 3.11, and 3.12 plus Docker and package checks. Its
+quality job uses Python 3.11 and runs the same pre-commit hooks used locally.
+
+## Code quality
+
+Ruff checks Python errors, unused imports, import ordering, and formatting. Run
+all checks with `python -m pre_commit run --all-files`, or use
+`python -m pre_commit run ruff-check --all-files` for just the linter.
+The hook may fix files; review the changes and stage them before committing.
+
+Hook revisions live in `.pre-commit-config.yaml`, and Ruff settings live in
+`pyproject.toml`. Keep these checks enabled when changing code. The other hooks
+validate YAML, TOML, and JSON, detect conflict markers and large files, and clean
+text whitespace. Byte-pinned JSON/CSV assets are excluded from whitespace edits.
 
 To check a change before opening a pull request, push it on a `codex/` branch.
 CI and the full-history public-release audit also run on pushes to these branches.

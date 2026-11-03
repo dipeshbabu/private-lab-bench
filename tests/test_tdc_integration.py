@@ -1,8 +1,8 @@
 """Synthetic contract cases; real upstream parity is an explicit opt-in script."""
 
+import json
 from dataclasses import replace
 from hashlib import sha256
-import json
 
 import numpy as np
 import pandas as pd

@@ -5,7 +5,6 @@ from typing import Iterable, Sequence
 
 import numpy as np
 
-
 ADJACENCY_MODEL = "fixed_size_replace_one"
 
 
@@ -97,7 +96,9 @@ class PrivacyBudget:
             raise ValueError("privacy epsilon budget exceeded")
         if self.delta_spent + delta > self.delta_limit + 1e-18:
             raise ValueError("privacy delta budget exceeded")
-        self.spends.append(PrivacySpend(label=label, epsilon=float(epsilon), delta=float(delta)))
+        self.spends.append(
+            PrivacySpend(label=label, epsilon=float(epsilon), delta=float(delta))
+        )
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -202,15 +203,21 @@ def release_bounded_means(
         if any(weight <= 0 for weight in weights):
             raise ValueError("weights must all be positive")
         total_weight = float(sum(weights))
-        allocations = [epsilon_total * float(weight) / total_weight for weight in weights]
+        allocations = [
+            epsilon_total * float(weight) / total_weight for weight in weights
+        ]
 
     budget = PrivacyBudget(epsilon_limit=float(epsilon_total), delta_limit=0.0)
     seed_sequence = np.random.SeedSequence(seed)
     child_seeds = seed_sequence.spawn(len(query_list))
     releases: list[BoundedMeanRelease] = []
-    for query, epsilon, child_seed in zip(query_list, allocations, child_seeds, strict=True):
+    for query, epsilon, child_seed in zip(
+        query_list, allocations, child_seeds, strict=True
+    ):
         child_int = int(child_seed.generate_state(1, dtype=np.uint64)[0])
-        releases.append(release_bounded_mean(query, epsilon=epsilon, seed=child_int, budget=budget))
+        releases.append(
+            release_bounded_mean(query, epsilon=epsilon, seed=child_int, budget=budget)
+        )
 
     return {
         "mechanism": "bounded_mean_laplace",

@@ -13,7 +13,9 @@ from privatelabbench.privacy.formal import (
 
 
 def test_metric_perturbation_is_labeled_non_formal_and_reproducible():
-    config = PrivacyConfig(mode="metric_perturbation", epsilon=4.0, sensitivity=0.5, seed=7)
+    config = PrivacyConfig(
+        mode="metric_perturbation", epsilon=4.0, sensitivity=0.5, seed=7
+    )
     first = release_metrics({"mae": 0.2, "rmse": 0.3}, config)
     second = release_metrics({"mae": 0.2, "rmse": 0.3}, config)
 
@@ -48,18 +50,27 @@ def test_privacy_config_rejects_fake_formal_mode():
 )
 def test_metric_release_rejects_invalid_noise_parameters(epsilon, sensitivity):
     with pytest.raises(ValueError):
-        release_metrics({"mae": 0.2}, PrivacyConfig(mode="metric_perturbation", epsilon=epsilon, sensitivity=sensitivity))
+        release_metrics(
+            {"mae": 0.2},
+            PrivacyConfig(
+                mode="metric_perturbation", epsilon=epsilon, sensitivity=sensitivity
+            ),
+        )
 
 
 def test_bounded_mean_clips_and_computes_replace_one_sensitivity():
-    query = BoundedMeanQuery(name="score", values=[-5.0, 0.0, 5.0, 50.0], lower=0.0, upper=10.0)
+    query = BoundedMeanQuery(
+        name="score", values=[-5.0, 0.0, 5.0, 50.0], lower=0.0, upper=10.0
+    )
     assert query.n == 4
     assert query.clipped_mean() == pytest.approx(3.75)
     assert query.sensitivity == pytest.approx(2.5)
 
 
 def test_bounded_mean_release_records_formal_query_contract():
-    query = BoundedMeanQuery(name="bounded-score", values=[0.0, 1.0, 2.0, 3.0], lower=0.0, upper=4.0)
+    query = BoundedMeanQuery(
+        name="bounded-score", values=[0.0, 1.0, 2.0, 3.0], lower=0.0, upper=4.0
+    )
     release = release_bounded_mean(query, epsilon=2.0, seed=11)
 
     assert release.adjacency == "fixed_size_replace_one"
@@ -71,7 +82,9 @@ def test_bounded_mean_release_records_formal_query_contract():
 
 
 def test_bounded_mean_release_is_reproducible_given_seed():
-    query = BoundedMeanQuery(name="bounded-score", values=[1.0, 2.0, 3.0], lower=0.0, upper=4.0)
+    query = BoundedMeanQuery(
+        name="bounded-score", values=[1.0, 2.0, 3.0], lower=0.0, upper=4.0
+    )
     a = release_bounded_mean(query, epsilon=1.0, seed=42)
     b = release_bounded_mean(query, epsilon=1.0, seed=42)
     assert a.value == b.value
@@ -97,8 +110,12 @@ def test_multiple_bounded_means_split_and_account_total_budget():
         seed=5,
     )
     assert result["budget"]["epsilon_spent"] == pytest.approx(1.0)
-    assert [spend["epsilon"] for spend in result["budget"]["spends"]] == pytest.approx([0.5, 0.5])
-    assert all(release["epsilon"] == pytest.approx(0.5) for release in result["releases"])
+    assert [spend["epsilon"] for spend in result["budget"]["spends"]] == pytest.approx(
+        [0.5, 0.5]
+    )
+    assert all(
+        release["epsilon"] == pytest.approx(0.5) for release in result["releases"]
+    )
 
 
 def test_weighted_bounded_mean_composition_uses_declared_total_budget():

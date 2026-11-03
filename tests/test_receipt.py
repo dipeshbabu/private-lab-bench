@@ -13,7 +13,9 @@ from privatelabbench.reports.receipt import (
 from privatelabbench.runner import run_config
 
 
-def _write_config(tmp_path: Path, *, signing_secret: str | None = None, privacy_mode: str = "none") -> Path:
+def _write_config(
+    tmp_path: Path, *, signing_secret: str | None = None, privacy_mode: str = "none"
+) -> Path:
     config_path = tmp_path / "receipt.yaml"
     md_path = tmp_path / "eval.md"
     json_path = tmp_path / "eval.json"
@@ -96,8 +98,14 @@ def test_config_run_writes_local_shareable_and_markdown_receipts(tmp_path):
     assert local["local"]["config_snapshot"]["project"] == "receipt-test"
     assert shareable["scope"] == "shareable"
     assert "local" not in shareable
-    assert shareable["shareable"]["evaluation"]["metrics"] == report["result"]["reported_metrics"]
-    assert shareable["shareable"]["evaluation"]["input_schema"]["schema_version"] == "prediction-table/v1"
+    assert (
+        shareable["shareable"]["evaluation"]["metrics"]
+        == report["result"]["reported_metrics"]
+    )
+    assert (
+        shareable["shareable"]["evaluation"]["input_schema"]["schema_version"]
+        == "prediction-table/v1"
+    )
     assert shareable["shareable"]["evaluation"]["slices"]["site"]
 
     serialized_shareable = json.dumps(shareable)
@@ -121,7 +129,10 @@ def test_receipt_separates_released_and_exact_metrics(tmp_path):
     report = json.loads(Path(summary["json_report"]).read_text(encoding="utf-8"))
 
     assert local["local"]["exact_metrics"] == report["result"]["clean_metrics"]
-    assert shareable["shareable"]["evaluation"]["metrics"] == report["result"]["reported_metrics"]
+    assert (
+        shareable["shareable"]["evaluation"]["metrics"]
+        == report["result"]["reported_metrics"]
+    )
     assert shareable["shareable"]["evaluation"]["metric_source"] == "reported_metrics"
 
 
@@ -162,16 +173,22 @@ def test_plb_verify_dispatches_receipts_and_legacy_artifacts(tmp_path, capsys):
     summary = run_config(str(config_path))
     _, shareable_path, _ = _receipt_paths(Path(summary["manifest"]))
 
-    receipt_code = verify_any_command(Namespace(artifact=str(shareable_path), signing_secret=None))
+    receipt_code = verify_any_command(
+        Namespace(artifact=str(shareable_path), signing_secret=None)
+    )
     receipt_output = capsys.readouterr().out
     assert receipt_code == 0
     assert "Schema: evaluation-receipt/v1" in receipt_output
     assert "Scope: shareable" in receipt_output
 
-    manifest_code = verify_any_command(Namespace(artifact=summary["manifest"], signing_secret=None))
+    manifest_code = verify_any_command(
+        Namespace(artifact=summary["manifest"], signing_secret=None)
+    )
     assert manifest_code == 0
 
-    report_code = verify_any_command(Namespace(artifact=summary["json_report"], signing_secret=None))
+    report_code = verify_any_command(
+        Namespace(artifact=summary["json_report"], signing_secret=None)
+    )
     assert report_code == 0
 
 
@@ -185,12 +202,19 @@ def test_legacy_run_manifest_has_receipt_compatibility_view(tmp_path):
     assert compatible["scope"] == "compatibility"
     assert compatible["local"]["legacy_schema"] == "run-manifest/v0.1"
     assert compatible["shareable"]["run"]["run_id"] == manifest["run"]["run_id"]
-    assert compatible["shareable"]["evaluation"]["metric_source"] == "not_present_in_legacy_manifest"
+    assert (
+        compatible["shareable"]["evaluation"]["metric_source"]
+        == "not_present_in_legacy_manifest"
+    )
 
 
 def test_checked_in_example_receipt_verifies():
     result = verify_receipt("examples/reports/evaluation_receipt_example.json")
     assert result["valid"] is True
-    payload = json.loads(Path("examples/reports/evaluation_receipt_example.json").read_text(encoding="utf-8"))
+    payload = json.loads(
+        Path("examples/reports/evaluation_receipt_example.json").read_text(
+            encoding="utf-8"
+        )
+    )
     assert payload["scope"] == "shareable"
     assert "local" not in payload

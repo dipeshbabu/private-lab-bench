@@ -1,4 +1,3 @@
-from copy import deepcopy
 import json
 from pathlib import Path
 
@@ -9,7 +8,7 @@ from privatelabbench.cli import main
 from privatelabbench.privacy.export import check_release
 from privatelabbench.protocols import resolve_protocol
 from privatelabbench.reports.integrity import attach_integrity_metadata, verify_payload
-from privatelabbench.trends import trend_receipts, render_trend
+from privatelabbench.trends import render_trend, trend_receipts
 
 MODEL = {"id": "synthetic-model", "revision": "v1"}
 SERIES = {"id": "synthetic-monthly", "revision": "v1"}
@@ -81,7 +80,7 @@ def receipts(tmp_path, values, *, width=0.02):
         path = tmp_path / f"receipt-{index}.json"
         path.write_text(json.dumps(attach_integrity_metadata(payload)))
         paths.append(path)
-        times.append(f"2026-{index+1:02d}-01")
+        times.append(f"2026-{index + 1:02d}-01")
     return paths, times
 
 
@@ -379,6 +378,7 @@ def test_latest_quality_gate_can_recover_after_a_past_failure(tmp_path, monkeypa
 def test_longitudinal_and_release_schemas(tmp_path):
     from jsonschema import Draft202012Validator
     from referencing import Registry, Resource
+
     import privatelabbench.trends as module
 
     paths, times = receipts(tmp_path, [0.2, 0.5])

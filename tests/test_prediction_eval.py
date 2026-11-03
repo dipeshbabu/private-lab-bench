@@ -75,9 +75,7 @@ def test_multiclass_prediction_table_runs():
 def test_multiclass_rejects_probabilities_that_do_not_sum_to_one(tmp_path):
     csv_path = tmp_path / "bad_multiclass.csv"
     csv_path.write_text(
-        "sample_id,target,p_a,p_b,p_c\n"
-        "a,a,0.8,0.4,0.1\n"
-        "b,b,0.1,0.8,0.1\n",
+        "sample_id,target,p_a,p_b,p_c\na,a,0.8,0.4,0.1\nb,b,0.1,0.8,0.1\n",
         encoding="utf-8",
     )
     with pytest.raises(ValueError, match="sum to 1.0"):
@@ -93,9 +91,7 @@ def test_multiclass_rejects_probabilities_that_do_not_sum_to_one(tmp_path):
 def test_prediction_table_rejects_duplicate_sample_ids(tmp_path):
     csv_path = tmp_path / "duplicates.csv"
     csv_path.write_text(
-        "sample_id,target,prediction\n"
-        "same,0.1,0.1\n"
-        "same,0.2,0.2\n",
+        "sample_id,target,prediction\nsame,0.1,0.1\nsame,0.2,0.2\n",
         encoding="utf-8",
     )
     with pytest.raises(ValueError, match="must be unique"):
@@ -140,7 +136,10 @@ def test_slice_metrics_suppress_small_groups(tmp_path):
         require_sample_id=True,
     )
     assert result.slice_metrics["site"]["north"]["status"] == "evaluated"
-    assert result.slice_metrics["site"]["south"] == {"n": 1, "status": "skipped_min_slice_size"}
+    assert result.slice_metrics["site"]["south"] == {
+        "n": 1,
+        "status": "skipped_min_slice_size",
+    }
 
 
 def test_prediction_eval_membership_risk_with_split_column(tmp_path):
@@ -220,6 +219,9 @@ def test_prediction_json_report_includes_schema_and_aggregates_only(tmp_path):
     payload = json.loads(output.read_text())
     serialized = json.dumps(payload)
     assert payload["report_type"] == "prediction_evaluation"
-    assert payload["result"]["prediction_table_schema"]["schema_version"] == "prediction-table/v1"
+    assert (
+        payload["result"]["prediction_table_schema"]["schema_version"]
+        == "prediction-table/v1"
+    )
     assert payload["result"]["sharing_boundary"]["row_level_values_included"] is False
     assert "s01" not in serialized

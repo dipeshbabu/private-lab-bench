@@ -28,7 +28,9 @@ def discover_client_csvs(directory: str) -> list[Path]:
     if not root.exists():
         raise FileNotFoundError(f"Client directory does not exist: {directory}")
     if not root.is_dir():
-        raise NotADirectoryError(f"Expected a directory of client CSV files: {directory}")
+        raise NotADirectoryError(
+            f"Expected a directory of client CSV files: {directory}"
+        )
     files = sorted(p for p in root.glob("*.csv") if p.is_file())
     if not files:
         raise ValueError(f"No client CSV files found in {directory}")
@@ -45,7 +47,9 @@ def evaluate_client_csv(
     seed: int = 13,
     privacy_config: PrivacyConfig,
 ) -> ClientEvaluation:
-    dataset = load_molecule_csv(str(csv_path), target=target, smiles_column=smiles_column, task_type=task_type)
+    dataset = load_molecule_csv(
+        str(csv_path), target=target, smiles_column=smiles_column, task_type=task_type
+    )
     result = evaluate_random_forest(dataset, test_size=test_size, seed=seed)
     clean_metrics = dict(result["metrics"])
     reported_metrics = privatize_metrics(clean_metrics, privacy_config)
@@ -87,9 +91,15 @@ def evaluate_federated_directory(
         for path in files
     ]
     weights = [client.n_samples for client in clients]
-    aggregate_clean = aggregate_client_metrics([client.clean_metrics for client in clients], weights=weights)
-    aggregate_reported = aggregate_client_metrics([client.reported_metrics for client in clients], weights=weights)
-    aggregate_shift = aggregate_client_metrics([client.shift for client in clients], weights=weights)
+    aggregate_clean = aggregate_client_metrics(
+        [client.clean_metrics for client in clients], weights=weights
+    )
+    aggregate_reported = aggregate_client_metrics(
+        [client.reported_metrics for client in clients], weights=weights
+    )
+    aggregate_shift = aggregate_client_metrics(
+        [client.shift for client in clients], weights=weights
+    )
 
     task_types = sorted({client.task_type for client in clients})
     models = sorted({client.model for client in clients})

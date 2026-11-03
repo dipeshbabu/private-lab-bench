@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 from typing import Any, Mapping
-
 
 RISK_ORDER = {"low": 0, "moderate": 1, "high": 2}
 
@@ -21,13 +20,19 @@ class PrivacyRiskPolicy:
             return cls()
         max_level = str(value.get("max_level", "high")).strip().lower()
         if max_level not in RISK_ORDER:
-            raise ValueError("privacy.risk_policy.max_level must be low, moderate, or high.")
+            raise ValueError(
+                "privacy.risk_policy.max_level must be low, moderate, or high."
+            )
         max_member_advantage = value.get("max_member_advantage")
         max_attack_auc = value.get("max_attack_auc")
         return cls(
             max_level=max_level,
-            max_member_advantage=float(max_member_advantage) if max_member_advantage is not None else None,
-            max_attack_auc=float(max_attack_auc) if max_attack_auc is not None else None,
+            max_member_advantage=float(max_member_advantage)
+            if max_member_advantage is not None
+            else None,
+            max_attack_auc=float(max_attack_auc)
+            if max_attack_auc is not None
+            else None,
             require_attack=bool(value.get("require_attack", False)),
         )
 
@@ -39,7 +44,12 @@ def evaluate_privacy_gate(
     policy = policy or PrivacyRiskPolicy()
     violations: list[str] = []
     if not privacy_risk:
-        if policy.require_attack or policy.max_level != "high" or policy.max_member_advantage is not None or policy.max_attack_auc is not None:
+        if (
+            policy.require_attack
+            or policy.max_level != "high"
+            or policy.max_member_advantage is not None
+            or policy.max_attack_auc is not None
+        ):
             violations.append("privacy_attack_required")
         return {
             "status": "fail" if violations else "pass",
@@ -62,14 +72,22 @@ def evaluate_privacy_gate(
 
     member_advantage = privacy_risk.get("member_advantage")
     if policy.max_member_advantage is not None:
-        if not isinstance(member_advantage, (int, float)) or isinstance(member_advantage, bool) or not math.isfinite(member_advantage):
+        if (
+            not isinstance(member_advantage, (int, float))
+            or isinstance(member_advantage, bool)
+            or not math.isfinite(member_advantage)
+        ):
             violations.append("member_advantage_required")
         elif float(member_advantage) > policy.max_member_advantage:
             violations.append("member_advantage_exceeds_policy")
 
     attack_auc = privacy_risk.get("attack_auc")
     if policy.max_attack_auc is not None:
-        if not isinstance(attack_auc, (int, float)) or isinstance(attack_auc, bool) or not math.isfinite(attack_auc):
+        if (
+            not isinstance(attack_auc, (int, float))
+            or isinstance(attack_auc, bool)
+            or not math.isfinite(attack_auc)
+        ):
             violations.append("attack_auc_required")
         elif float(attack_auc) > policy.max_attack_auc:
             violations.append("attack_auc_exceeds_policy")
