@@ -49,6 +49,11 @@ docker run --rm privatelabbench:dev list-tasks
 
 CI runs tests on Python 3.10, 3.11, and 3.12 plus a Docker smoke test.
 
+To check a change before opening a pull request, push it on a `codex/` branch.
+CI and the full-history public-release audit also run on pushes to these branches.
+Wait for both workflows to succeed on the current commit before opening the PR,
+then confirm the PR checks pass before merging. Remove the branch after merge.
+
 ## Architecture in one page
 
 The important layers are:
