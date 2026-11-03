@@ -6,7 +6,9 @@ The current schema is **`evaluation-receipt/v1`**. A machine-readable JSON Schem
 
 ## Three local outputs
 
-A config-driven run writes its existing report and run manifest, then creates:
+A config-driven run writes its local report, manifest, full receipt, and Markdown
+summary. A shareable receipt is created only when an explicit `release-policy/v1`
+policy permits export:
 
 ```text
 <run>_receipt.json
@@ -16,27 +18,29 @@ A config-driven run writes its existing report and run manifest, then creates:
 
 The full JSON receipt has `scope: local`. It contains two explicitly separated sections:
 
-- `shareable` — aggregate evaluation results intended to be safe to extract/share under the run's release policy;
+- `shareable` — the local candidate aggregate results; this section must pass the exporter before sharing;
 - `local` — paths, config snapshot, exact local metrics, runner identity, and full attestation metadata.
 
 The `*.receipt.shareable.json` file has `scope: shareable` and contains **no `local` section**. It is independently hashed/signed, so removing the local section does not invalidate its integrity metadata.
 
-The Markdown receipt is rendered only from the shareable section.
+An allowed Markdown receipt is rendered from the sanitized export. A blocked
+export instead writes a local explanation and a `*.shareable.release-audit.json`
+decision record. Any previous shareable JSON is removed. See the
+[export-policy guide](privacy.md#enforced-export-policy).
 
 ## Shareable section
 
 `shareable` contains:
 
-- run ID, project, task, report type, and run timestamp;
-- benchmark ID/version/suite/domain/protocol;
-- input schema summary;
+- fresh export identity and timestamp, without private project labels;
+- explicitly approved public benchmark ID/version/suite/domain/protocol;
+- minimal input schema, with column names only when explicitly approved;
 - aggregate sample counts;
 - released/reported metrics;
 - optional uncertainty fields when a task supplies them;
-- aggregate configured slice metrics;
+- one explicitly approved slice partition when all categories meet cell thresholds;
 - privacy-audit summary and release-gate status;
-- package version and privacy-preserving attestation ID;
-- artifact **names + SHA256 hashes**, without local paths.
+- package identity; local attestation and source artifact names/hashes are withheld.
 
 For prediction-table tasks, the input schema is `prediction-table/v1` and includes only column/schema metadata—not row values.
 

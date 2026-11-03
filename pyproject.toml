@@ -47,6 +47,7 @@ Documentation = "https://github.com/dipeshbabu/private-lab-bench/tree/main/docs"
 rdkit = ["rdkit>=2023.9.1"]
 dev = [
   "pytest>=7.0",
+  "jsonschema>=4.0",
 ]
 docs = [
   "mkdocs>=1.6,<2",
