@@ -444,6 +444,8 @@ def evaluate_scored(
 
 def score_command(args) -> int:
     """CLI orchestration keeps input files separate and invalidates old exports first."""
+    from privatelabbench.core.local_io import validate_output_paths
+
     public = markdown = None
     try:
         protected = {
@@ -473,21 +475,18 @@ def score_command(args) -> int:
             except ValueError as exc:
                 manifest_error = exc
         prediction_output = Path(args.output).resolve()
-        scoring_outputs = {
+        scoring_outputs = [
             prediction_output,
             prediction_output.with_suffix(".score.json"),
-        }
-        if scoring_outputs & protected:
-            raise ValueError(
-                "Scoring outputs must preserve every model/data/policy/protocol input"
-            )
+        ]
+        validate_output_paths(protected, scoring_outputs)
         if args.evaluate_output_dir:
             folder = Path(args.evaluate_output_dir).resolve()
-            public, markdown = (
+            candidate_public, candidate_markdown = (
                 folder / "evaluation_receipt.shareable.json",
                 folder / "evaluation_receipt.md",
             )
-            related = {
+            related = [
                 folder / name
                 for name in (
                     "evaluation.json",
@@ -502,13 +501,9 @@ def score_command(args) -> int:
                     ".plb-release-ledger.json",
                     ".plb-release.lock",
                 )
-            }
-            if related & (protected | scoring_outputs):
-                # Never remove a colliding source, including on the exception path.
-                public = markdown = None
-                raise ValueError(
-                    "Evaluation outputs must preserve every scoring input and prediction output"
-                )
+            ]
+            validate_output_paths([*protected, *scoring_outputs], related)
+            public, markdown = candidate_public, candidate_markdown
             public.unlink(missing_ok=True)
             markdown.unlink(missing_ok=True)
             if not args.target or not args.protocol:

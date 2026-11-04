@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from numbers import Real
 from typing import Any, Mapping
 
 RISK_ORDER = {"low": 0, "moderate": 1, "high": 2}
@@ -14,10 +15,42 @@ class PrivacyRiskPolicy:
     max_attack_auc: float | None = None
     require_attack: bool = False
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.max_level, str) or self.max_level not in RISK_ORDER:
+            raise ValueError(
+                "privacy.risk_policy.max_level must be low, moderate, or high."
+            )
+        if not isinstance(self.require_attack, bool):
+            raise ValueError("privacy.risk_policy.require_attack must be a boolean.")
+        for name in ("max_member_advantage", "max_attack_auc"):
+            threshold = getattr(self, name)
+            if threshold is not None and (
+                isinstance(threshold, bool)
+                or not isinstance(threshold, Real)
+                or not math.isfinite(threshold)
+                or not 0 <= threshold <= 1
+            ):
+                raise ValueError(
+                    f"privacy.risk_policy.{name} must be a finite number in [0, 1]."
+                )
+
     @classmethod
     def from_config(cls, value: Mapping[str, Any] | None) -> "PrivacyRiskPolicy":
-        if not value:
+        if value is None:
             return cls()
+        if not isinstance(value, Mapping):
+            raise ValueError("privacy.risk_policy must be a mapping.")
+        unknown = set(value) - {
+            "max_level",
+            "max_member_advantage",
+            "max_attack_auc",
+            "require_attack",
+        }
+        if unknown:
+            raise ValueError(
+                "Unknown privacy.risk_policy fields: "
+                + ", ".join(sorted(map(str, unknown)))
+            )
         max_level = str(value.get("max_level", "high")).strip().lower()
         if max_level not in RISK_ORDER:
             raise ValueError(
@@ -27,13 +60,9 @@ class PrivacyRiskPolicy:
         max_attack_auc = value.get("max_attack_auc")
         return cls(
             max_level=max_level,
-            max_member_advantage=float(max_member_advantage)
-            if max_member_advantage is not None
-            else None,
-            max_attack_auc=float(max_attack_auc)
-            if max_attack_auc is not None
-            else None,
-            require_attack=bool(value.get("require_attack", False)),
+            max_member_advantage=max_member_advantage,
+            max_attack_auc=max_attack_auc,
+            require_attack=value.get("require_attack", False),
         )
 
 

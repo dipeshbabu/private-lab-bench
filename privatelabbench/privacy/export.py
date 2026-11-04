@@ -15,6 +15,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
+from privatelabbench.core.local_io import validate_output_paths
 from privatelabbench.reports.integrity import attach_integrity_metadata
 
 POLICY_SCHEMA = "release-policy/v1"
@@ -997,13 +998,14 @@ def publish_shareable_artifact(
 ) -> ReleaseDecision:
     """The sole shareable JSON writer. Denial removes any previous export."""
     output = Path(path)
+    audit_path = output.with_suffix(".release-audit.json")
+    ledger_path = output.parent / ".plb-release-ledger.json"
+    lock_path = output.parent / ".plb-release.lock"
+    validate_output_paths([], [output, audit_path, ledger_path, lock_path])
     output.parent.mkdir(parents=True, exist_ok=True)
     output.unlink(missing_ok=True)
     decision, payload = check_release(candidate, policy, evidence=evidence)
-    audit_path = output.with_suffix(".release-audit.json")
     if payload is not None:
-        ledger_path = output.parent / ".plb-release-ledger.json"
-        lock_path = output.parent / ".plb-release.lock"
         lock = None
         try:
             lock = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)

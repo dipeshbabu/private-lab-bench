@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import hmac
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,6 +9,7 @@ from uuid import uuid4
 
 from privatelabbench import __version__
 from privatelabbench.attestation import collect_runner_attestation
+from privatelabbench.core.local_io import validate_output_paths
 from privatelabbench.reports.integrity import attach_integrity_metadata, verify_report
 
 
@@ -117,6 +117,19 @@ def write_run_manifest(
     signing_secret: str | None = None,
 ) -> Path:
     path = Path(output_path)
+    receipt_path, shareable_path, receipt_markdown_path = _receipt_output_paths(path)
+    validate_output_paths(
+        [config_path, json_report_path, audit_log_path, markdown_report_path],
+        [
+            path,
+            receipt_path,
+            shareable_path,
+            receipt_markdown_path,
+            shareable_path.with_suffix(".release-audit.json"),
+            shareable_path.parent / ".plb-release-ledger.json",
+            shareable_path.parent / ".plb-release.lock",
+        ],
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     manifest = build_run_manifest(
         summary=summary,
@@ -134,7 +147,6 @@ def write_run_manifest(
     # Import locally to keep manifest verification independent and avoid a module cycle.
     from privatelabbench.reports.receipt import write_evaluation_receipts
 
-    receipt_path, shareable_path, receipt_markdown_path = _receipt_output_paths(path)
     write_evaluation_receipts(
         full_path=receipt_path,
         shareable_path=shareable_path,
@@ -160,18 +172,20 @@ def verify_run_manifest(
             "reason": "missing_integrity_metadata",
             "path": str(manifest_path),
         }
-    from privatelabbench.reports.integrity import compute_payload_sha256, sign_payload
+    from privatelabbench.reports.integrity import (
+        compute_payload_sha256,
+        digest_matches,
+        sign_payload,
+    )
 
-    expected_hash = str(integrity.get("payload_sha256", ""))
+    expected_hash = integrity.get("payload_sha256", "")
     actual_hash = compute_payload_sha256(manifest)
-    hash_valid = bool(expected_hash) and hmac.compare_digest(expected_hash, actual_hash)
+    hash_valid = digest_matches(expected_hash, actual_hash)
     signature_valid = None
     if signing_secret:
-        expected_signature = str(integrity.get("signature", ""))
+        expected_signature = integrity.get("signature", "")
         actual_signature = sign_payload(manifest, signing_secret)
-        signature_valid = bool(expected_signature) and hmac.compare_digest(
-            expected_signature, actual_signature
-        )
+        signature_valid = digest_matches(expected_signature, actual_signature)
     artifact_results: list[dict[str, Any]] = []
     artifacts_valid = True
     report_valid = True

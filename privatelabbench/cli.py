@@ -928,6 +928,7 @@ def gate_command(args: argparse.Namespace) -> int:
 
 
 def simple_evaluation_command(args: argparse.Namespace) -> int:
+    from privatelabbench.core.local_io import validate_output_paths
     from privatelabbench.evaluate import evaluation_summary, make_evaluation_config
 
     output = Path(args.output_dir).resolve()
@@ -966,10 +967,10 @@ def simple_evaluation_command(args: argparse.Namespace) -> int:
             inputs.add(Path(getattr(args, key)).resolve())
     if args.protocol and not args.protocol.startswith("plb://"):
         inputs.add(Path(args.protocol).resolve())
-    if any(path in inputs for path in protected):
-        print(
-            "Evaluation rejected: output paths must be separate from all input tables and policy/protocol files"
-        )
+    try:
+        validate_output_paths(inputs, protected)
+    except (ValueError, OSError) as exc:
+        print(f"Evaluation rejected: {exc}")
         return 2
     if args.command == "evaluate":
         public.unlink(missing_ok=True)
@@ -1142,6 +1143,7 @@ def tdc_command(args: argparse.Namespace) -> int:
 
 
 def audit_design_command(args: argparse.Namespace) -> int:
+    from privatelabbench.core.local_io import validate_output_paths
     from privatelabbench.design_audit import EvaluationDesign, prepare_evaluation
     from privatelabbench.privacy.export import atomic_write_json
     from privatelabbench.reports.integrity import attach_integrity_metadata
@@ -1153,10 +1155,8 @@ def audit_design_command(args: argparse.Namespace) -> int:
     }
     if not args.protocol.startswith("plb://"):
         protected.add(Path(args.protocol).resolve())
-    if output.resolve() in protected:
-        print("Audit rejected: choose a separate output path")
-        return 2
     try:
+        validate_output_paths(protected, [output])
         output.unlink(missing_ok=True)
         protocol = None
         if args.protocol.startswith("plb://"):

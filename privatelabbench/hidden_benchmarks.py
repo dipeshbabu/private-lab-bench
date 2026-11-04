@@ -15,7 +15,7 @@ import pandas as pd
 import yaml
 
 from privatelabbench.aggregate import model_identity
-from privatelabbench.core.local_io import atomic_write_csv
+from privatelabbench.core.local_io import atomic_write_csv, validate_output_paths
 from privatelabbench.privacy.export import (
     _mapping,
     _token,
@@ -441,10 +441,7 @@ def evaluate_benchmark(
         ".plb-release-ledger.json",
         ".plb-release.lock",
     )
-    if {output / name for name in names} & sources:
-        raise ValueError(
-            "Benchmark output paths must preserve every owner/submission input"
-        )
+    validate_output_paths(sources, [output / name for name in names])
     public, markdown = (
         output / "evaluation_receipt.shareable.json",
         output / "evaluation_receipt.md",

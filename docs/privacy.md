@@ -243,6 +243,19 @@ guarantee: none
 
 A high attack score can identify a meaningful leakage signal. A low attack score does **not** prove privacy, differential privacy, or resistance to stronger attacks.
 
+The threshold diagnostic gives members and nonmembers equal weight, even when
+their sample counts differ. It checks both loss directions; `attack_auc` reports
+the stronger orientation and `directional_attack_auc` retains the lower-loss
+orientation. `threshold_attack_accuracy` is balanced accuracy, with its basis and
+threshold direction recorded alongside it. Thresholds are selected on the audit
+sample itself, so these are descriptive diagnostics, not held-out attack accuracy.
+Inputs must contain aligned, finite scores; classification requires binary targets
+and probabilities in [0, 1].
+
+Risk policies reject unknown fields, nonboolean `require_attack`, and thresholds
+outside [0, 1], including NaN and infinity. Heuristic metric perturbation also
+requires finite positive parameters and a representable positive noise scale.
+
 The attack registry exists so the community can add stronger audits without changing the meaning of any formal privacy mechanism.
 
 ## 5. Release policies

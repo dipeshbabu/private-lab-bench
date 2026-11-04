@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import math
 import warnings
 from dataclasses import dataclass
+from numbers import Integral, Real
 from typing import Mapping, Protocol
 
 import numpy as np
@@ -45,10 +47,27 @@ class PrivacyConfig:
             raise ValueError(
                 "privacy mode must be 'none' or 'metric_perturbation' ('dp' is a deprecated alias)"
             )
-        if self.epsilon <= 0:
-            raise ValueError("epsilon must be positive")
-        if self.sensitivity <= 0:
-            raise ValueError("sensitivity must be positive")
+        for name in ("epsilon", "sensitivity"):
+            value = getattr(self, name)
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, Real)
+                or not math.isfinite(value)
+                or value <= 0
+            ):
+                raise ValueError(f"{name} must be finite and positive")
+        if (
+            isinstance(self.seed, bool)
+            or not isinstance(self.seed, Integral)
+            or self.seed < 0
+        ):
+            raise ValueError("seed must be a nonnegative integer")
+        if self.normalized_mode != NO_PRIVACY:
+            scale = self.sensitivity / self.epsilon
+            if not math.isfinite(scale) or scale <= 0:
+                raise ValueError(
+                    "metric perturbation requires a finite, positive noise scale"
+                )
         if self.uses_legacy_dp_alias:
             warnings.warn(
                 "privacy.mode='dp' is deprecated and means heuristic metric_perturbation; "
@@ -114,6 +133,7 @@ class MetricPerturbationRelease:
     def release(
         self, metrics: Mapping[str, float], config: PrivacyConfig
     ) -> MetricRelease:
+        metadata = config.report_metadata()
         clean = {key: float(value) for key, value in metrics.items()}
         rng = np.random.default_rng(config.seed)
         scale = config.sensitivity / config.epsilon
@@ -122,11 +142,14 @@ class MetricPerturbationRelease:
             if np.isnan(value):
                 released[key] = value
             else:
-                released[key] = float(value + rng.laplace(0.0, scale))
+                released_value = float(value + rng.laplace(0.0, scale))
+                if not math.isfinite(released_value):
+                    raise ValueError("Metric perturbation produced a nonfinite release")
+                released[key] = released_value
         return MetricRelease(
             metrics=released,
             metadata={
-                **config.report_metadata(),
+                **metadata,
                 "mechanism": self.name,
                 "guarantee_level": self.guarantee_level,
                 "formal_dp": False,

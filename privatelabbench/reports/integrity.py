@@ -9,6 +9,16 @@ from typing import Any, Mapping
 INTEGRITY_FIELD = "integrity"
 
 
+def digest_matches(expected: Any, actual: str) -> bool:
+    """Compare a serialized SHA-256/HMAC digest without coercing malformed input."""
+    return (
+        isinstance(expected, str)
+        and len(expected) == 64
+        and expected.isascii()
+        and hmac.compare_digest(expected, actual)
+    )
+
+
 def canonical_json(payload: Mapping[str, Any]) -> bytes:
     unsigned = {k: v for k, v in payload.items() if k != INTEGRITY_FIELD}
     return json.dumps(
@@ -95,17 +105,13 @@ def verify_payload(
 
     expected_hash = integrity.get("payload_sha256")
     actual_hash = compute_payload_sha256(payload)
-    hash_valid = bool(expected_hash) and hmac.compare_digest(
-        str(expected_hash), actual_hash
-    )
+    hash_valid = digest_matches(expected_hash, actual_hash)
 
     signature_valid = None
     if signing_secret and integrity.get("signature_algorithm") != "ed25519":
         expected_signature = integrity.get("signature")
         actual_signature = sign_payload(payload, signing_secret)
-        signature_valid = bool(expected_signature) and hmac.compare_digest(
-            str(expected_signature), actual_signature
-        )
+        signature_valid = digest_matches(expected_signature, actual_signature)
 
     valid = hash_valid and (signature_valid is not False)
     reason = "ok" if valid else "integrity_check_failed"

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Mapping
 from uuid import uuid4
 
+from privatelabbench.core.local_io import validate_output_paths
 from privatelabbench.privacy.export import check_release, publish_shareable_artifact
 from privatelabbench.reports.integrity import attach_integrity_metadata
 
@@ -234,18 +235,29 @@ def write_paired_comparison_artifacts(
     signing_secret: str | None = None,
     release_policy: Mapping[str, Any] | None = None,
 ) -> dict[str, Path]:
+    local_path = Path(json_path)
+    shareable_path = local_path.with_name(
+        f"{local_path.stem}.shareable{local_path.suffix}"
+    )
+    markdown_output = Path(markdown_path)
+    validate_output_paths(
+        [path_a, path_b],
+        [
+            local_path,
+            shareable_path,
+            markdown_output,
+            shareable_path.with_suffix(".release-audit.json"),
+            shareable_path.parent / ".plb-release-ledger.json",
+            shareable_path.parent / ".plb-release.lock",
+        ],
+    )
     local = build_paired_comparison_artifact(
         result=result,
         path_a=path_a,
         path_b=path_b,
         signing_secret=signing_secret,
     )
-    local_path = Path(json_path)
-    shareable_path = local_path.with_name(
-        f"{local_path.stem}.shareable{local_path.suffix}"
-    )
     shareable_path.unlink(missing_ok=True)
-    markdown_output = Path(markdown_path)
     for path in (local_path, shareable_path, markdown_output):
         path.parent.mkdir(parents=True, exist_ok=True)
     local_path.write_text(

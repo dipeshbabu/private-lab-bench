@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Mapping
 from uuid import uuid4
 
+from privatelabbench.core.local_io import validate_output_paths
 from privatelabbench.privacy.export import check_release, publish_shareable_artifact
 from privatelabbench.reports.integrity import attach_integrity_metadata, verify_report
 
@@ -551,6 +552,17 @@ def write_evaluation_receipts(
     full_output = Path(full_path)
     shareable_output = Path(shareable_path)
     markdown_output = Path(markdown_path)
+    validate_output_paths(
+        [report_path, manifest_path, config_path],
+        [
+            full_output,
+            shareable_output,
+            markdown_output,
+            shareable_output.with_suffix(".release-audit.json"),
+            shareable_output.parent / ".plb-release-ledger.json",
+            shareable_output.parent / ".plb-release.lock",
+        ],
+    )
     shareable_output.unlink(missing_ok=True)
     markdown_output.unlink(missing_ok=True)
     full = build_evaluation_receipt(

@@ -713,18 +713,20 @@ def trend_command(args):
         ]
         if path
     }
-    targets = {
+    targets = [
         output,
         public,
         markdown,
         public.with_suffix(".release-audit.json"),
         output.parent / ".plb-release-ledger.json",
         output.parent / ".plb-release.lock",
-    }
-    if targets & protected:
-        print(
-            "Trend rejected: output paths must preserve every input receipt and policy file"
-        )
+    ]
+    from privatelabbench.core.local_io import validate_output_paths
+
+    try:
+        validate_output_paths(protected, targets)
+    except (ValueError, OSError) as exc:
+        print(f"Trend rejected: {exc}")
         return 2
     public.unlink(missing_ok=True)
     markdown.unlink(missing_ok=True)
