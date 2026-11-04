@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from typing import Literal
 
 import numpy as np
@@ -18,11 +17,33 @@ LOSS_THRESHOLD_ATTACK_ID = "loss-threshold-membership-inference"
 def _prediction_loss(
     y_true: np.ndarray, y_score: np.ndarray, task_type: str
 ) -> np.ndarray:
+    y_true, y_score = np.asarray(y_true, dtype=float), np.asarray(y_score, dtype=float)
+    if (
+        y_true.ndim != 1
+        or y_score.shape != y_true.shape
+        or not len(y_true)
+        or not np.isfinite(y_true).all()
+        or not np.isfinite(y_score).all()
+    ):
+        raise ValueError(
+            "Membership audits require aligned, nonempty, finite 1D targets and scores"
+        )
     if task_type == "classification":
+        if (
+            not np.isin(y_true, [0, 1]).all()
+            or not ((0 <= y_score) & (y_score <= 1)).all()
+        ):
+            raise ValueError(
+                "Classification audits require binary targets and probabilities in [0, 1]"
+            )
         clipped = np.clip(y_score.astype(float), 1e-6, 1.0 - 1e-6)
         labels = y_true.astype(int)
         return -(labels * np.log(clipped) + (1 - labels) * np.log(1.0 - clipped))
-    return np.abs(y_true.astype(float) - y_score.astype(float))
+    with np.errstate(over="ignore"):
+        losses = np.abs(y_true - y_score)
+    if not np.isfinite(losses).all():
+        raise ValueError("Prediction losses must be finite")
+    return losses
 
 
 def _risk_level(advantage: float) -> RiskLevel:
@@ -48,9 +69,6 @@ def membership_inference_risk(
     """
     if task_type not in {"regression", "classification"}:
         raise ValueError("task_type must be 'regression' or 'classification'")
-    if len(train_y) == 0 or len(test_y) == 0:
-        raise ValueError("train and test sets must both contain at least one sample")
-
     member_loss = _prediction_loss(train_y, train_score, task_type)
     nonmember_loss = _prediction_loss(test_y, test_score, task_type)
     losses = np.concatenate([member_loss, nonmember_loss])
@@ -58,30 +76,30 @@ def membership_inference_risk(
         [np.ones(len(member_loss), dtype=int), np.zeros(len(nonmember_loss), dtype=int)]
     )
 
-    candidates = np.unique(losses)
-    best_accuracy = 0.5
-    best_threshold = float(np.median(losses))
-    for threshold in candidates:
-        predictions = (losses <= threshold).astype(int)
-        accuracy = float(np.mean(predictions == labels))
-        if accuracy > best_accuracy:
-            best_accuracy = accuracy
-            best_threshold = float(threshold)
-
-    try:
-        auc = float(roc_auc_score(labels, -losses))
-    except ValueError:
-        auc = float("nan")
+    # Evaluate whole tie groups with cumulative counts: O(n log n), rather
+    # than scanning all n rows at each of n distinct thresholds. Equal weight
+    # for the two membership classes prevents sample imbalance looking like leakage.
+    order = np.argsort(losses, kind="stable")
+    sorted_losses = losses[order]
+    ends = np.flatnonzero(np.r_[sorted_losses[1:] != sorted_losses[:-1], True])
+    member_count = np.cumsum(labels[order])[ends]
+    nonmember_count = ends + 1 - member_count
+    lower_accuracy = 0.5 * (
+        member_count / len(member_loss) + 1 - nonmember_count / len(nonmember_loss)
+    )
+    accuracies = np.stack([lower_accuracy, 1 - lower_accuracy])
+    direction, candidate = np.unravel_index(np.argmax(accuracies), accuracies.shape)
+    best_accuracy = float(accuracies[direction, candidate])
+    best_threshold = float(sorted_losses[ends[candidate]])
+    directional_auc = float(roc_auc_score(labels, -losses))
+    auc = max(directional_auc, 1.0 - directional_auc)
 
     advantage = max(0.0, (best_accuracy - 0.5) * 2.0)
-    train_loss_mean = float(np.mean(member_loss))
-    test_loss_mean = float(np.mean(nonmember_loss))
+    train_loss_mean = float(np.sum(member_loss / len(member_loss)))
+    test_loss_mean = float(np.sum(nonmember_loss / len(nonmember_loss)))
     loss_gap = float(test_loss_mean - train_loss_mean)
 
-    if math.isnan(auc):
-        auc_for_level = advantage
-    else:
-        auc_for_level = max(0.0, (auc - 0.5) * 2.0)
+    auc_for_level = max(0.0, (auc - 0.5) * 2.0)
     level = _risk_level(max(advantage, auc_for_level))
 
     return {
@@ -94,7 +112,10 @@ def membership_inference_risk(
         "risk_level": level,
         "member_advantage": float(advantage),
         "attack_auc": auc,
+        "directional_attack_auc": directional_auc,
         "threshold_attack_accuracy": best_accuracy,
+        "threshold_accuracy_basis": "balanced_membership_classes",
+        "loss_threshold_direction": "loss_gt" if direction else "loss_le",
         "loss_threshold": best_threshold,
         "train_loss_mean": train_loss_mean,
         "test_loss_mean": test_loss_mean,

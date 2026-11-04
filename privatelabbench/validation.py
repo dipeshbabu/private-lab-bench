@@ -125,9 +125,9 @@ def _validate_privacy(config: RunnerConfig, errors: list[str]) -> None:
     try:
         PrivacyConfig(
             mode=str(privacy.get("mode", "none")),
-            epsilon=float(privacy.get("epsilon", 8.0)),
-            sensitivity=float(privacy.get("sensitivity", 1.0)),
-            seed=int(privacy.get("seed", 13)),
+            epsilon=privacy.get("epsilon", 8.0),
+            sensitivity=privacy.get("sensitivity", 1.0),
+            seed=privacy.get("seed", 13),
         ).validate()
         risk_policy = privacy.get("risk_policy")
         if risk_policy is not None and not isinstance(risk_policy, dict):

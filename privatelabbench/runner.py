@@ -43,9 +43,9 @@ def _privacy_config(config: RunnerConfig) -> PrivacyConfig:
     privacy = section(config, "privacy")
     return PrivacyConfig(
         mode=str(privacy.get("mode", "none")),
-        epsilon=float(privacy.get("epsilon", 8.0)),
-        sensitivity=float(privacy.get("sensitivity", 1.0)),
-        seed=int(privacy.get("seed", 13)),
+        epsilon=privacy.get("epsilon", 8.0),
+        sensitivity=privacy.get("sensitivity", 1.0),
+        seed=privacy.get("seed", 13),
     )
 
 
@@ -751,6 +751,9 @@ def run_config(
     )
     previous_shareable.unlink(missing_ok=True)
     previous_markdown.unlink(missing_ok=True)
+    _privacy_config(config).validate()
+    _privacy_risk_policy(config)
+    _aggregate_release_policy(config)
     ensure_builtin_tasks_registered()
     discover_entrypoint_tasks()
     task = get_task(config.task_id)

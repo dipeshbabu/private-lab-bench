@@ -131,6 +131,8 @@ def multiclass_metrics(
     labels: Sequence[int] | None = None,
     metric_names: Sequence[str] | None = None,
 ) -> dict[str, float]:
+    probabilities = np.asarray(probabilities, dtype=float)
+    y_true = np.asarray(y_true)
     if probabilities.ndim != 2 or probabilities.shape[1] < 2:
         raise ValueError(
             "multiclass probabilities must be a 2D array with at least two class columns"
@@ -141,6 +143,31 @@ def multiclass_metrics(
     label_values = (
         list(labels) if labels is not None else list(range(probabilities.shape[1]))
     )
+    if len(label_values) != probabilities.shape[1] or len(set(label_values)) != len(
+        label_values
+    ):
+        raise ValueError("Declare one unique label per probability column")
+    if y_true.ndim != 1 or len(y_true) != len(probabilities) or not len(y_true):
+        raise ValueError(
+            "Multiclass targets and probability rows must be aligned and nonempty"
+        )
+    if (
+        not np.isfinite(probabilities).all()
+        or not ((0 <= probabilities) & (probabilities <= 1)).all()
+    ):
+        raise ValueError("Multiclass probabilities must be finite and in [0, 1]")
+    if not np.allclose(probabilities.sum(axis=1), 1.0, rtol=1e-7, atol=1e-8):
+        raise ValueError("Multiclass probability rows must sum to one")
+    # Encode against the declared column order, rather than letting sklearn
+    # sort class labels independently of the supplied probability matrix.
+    encoding = {label: index for index, label in enumerate(label_values)}
+    try:
+        y_true = np.asarray([encoding[label] for label in y_true], dtype=int)
+    except KeyError as exc:
+        raise ValueError(
+            "Every target must have a declared probability column"
+        ) from exc
+    label_values = list(range(len(label_values)))
     out: dict[str, float] = {}
     if "accuracy" in names:
         out["accuracy"] = float(accuracy_score(y_true, predicted))

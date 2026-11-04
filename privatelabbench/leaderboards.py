@@ -411,18 +411,20 @@ def leaderboard_command(args):
     }
     if not args.protocol.startswith("plb://"):
         sources.add(Path(args.protocol).resolve())
-    targets = {
+    targets = [
         output,
         public,
         markdown,
         public.with_suffix(".release-audit.json"),
         output.parent / ".plb-release-ledger.json",
         output.parent / ".plb-release.lock",
-    }
-    if targets & sources:
-        print(
-            "Leaderboard rejected: outputs must preserve every source receipt, protocol, and policy."
-        )
+    ]
+    from privatelabbench.core.local_io import validate_output_paths
+
+    try:
+        validate_output_paths(sources, targets)
+    except (ValueError, OSError) as exc:
+        print(f"Leaderboard rejected: {exc}")
         return 2
     public.unlink(missing_ok=True)
     markdown.unlink(missing_ok=True)

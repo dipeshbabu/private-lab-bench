@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Correct membership-risk diagnostics for unequal member/nonmember counts and inverted loss separation; evaluate thresholds in O(n log n) time and reject misaligned or nonfinite inputs.
+- Reject malformed privacy-risk policies and nonfinite or unrepresentable heuristic noise parameters before evaluation or sampling.
+- Respect declared probability-column labels in multiclass metrics, including nonconsecutive and reordered classes.
+- Reject inconsistent aggregate evidence and malformed minimum-client/sample policies instead of silently weakening release thresholds.
+- Preserve inputs and release state when SDK or CLI report paths collide, including hard links and reserved ledger/lock filenames.
+- Treat malformed non-ASCII integrity digests as invalid evidence instead of crashing report and manifest verification.
+
 ## v0.1.3 — 2026-11-03
 
 ### Added
