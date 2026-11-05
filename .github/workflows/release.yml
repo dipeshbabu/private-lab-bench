@@ -66,6 +66,6 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           sha256sum -- *.whl *.tar.gz > SHA256SUMS.txt
-          gh release create "$RELEASE_TAG" *.whl *.tar.gz SHA256SUMS.txt \
+          gh release create "$RELEASE_TAG" ./*.whl ./*.tar.gz SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes \
             --title "$RELEASE_TAG"
