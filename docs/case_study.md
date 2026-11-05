@@ -21,7 +21,7 @@ A notebook reporting only “the forest beats the mean” would miss the separat
 Use a separate **Python 3.11** environment for the pinned TDC/RDKit reference stack. Do not combine `rdkit-pypi` and the separate modern `rdkit` distribution in that environment.
 
 ```sh
-git clone --branch v0.1.3 https://github.com/dipeshbabu/private-lab-bench.git
+git clone --branch v0.1.4 https://github.com/dipeshbabu/private-lab-bench.git
 cd private-lab-bench
 python -m venv .venv-case
 # Activate .venv-case with your shell's normal activation command.
@@ -29,7 +29,7 @@ python -m pip install -e '.[dev,tdc,signing]' -c docs/case_study/constraints.txt
 python -m scripts.caco2_case_study --download --cache-dir outputs/tdc --output-dir outputs/caco2-case
 ```
 
-This walkthrough uses the v0.1.3 source checkout because the opt-in research scripts and reference constraints are repository assets. The core framework is also installable as `private-lab-bench==0.1.3`. Data downloads stay local and come from the [TDC benchmark workflow](tdc_admet.md). Use an empty output directory for each run.
+This walkthrough uses the v0.1.4 source checkout because the opt-in research scripts and reference constraints are repository assets. The core framework is also installable as `private-lab-bench==0.1.4`. Data downloads stay local and come from the [TDC benchmark workflow](tdc_admet.md). Use an empty output directory for each run.
 
 Read `outputs/caco2-case/approved/decision.md`, then verify the generated candidate receipt against **that run's own public trust store**:
 

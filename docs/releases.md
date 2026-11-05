@@ -23,8 +23,8 @@ Before tagging:
 Create a tag:
 
 ```bash
-git tag v0.1.3
-git push origin v0.1.3
+git tag v0.1.4
+git push origin v0.1.4
 ```
 
 The release workflow refuses to publish if the tag version differs from package metadata.
@@ -48,9 +48,9 @@ The GitHub environment `pypi` and PyPI publisher are configured. The workflow ha
 successfully published this project; no first-upload registration is needed.
 
 After publishing, verify a clean
-`python -m pip install private-lab-bench==0.1.3` outside the checkout. Compare the
+`python -m pip install private-lab-bench==0.1.4` outside the checkout. Compare the
 PyPI distribution hashes, GitHub Release assets, and `SHA256SUMS.txt`. Keep the
-GitHub Release title equal to the tag, such as `v0.1.3`, and edit the generated
+GitHub Release title equal to the tag, such as `v0.1.4`, and edit the generated
 notes to explain the changes and upgrade guidance. Confirm the README's PyPI
 badge resolves to the published version. Never reuse a published version for
 different distribution files; publish a new version for corrections.

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.4 — 2026-11-05
 
 ### Fixed
 
@@ -10,6 +10,8 @@
 - Reject inconsistent aggregate evidence and malformed minimum-client/sample policies instead of silently weakening release thresholds.
 - Preserve inputs and release state when SDK or CLI report paths collide, including hard links and reserved ledger/lock filenames.
 - Treat malformed non-ASCII integrity digests as invalid evidence instead of crashing report and manifest verification.
+
+Upgrade from v0.1.3 to receive these correctness and input-safety fixes. Rerun affected multiclass evaluations and membership audits from the original predictions; the corrected audit can change risk scores and policy decisions.
 
 ## v0.1.3 — 2026-11-03
 

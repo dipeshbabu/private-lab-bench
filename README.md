@@ -14,7 +14,7 @@
 <p align="center">
   <a href="https://dipeshbabu.github.io/private-lab-bench/quickstart/">Quickstart</a> ·
   <a href="https://dipeshbabu.github.io/private-lab-bench/">Documentation</a> ·
-  <a href="https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.3">v0.1.3 release</a> ·
+  <a href="https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.4">v0.1.4 release</a> ·
   <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/CONTRIBUTING.md">Contributing</a>
 </p>
 
@@ -26,7 +26,9 @@ Evaluation runs without an account, hosted service, or data upload. A receipt re
 
 ## Installation
 
-The current release is **v0.1.3**, available on [PyPI](https://pypi.org/project/private-lab-bench/0.1.3/) and [GitHub Releases](https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.3). CI tests Python 3.10, 3.11, and 3.12.
+The current release is **v0.1.4**, available on [PyPI](https://pypi.org/project/private-lab-bench/0.1.4/) and [GitHub Releases](https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.4). CI tests Python 3.10, 3.11, and 3.12.
+
+Upgrade to v0.1.4 for corrected multiclass scores, membership-risk diagnostics, privacy-policy validation, and input-safe report writing. Rerun affected evaluations from the original predictions.
 
 Create a virtual environment:
 
@@ -37,11 +39,11 @@ python -m venv .venv
 Activate it with `source .venv/bin/activate` on macOS/Linux, or `.venv\Scripts\Activate.ps1` in Windows PowerShell. Then install:
 
 ```sh
-python -m pip install private-lab-bench==0.1.3
+python -m pip install private-lab-bench==0.1.4
 plb --help
 ```
 
-The longer command name, `privatelabbench`, works too. See the [installation guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/install.md) for optional dependencies and source installs, or open the [quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.3/examples/notebooks/quickstart.ipynb).
+The longer command name, `privatelabbench`, works too. See the [installation guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/install.md) for optional dependencies and source installs, or open the [quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.4/examples/notebooks/quickstart.ipynb).
 
 ## Run a first evaluation
 
