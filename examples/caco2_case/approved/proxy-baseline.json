@@ -1,13 +1,13 @@
 {
-  "created_at": "2026-11-03T23:04:41.285444+00:00",
+  "created_at": "2026-11-05T22:46:36.211574+00:00",
   "integrity": {
     "algorithm": "sha256",
-    "payload_sha256": "8aac64b7d9479650e85e1a68100b28d13378d4ac572ba452d9906584ca78c777",
-    "signature": "Klrc3cqBhlNdmxohP3R9riJYhAby70jSi5DT1ukeGF3Qj4vENlfuebahrfbFRdQVlu+cHPNpT/YPJImZiXOPBw==",
+    "payload_sha256": "525ffd4f6d786f5c74eb6d4a20eea6876d0e0a48c57b7d24b5daf01249258233",
+    "signature": "nPcNrD4y0NUAlvAfFXqpDqWqOH7zcjIOEh600YK75v2OFED4HDAR4IUfZkBA31o6zxPR5WJcx+DaQlkmUh3dBw==",
     "signature_algorithm": "ed25519",
     "signed": true
   },
-  "receipt_id": "a2af9bd8-ceea-4e9d-a0bd-5f5af9d42fe3",
+  "receipt_id": "47266450-1c13-4beb-ac40-71176e389bcc",
   "schema_version": "evaluation-receipt/v1",
   "scope": "shareable",
   "shareable": {
@@ -250,7 +250,7 @@
   },
   "signer_statement": {
     "evaluation_code": {
-      "package_version": "0.1.3",
+      "package_version": "0.1.4",
       "python_version": "3.11.15"
     },
     "key_id": "caco2-case-example-v1",
