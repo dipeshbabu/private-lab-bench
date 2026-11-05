@@ -46,7 +46,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       PYTHONUTF8: "1"
-      CORE_SMOKE_DIR: ${{ runner.temp }}/plb-core-${{ matrix.python-version }}
     defaults:
       run:
         shell: bash
@@ -63,9 +62,9 @@ jobs:
           path: dist/
       - name: Install wheel and sdist separately and exercise the core outside the checkout
         run: |
-          python scripts/check_core_distributions.py --dist-dir dist --constraints constraints/core.txt --work-dir "$CORE_SMOKE_DIR"
+          python scripts/check_core_distributions.py --dist-dir dist --constraints constraints/core.txt --work-dir "$RUNNER_TEMP/plb-core-${{ matrix.python-version }}"
       - name: Retain the tested versions and semantic results
         uses: actions/upload-artifact@v7
         with:
           name: core-${{ matrix.os }}-py${{ matrix.python-version }}
-          path: ${{ env.CORE_SMOKE_DIR }}/compatibility-summary.json
+          path: ${{ runner.temp }}/plb-core-${{ matrix.python-version }}/compatibility-summary.json
