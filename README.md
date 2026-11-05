@@ -43,40 +43,56 @@ python -m pip install private-lab-bench==0.1.4
 plb --help
 ```
 
-The longer command name, `privatelabbench`, works too. See the [installation guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/install.md) for optional dependencies and source installs, or open the [quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.4/examples/notebooks/quickstart.ipynb).
+The longer command name, `privatelabbench`, works too. See the [installation guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/install.md) for optional dependencies and source installs, or open the [quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/main/examples/notebooks/quickstart.ipynb).
 
-## Run a first evaluation
+## 1. Try a scientific decision in five minutes
 
-Run a bundled synthetic example in a fresh directory and verify its shareable receipt:
+The candidate improves overall. Does it still fail on a required instrument?
+Run this fully synthetic calibration example: 160 simulated specimens, two
+instruments, a baseline, and acceptance thresholds fixed before evaluation.
+No training or model download is needed.
 
-```sh
-mkdir plb-example
-cd plb-example
-plb list-packs
-plb run-pack community-tabular-regression@1.0.0
-plb verify reports/benchmark_packs/tabular_regression_receipt.shareable.json
-```
-
-The pack includes predictions, evaluation settings, and an example disclosure policy. It runs from the installed package without a checkout or model download. Other packs cover molecular regression and protein binary classification. Pack and protocol versions are independent of the package release.
-
-## Evaluate your predictions
-
-Save a table like this as `predictions.csv`:
-
-```csv
-sample_id,target,prediction,site
-s01,0.12,0.14,lab-a
-s02,0.20,0.23,lab-a
-s03,0.33,0.31,lab-b
-s04,0.41,0.45,lab-b
-```
+In a fresh working directory, download the small example and run it:
 
 ```sh
-plb evaluate predictions.csv --task-type regression --slice site
-plb verify reports/evaluation/evaluation_receipt.json
+python -c "from urllib.request import urlretrieve; urlretrieve('https://raw.githubusercontent.com/dipeshbabu/private-lab-bench/main/examples/first_run.py', 'first_run.py')"
+python first_run.py --output-dir plb-demo
+plb verify plb-demo/evaluation/evaluation_receipt.json
 ```
 
-This writes local reports and a receipt. The four rows illustrate the schema; the default bootstrap requires at least 20 observations, and slice metrics require at least five per group. Repeated patients, compounds, or batches need a declared [sampling design](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/sampling_design.md).
+These commands work in PowerShell, bash, and zsh with the installed v0.1.4 package.
+The observed result, rounded for display:
+
+```text
+Candidate MAE 0.272; baseline MAE 0.497 (lower is better).
+Paired improvement 0.225; 95% CI [0.178, 0.267]; required improvement 0.05.
+Instrument B MAE 0.797 exceeds the prespecified maximum 0.50.
+Decision: REJECT for instrument B despite the overall improvement; quality gate FAIL.
+```
+
+The interval and subgroup checks are computed by the normal evaluation APIs.
+Inspect `plb-demo/decision.json`, `plb-demo/paired.md`, and the local evaluation
+receipt. This constructed example illustrates a decision; it supplies no evidence
+about a real biological task or outside-researcher adoption. See the
+[walkthrough](https://dipeshbabu.github.io/private-lab-bench/quickstart/) for
+assumptions, optional synthetic export, troubleshooting, and the
+[Colab notebook](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/main/examples/notebooks/quickstart.ipynb).
+
+## 2. Evaluate your own predictions
+
+Export a local CSV with stable `sample_id`, observed `target`, model `prediction`,
+and optional group columns such as `instrument`. Then run:
+
+```sh
+plb evaluate YOUR.csv --task-type regression --slice instrument --output-dir YOUR_RESULTS
+plb verify YOUR_RESULTS/evaluation_receipt.json
+```
+
+This keeps results local. The default confidence interval needs at least 20
+observations; each evaluated group needs at least five. Repeated patients,
+compounds, or batches need a declared
+[sampling design](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/sampling_design.md).
+Choose quality thresholds for your scientific use case before looking at results.
 
 Binary classification and multiclass probability tables are also supported. Class order and probability meaning matter: use explicit labels when needed. The [prediction-table reference](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/prediction_tables.md) covers column bindings, missing values, and classification examples.
 
@@ -90,7 +106,7 @@ plb run evaluation.yaml
 
 Use a versioned [evaluation protocol](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/protocols.md) when collaborators need the same metrics, sampling rules, and decision criteria. Receipts bind its identity and digest.
 
-## Compare models
+### Compare models
 
 Provide one prediction table per model, with identical sample IDs and targets:
 
@@ -99,6 +115,25 @@ plb compare model-a.csv model-b.csv --target target --task-type regression --met
 ```
 
 The comparison reports the paired improvement, bootstrap interval, and whether the evidence supports your practical threshold. Subgroup comparisons help locate the difference. See the [paired-comparison guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/paired_comparison.md) for noninferiority, sampling assumptions, and interval interpretation.
+
+## 3. Share approved evidence
+
+| Artifact | Purpose |
+| --- | --- |
+| `<run>_receipt.json` | Local evidence, including paths, configuration, and exact results |
+| `<run>_receipt.shareable.json` | Approved aggregate evidence for exchange |
+| `<run>_receipt.md` | Human-readable receipt summary |
+
+A reviewed release policy controls export. When export is blocked, the run keeps its local results and release audit and removes a previous shareable receipt. Bundled packs use policies for synthetic examples; private-data evaluations need their own review.
+
+```sh
+plb release-check local_receipt.json --policy release.yaml
+plb verify receipt.shareable.json --trust-store trusted-labs.yaml --require-trusted-signer --json
+```
+
+Verification distinguishes artifact integrity from an authenticated signer statement. Execution and scientific validity require separate evidence. The [receipt trust guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/receipt_trust.md) covers signing and pinned keys.
+
+Keeping rows local limits data movement, but aggregates can still disclose sensitive information. Empirical audits, disclosure policies, and heuristic metric perturbation address different questions. Metric perturbation, including the deprecated `dp` alias, provides no formal differential privacy guarantee. Read the [privacy guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/privacy.md) before sharing private results.
 
 ## Scientific workflows
 
@@ -129,25 +164,6 @@ requires a shared budget. Neither extension automatically authorizes disclosure
 of model outputs or existing exact evaluation reports.
 
 The [Caco2 case study](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/case_study.md) follows a model-selection decision through uncertainty, critical-group checks, approved export, and signature verification. It distinguishes the real public control from a synthetic measurement-shift proxy. Independent researcher onboarding trials remain pending.
-
-## Receipts and sharing
-
-| Artifact | Purpose |
-| --- | --- |
-| `<run>_receipt.json` | Local evidence, including paths, configuration, and exact results |
-| `<run>_receipt.shareable.json` | Approved aggregate evidence for exchange |
-| `<run>_receipt.md` | Human-readable receipt summary |
-
-A reviewed release policy controls export. When export is blocked, the run keeps its local results and release audit and removes a previous shareable receipt. Bundled packs use policies for synthetic examples; private-data evaluations need their own review.
-
-```sh
-plb release-check local_receipt.json --policy release.yaml
-plb verify receipt.shareable.json --trust-store trusted-labs.yaml --require-trusted-signer --json
-```
-
-Verification distinguishes artifact integrity from an authenticated signer statement. Execution and scientific validity require separate evidence. The [receipt trust guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/receipt_trust.md) covers signing and pinned keys.
-
-Keeping rows local limits data movement, but aggregates can still disclose sensitive information. Empirical audits, disclosure policies, and heuristic metric perturbation address different questions. Metric perturbation, including the deprecated `dp` alias, provides no formal differential privacy guarantee. Read the [privacy guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/privacy.md) before sharing private results.
 
 ## Developing and contributing
 

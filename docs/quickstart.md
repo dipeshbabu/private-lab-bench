@@ -1,90 +1,147 @@
-# 5-minute quickstart
+# A scientific decision in five minutes
 
-Start with your own prediction CSV, or try a bundled synthetic pack.
+Try the synthetic example, evaluate your own predictions, then share only approved
+evidence. No account, model training, or dataset upload is required.
 
-## 1. Install
+## Install
 
-Install the current release in a virtual environment:
-
-```bash
+```sh
 python -m venv .venv
-source .venv/bin/activate
+```
+
+Activate with `source .venv/bin/activate` on macOS/Linux, or
+`.venv\Scripts\Activate.ps1` in Windows PowerShell. Then:
+
+```sh
 python -m pip install private-lab-bench==0.1.4
 ```
 
-On Windows, activate with `.venv\Scripts\Activate.ps1`. The [installation guide](install.md)
-covers optional dependencies and development installs. You can also run the
-[quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/v0.1.4/examples/notebooks/quickstart.ipynb).
+The [installation guide](install.md) covers optional dependencies. The
+[Colab notebook](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/main/examples/notebooks/quickstart.ipynb)
+installs the same PyPI version and contains the complete synthetic example.
 
-## 2. Evaluate your own model outputs
+## 1. Try the decision
 
-Export a local CSV such as:
+Download the project's small example script in a fresh working directory. The
+following commands work in PowerShell, bash, and zsh:
 
-```csv
-sample_id,target,prediction,site
-s01,0.12,0.14,lab-a
-s02,0.20,0.23,lab-a
-s03,0.33,0.31,lab-b
+```sh
+python -c "from urllib.request import urlretrieve; urlretrieve('https://raw.githubusercontent.com/dipeshbabu/private-lab-bench/main/examples/first_run.py', 'first_run.py')"
+python first_run.py --output-dir plb-demo
+plb verify plb-demo/evaluation/evaluation_receipt.json
 ```
 
-Then run:
+The fixture generates **160 independent simulated specimens**, with 120 measured
+by instrument A and 40 by instrument B. Its candidate has an intentionally
+constructed calibration bias on B. Targets and predictions are generated from a
+fixed synthetic signal and separate noise; no real assay data or trained model is
+downloaded. Thresholds are fixed before generation.
 
-```bash
-plb evaluate predictions.csv --slice site
-plb verify reports/evaluation/evaluation_receipt.json
+The actual computed result, rounded to three decimals:
+
+| Evidence | Result | Decision |
+| --- | --- | --- |
+| Overall candidate / baseline MAE | 0.272 / 0.497 | Candidate improves |
+| Paired MAE improvement, 95% interval | 0.225 [0.178, 0.267] | Exceeds required improvement 0.05 |
+| Instrument B candidate MAE | 0.797 | Exceeds the prespecified maximum 0.50 |
+| Quality gate | **fail** | Reject for instrument B despite overall improvement |
+
+Intervals and group diagnostics are computed, not skipped for sample count.
+The percentile bootstrap resamples paired independent specimens, with 1,000
+resamples and a fixed test seed. The instrument mix is part of that resampling
+assumption. The critical group was specified in advance; this is not a search for
+the worst-looking subgroup. Floating-point results can vary slightly by environment.
+Repeated compounds, patients, or batches require an appropriate
+[sampling design](sampling_design.md) when you use real data.
+
+Inspect these files under `plb-demo/`:
+
+| File | Contents |
+| --- | --- |
+| `decision.json` | Computed decision, paired interval, and critical-rule evidence |
+| `candidate.csv`, `baseline.csv` | Synthetic predictions with exact paired sample IDs |
+| `quality.yaml`, `evaluation.yaml` | Prespecified thresholds and reproducible settings |
+| `paired.md`, `paired.json` | Paired comparison and subgroup uncertainty |
+| `evaluation/evaluation_receipt.json` | Local evaluation evidence |
+
+The example exits successfully when the complete demonstration finishes. Its
+deliberate **model-quality failure** is the result, not an installation error.
+The normal `plb evaluate`/`plb gate` commands still return exit code 1 for a failed
+quality gate. No shareable receipt is created by default.
+
+## 2. Evaluate your own predictions
+
+Export a CSV with `sample_id,target,prediction` and optional group columns:
+
+```sh
+plb evaluate YOUR.csv --task-type regression --slice instrument --output-dir YOUR_RESULTS
+plb verify YOUR_RESULTS/evaluation_receipt.json
 ```
 
-The summary shows sample count, primary metric, available uncertainty, baseline improvement when supplied, worst eligible slice, release status, and receipt path. Full details stay in the local report and receipt. This three-row illustration is too small for a default confidence interval (at least 20 rows) or slices (at least five rows per group); the output says so.
+This command computes results locally and invents no acceptance thresholds. Supply
+your own [quality policy](quality_gates.md) when you have scientific acceptance
+criteria. The default bootstrap needs at least 20 observations; group metrics need
+at least five rows per group. Small tables in the [CSV reference](prediction_tables.md)
+illustrate schema, not a statistically useful experiment.
 
-Default primary metrics are RMSE for regression, AUROC for binary classification, and macro AUROC for multiclass probabilities. Use `--primary-metric mae` for a different supported choice. No model-quality threshold is invented for you. The default bootstrap assumes independent rows for regression and resamples within target classes for classification; review these assumptions for dependent scientific observations.
+Use `--target`, `--prediction-column`, and `--sample-id-column` for other column
+names. Classification needs explicit class/probability meaning; see
+[prediction tables](prediction_tables.md). Save settings with:
 
-## 3. Resolve ambiguity explicitly
-
-Conventional `sample_id`, `target`, and `prediction` columns are detected when unambiguous. Select other columns explicitly:
-
-```bash
-plb evaluate outputs.csv --sample-id-column record_id \
-  --target observed --prediction-column predicted --task-type regression
-```
-
-Non-integer continuous targets with more than two values can infer regression. Binary-looking, integer-valued, or categorical targets require an explicit choice. For binary probabilities:
-
-```bash
-plb evaluate probabilities.csv --task-type classification
-plb evaluate named_classes.csv --task-type classification \
-  --class-labels healthy diseased
-```
-
-Numeric labels `0` and `1` use `1` as positive after classification is selected. Named labels require ordered negative/positive classes: predictions represent the probability of the second label. Multiclass evaluation requires ordered `--prediction-columns p_a p_b p_c --class-labels a b c`. Missing labels, duplicate IDs, invalid probabilities, and ambiguous columns produce actionable errors.
-
-Repeat `--slice site --slice batch` for subgroup evaluation. Add `--baseline-column baseline_prediction` for a same-table baseline, or `--quality-policy quality.yaml` for explicit pass/fail/investigate rules. See [quality gates](quality_gates.md).
-
-## 4. Keep a reproducible configuration
-
-```bash
-plb init predictions.csv --slice site --out evaluation.yaml
+```sh
+plb init YOUR.csv --task-type regression --slice instrument --out evaluation.yaml
+plb validate-config evaluation.yaml
 plb run evaluation.yaml
-plb list-protocols
-plb evaluate predictions.csv --protocol plb://generic/regression@1.0.0
 ```
 
-`init` writes local paths and settings without copying dataset rows. With a protocol, it also pins the exact digest so later changes to a local definition are rejected. Existing configs require `--force` to overwrite. Evaluation also keeps a generated config under its output directory; use `--output-dir reports/another_run` to retain separate runs. Manually authored configs in that directory are protected. Exact [protocol versions](protocols.md) bind scientific settings and reject contradictory overrides.
+Use an exact [protocol](protocols.md) when collaborators need shared metrics,
+sampling assumptions, and decision criteria. For two aligned prediction files:
 
-## 5. Compare and exchange results
-
-```bash
-plb compare candidate.csv baseline.csv
+```sh
+plb compare candidate.csv baseline.csv --target target --task-type regression --metric mae --practical-threshold 0.05
 ```
 
-Conventional CSVs enter paired comparison directly. The same ambiguity rules apply; add `--task-type` or column flags as needed. Paired comparison requires exactly matching sample IDs and targets. See [paired comparison](paired_comparison.md) for practical thresholds and uncertainty.
+See [paired comparisons](paired_comparison.md) for dependent sampling and
+noninferiority. The [public Caco2 case](case_study.md) adds pinned upstream parity,
+a real public control, and an explicitly synthetic measurement-shift proxy.
 
-Evaluation stays local by default. Public aggregate receipts require a reviewed `--release-policy release.yaml`; blocked export leaves a local receipt and release audit. A quality-gate pass does not authorize publication. See [privacy](privacy.md) and [cross-site aggregation](aggregation.md) before exchanging results.
+## 3. Share approved evidence
 
-To try a complete synthetic pack with a reviewed demonstration release policy:
+For this generated synthetic fixture only, explicitly approve aggregate export:
 
-```bash
-plb run-pack community-tabular-regression@1.0.0
-plb verify reports/benchmark_packs/tabular_regression_receipt.shareable.json
+```sh
+python first_run.py --output-dir plb-demo-approved --share-synthetic
+plb verify plb-demo-approved/evaluation/evaluation_receipt.shareable.json
 ```
 
-See [Prediction tables](prediction_tables.md) for multiclass probabilities, metadata, and slice rules.
+The demo policy deliberately waives an empirical privacy audit for **fully
+synthetic data**. Do not reuse that waiver for private data. A failed model-quality
+rule does not by itself prohibit sharing an approved synthetic result. Disclosure
+approval, scientific quality, and signatures answer different questions.
+
+The receipt verifier checks integrity. The demo receipts are unsigned: no
+authenticated signer, independently verified execution, or scientific validation
+is claimed. Real collaborators can use a reviewed release policy and pinned
+[signer trust](receipt_trust.md); consult the [privacy guide](privacy.md) first.
+
+## If something fails
+
+- **`plb` is missing:** activate the environment used for installation; try
+  `python -m privatelabbench.cli --help` and `python -m pip show private-lab-bench`.
+- **The script download fails:** check access to `raw.githubusercontent.com`, or
+  download `examples/first_run.py` from the repository and run the saved file.
+- **Output directory is not empty:** use a new `--output-dir`. Existing files are
+  deliberately preserved.
+- **A private CSV's interval is skipped:** check row/group counts and declared
+  sampling units; do not lower thresholds merely to obtain an interval.
+- **The demo's quality gate fails:** this is the expected instrument-B decision.
+  An incomplete or invalid calculation exits with an error instead.
+
+## Independent walkthroughs
+
+Automated checks do not establish that a new researcher can complete the flow.
+Independent trials remain **0/3**. The [voluntary trial guide](case_study/trial_guide.md)
+records redacted setup friction, interpretation, and decision usefulness without
+private datasets, contact details, or telemetry. See the
+[pending findings](case_study/findings.md). No outreach or researcher feedback is
+claimed by this engineering example.

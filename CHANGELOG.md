@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- A self-contained, fully synthetic 160-specimen onboarding example that uses the published v0.1.4 APIs to compute paired uncertainty and show a prespecified instrument failure despite overall improvement.
+- CI that runs this walkthrough against the actual PyPI wheel outside the checkout, with local-only and explicitly approved synthetic export paths.
+
+### Changed
+
+- Organize the README, landing page, quickstart, and version-pinned Colab notebook around trying a decision, evaluating private predictions, and sharing approved evidence. Independent researcher trials remain pending.
+
 ## v0.1.4 — 2026-11-05
 
 ### Fixed
