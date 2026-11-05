@@ -29,6 +29,8 @@ jobs:
         run: python -m pre_commit run --all-files --show-diff-on-failure
       - name: Test issue and PR labeling
         run: node --test .github/scripts/auto-label.test.cjs
+      - name: Validate workflow expressions and job contexts
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
 
   test:
     runs-on: ubuntu-latest
