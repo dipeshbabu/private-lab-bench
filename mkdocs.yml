@@ -21,6 +21,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Install: install.md
+  - Tested support: support.md
   - Quickstart: quickstart.md
   - Caco2 model-selection case:
       - Walkthrough: case_study.md

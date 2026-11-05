@@ -1,0 +1,70 @@
+name: Core compatibility
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-core-distributions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Build the candidate distributions once
+        run: |
+          python -m pip install build twine
+          python -m build
+          python -m twine check dist/*
+      - uses: actions/upload-artifact@v7
+        with:
+          name: core-compatibility-distributions
+          path: dist/
+
+  installed-core:
+    needs: build-core-distributions
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-latest, python-version: "3.10"}
+          - {os: ubuntu-latest, python-version: "3.11"}
+          - {os: ubuntu-latest, python-version: "3.12"}
+          - {os: ubuntu-latest, python-version: "3.13"}
+          - {os: ubuntu-latest, python-version: "3.14"}
+          - {os: windows-latest, python-version: "3.12"}
+          - {os: windows-latest, python-version: "3.14"}
+          - {os: macos-latest, python-version: "3.12"}
+          - {os: macos-latest, python-version: "3.14"}
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONUTF8: "1"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: constraints/core.txt
+      - uses: actions/download-artifact@v8
+        with:
+          name: core-compatibility-distributions
+          path: dist/
+      - name: Install wheel and sdist separately and exercise the core outside the checkout
+        run: |
+          python scripts/check_core_distributions.py --dist-dir dist --constraints constraints/core.txt --work-dir "$RUNNER_TEMP/plb-core-${{ matrix.python-version }}"
+      - name: Retain the tested versions and semantic results
+        uses: actions/upload-artifact@v7
+        with:
+          name: core-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: ${{ runner.temp }}/plb-core-${{ matrix.python-version }}/compatibility-summary.json

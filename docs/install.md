@@ -58,7 +58,11 @@ mkdocs serve
 
 ## Supported Python
 
-The project tests Python 3.10, 3.11, and 3.12.
+The core has installed-wheel and source-install checks on Linux for Python
+3.10–3.14, and on Windows/macOS for Python 3.12 and 3.14. Linux 3.10–3.12 also run
+the full suite. Other OS/interpreter combinations remain untested. See the
+[support matrix](support.md) for exact scope, representative dependency pins,
+legacy Python 3.10 status, and the separate constraints for optional integrations.
 
 ## Verify the installation
 

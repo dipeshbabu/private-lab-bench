@@ -6,10 +6,13 @@
 
 - A self-contained, fully synthetic 160-specimen onboarding example that uses the published v0.1.4 APIs to compute paired uncertainty and show a prespecified instrument failure despite overall improvement.
 - CI that runs this walkthrough against the actual PyPI wheel outside the checkout, with local-only and explicitly approved synthetic export paths.
+- A nine-combination Linux/Windows/macOS core compatibility matrix covering Python 3.10–3.14 where declared, with separate clean wheel and source installs, pinned representative dependencies, and retained semantic smoke results.
+- Cross-platform checks for Unicode paths and groups, line endings, paired uncertainty, receipt verification, argument/quality exit codes, hard links, and release-state preservation. Optional scientific extras and the Linux/gVisor runtime retain separate coverage.
 
 ### Changed
 
 - Organize the README, landing page, quickstart, and version-pinned Colab notebook around trying a decision, evaluating private predictions, and sharing approved evidence. Independent researcher trials remain pending.
+- Document exact tested and untested OS/Python combinations and add Python 3.13/3.14 classifiers after successful core verification, without narrowing runtime dependency bounds or adding an upper Python ceiling.
 
 ## v0.1.4 — 2026-11-05
 
