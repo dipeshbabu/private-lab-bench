@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.5 — 2026-11-05
 
 ### Added
 
@@ -13,6 +13,8 @@
 
 - Organize the README, landing page, quickstart, and version-pinned Colab notebook around trying a decision, evaluating private predictions, and sharing approved evidence. Independent researcher trials remain pending.
 - Document exact tested and untested OS/Python combinations and add Python 3.13/3.14 classifiers after successful core verification, without narrowing runtime dependency bounds or adding an upper Python ceiling.
+
+This documentation and compatibility release follows the v0.1.4 correctness release. Evaluation algorithms are unchanged.
 
 ## v0.1.4 — 2026-11-05
 
