@@ -1,32 +1,36 @@
 # PrivateLabBench
 
-**Local-first evaluation for scientific machine learning on private data.**
+Evaluate scientific model predictions locally, compare candidates with a baseline,
+and decide whether they meet your scientific requirements. Keep private rows in
+your environment; share reviewed aggregate evidence when disclosure is approved.
 
-PrivateLabBench evaluates model predictions on datasets that cannot be uploaded to a public benchmark service. Runs stay local and produce metrics, slice diagnostics, privacy-audit summaries, verifiable manifests, and evaluation receipts.
+## Choose your starting point
 
-> Benchmark locally. Share evaluation artifacts, not raw data.
+| Journey | Start here |
+| --- | --- |
+| Try a decision in five minutes | [Synthetic calibration walkthrough](quickstart.md): a better overall model fails a required instrument group |
+| Evaluate your own private data | [Prediction tables](prediction_tables.md), [paired comparisons](paired_comparison.md), and [quality gates](quality_gates.md) |
+| Share approved evidence | [Evaluation receipts](evaluation_receipts.md), [release policy](privacy.md), and [signer trust](receipt_trust.md) |
 
-## Start here
+Install the [current PyPI release](install.md), or open the
+[Colab notebook](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/main/examples/notebooks/quickstart.ipynb).
+Evaluation needs no account, hosted service, training framework, or data upload.
 
-- [Install](install.md)
-- [5-minute quickstart](quickstart.md)
-- [Prediction-table protocol](prediction_tables.md)
-- [Evaluation receipts](evaluation_receipts.md)
-- [Community benchmark packs](benchmark_packs.md)
-- [Privacy guarantees and audits](privacy.md)
+## Follow a scientific case
 
-## Core workflow
+The [Caco2 model-selection study](case_study.md) begins with a real public TDC ADMET
+control, reproduces upstream scoring, and examines an explicitly synthetic
+measurement-shift proxy. It shows what an overall benchmark score can miss.
+Additional guides cover [TDC](tdc_admet.md), [Matbench](matbench.md), and
+[ProteinGym](proteingym.md), with versioned protocols and pinned upstream checks.
 
-```text
-local prediction table
-        ↓
-      task
-        ↓
-metrics + slices + privacy audits
-        ↓
-report + manifest
-        ↓
-local receipt + shareable receipt
-```
+## Interpret the evidence
 
-The core does not require a hosted service, account, model framework, or private-data upload.
+Uncertainty depends on declared sampling assumptions. Quality gates check chosen
+scientific requirements. Release policies govern disclosure. Verification can
+establish integrity or an authenticated signer statement; it does not independently
+establish execution or scientific validity. [Concepts](concepts.md) explains these
+boundaries before you explore the optional [privacy](privacy.md) and
+[sandbox](sandbox.md) modules.
+
+Independent researcher trials remain [pending](case_study/findings.md), at 0/3.
