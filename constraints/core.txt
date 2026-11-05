@@ -1,0 +1,54 @@
+cloudpickle==3.1.2
+    # via joblib
+joblib==1.6.0
+    # via scikit-learn
+narwhals==2.28.0 ; python_full_version >= '3.11'
+    # via scikit-learn
+numpy==2.2.6 ; python_full_version < '3.11'
+    # via
+    #   private-lab-bench (pyproject.toml)
+    #   pandas
+    #   scikit-learn
+    #   scipy
+numpy==2.4.6 ; python_full_version == '3.11.*'
+    # via
+    #   private-lab-bench (pyproject.toml)
+    #   pandas
+    #   scikit-learn
+    #   scipy
+numpy==2.5.4 ; python_full_version >= '3.12'
+    # via
+    #   private-lab-bench (pyproject.toml)
+    #   pandas
+    #   scikit-learn
+    #   scipy
+pandas==2.3.3 ; python_full_version < '3.11'
+    # via private-lab-bench (pyproject.toml)
+pandas==3.1.1 ; python_full_version >= '3.11'
+    # via private-lab-bench (pyproject.toml)
+python-dateutil==3.0.0 ; python_full_version < '3.11'
+    # via pandas
+python-dateutil==4.0.0 ; python_full_version >= '3.11'
+    # via pandas
+pytz==2026.6 ; python_full_version < '3.11'
+    # via pandas
+pyyaml==6.0.3
+    # via private-lab-bench (pyproject.toml)
+scikit-learn==1.7.2 ; python_full_version < '3.11'
+    # via private-lab-bench (pyproject.toml)
+scikit-learn==1.9.1 ; python_full_version >= '3.11'
+    # via private-lab-bench (pyproject.toml)
+scipy==1.15.3 ; python_full_version < '3.11'
+    # via scikit-learn
+scipy==1.17.1 ; python_full_version == '3.11.*'
+    # via scikit-learn
+scipy==1.18.1 ; python_full_version >= '3.12'
+    # via scikit-learn
+six==1.17.0 ; python_full_version < '3.11'
+    # via python-dateutil
+threadpoolctl==3.8.0
+    # via scikit-learn
+tzdata==2026.6
+    # via
+    #   pandas
+    #   python-dateutil

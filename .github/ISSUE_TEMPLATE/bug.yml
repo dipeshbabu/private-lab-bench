@@ -39,8 +39,18 @@ body:
         - Python 3.10
         - Python 3.11
         - Python 3.12
+        - Python 3.13
+        - Python 3.14
+        - Python 3.15+ (untested)
         - Docker
         - Other
+    validations:
+      required: true
+  - type: input
+    id: operating_system
+    attributes:
+      label: Operating system and architecture
+      placeholder: "Windows 11 x64, macOS arm64, Ubuntu x64; redact identifying paths"
     validations:
       required: true
   - type: textarea
