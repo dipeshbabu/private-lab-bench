@@ -7,6 +7,12 @@
 - Keep export invalidation, approval, artifact writes, and audits under one owned directory lock. A blocked publisher preserves the active publisher's output and audit.
 - Reject malformed local receipt sections in `release-check` with a structured decision instead of an AttributeError traceback.
 
+### Added
+
+- Full base-suite and installed-distribution checks across the declared OS/Python matrix, including Linux Python 3.15/free-threaded 3.14 candidates, combined statement/branch coverage floors, and actual installed third-party plugin-wheel execution.
+- An exact-SHA release CI gate and clean wheel/source smoke before publication; failed, skipped, missing, pending, and stale workflow results block upload.
+- Daily current-PyPI onboarding and weekly real-data parity for all supported TDC, Matbench, and ProteinGym profiles, retaining aggregate-only evidence.
+
 ## v0.1.5 — 2026-11-05
 
 ### Added

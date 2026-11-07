@@ -59,8 +59,9 @@ mkdocs serve
 ## Supported Python
 
 The core has installed-wheel and source-install checks on Linux for Python
-3.10–3.14, and on Windows/macOS for Python 3.12 and 3.14. Linux 3.10–3.12 also run
-the full suite. Other OS/interpreter combinations remain untested. See the
+3.10–3.15, and on Windows/macOS for Python 3.12 and 3.14. All configured combinations
+also run the full base suite; Linux 3.14 free-threaded is checked separately.
+Other OS/interpreter combinations remain untested. See the
 [support matrix](support.md) for exact scope, representative dependency pins,
 legacy Python 3.10 status, and the separate constraints for optional integrations.
 

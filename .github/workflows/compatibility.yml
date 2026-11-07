@@ -22,10 +22,15 @@ jobs:
           python -m pip install build twine
           python -m build
           python -m twine check dist/*
+          python -m pip wheel --no-deps tests/fixtures/task_plugin --wheel-dir plugin-dist
       - uses: actions/upload-artifact@v7
         with:
           name: core-compatibility-distributions
           path: dist/
+      - uses: actions/upload-artifact@v7
+        with:
+          name: task-plugin-fixture
+          path: plugin-dist/*.whl
 
   installed-core:
     needs: build-core-distributions
@@ -39,6 +44,8 @@ jobs:
           - {os: ubuntu-latest, python-version: "3.12"}
           - {os: ubuntu-latest, python-version: "3.13"}
           - {os: ubuntu-latest, python-version: "3.14"}
+          - {os: ubuntu-latest, python-version: "3.15"}
+          - {os: ubuntu-latest, python-version: "3.14t"}
           - {os: windows-latest, python-version: "3.12"}
           - {os: windows-latest, python-version: "3.14"}
           - {os: macos-latest, python-version: "3.12"}
@@ -60,9 +67,14 @@ jobs:
         with:
           name: core-compatibility-distributions
           path: dist/
-      - name: Install wheel and sdist separately and exercise the core outside the checkout
+      # Keep the independent plugin fixture out of the release dist/ directory.
+      - uses: actions/download-artifact@v8
+        with:
+          name: task-plugin-fixture
+          path: plugin-dist/
+      - name: Verify installed core and actual third-party task discovery
         run: |
-          python scripts/check_core_distributions.py --dist-dir dist --constraints constraints/core.txt --work-dir "$RUNNER_TEMP/plb-core-${{ matrix.python-version }}"
+          python scripts/check_core_distributions.py --dist-dir dist --constraints constraints/core.txt --plugin-dir plugin-dist --work-dir "$RUNNER_TEMP/plb-core-${{ matrix.python-version }}"
       - name: Retain the tested versions and semantic results
         uses: actions/upload-artifact@v7
         with:

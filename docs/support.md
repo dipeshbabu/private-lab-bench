@@ -8,15 +8,21 @@ does not imply that every optional extra or every dependency version was tested.
 
 | Python | Linux | Windows | macOS |
 | --- | --- | --- | --- |
-| 3.10 | Core smoke + full suite; legacy compatibility | Untested | Untested |
-| 3.11 | Core smoke + full suite | Untested | Untested |
-| 3.12 | Core smoke + full suite | Core smoke | Core smoke |
-| 3.13 | Core smoke | Untested | Untested |
-| 3.14 | Core smoke | Core smoke | Core smoke |
-| 3.15 and newer | Untested | Untested | Untested |
+| 3.10 | Full base suite + core smoke; legacy compatibility | Untested | Untested |
+| 3.11 | Full base suite + core smoke | Untested | Untested |
+| 3.12 | Full base suite + core smoke | Full base suite + core smoke | Full base suite + core smoke |
+| 3.13 | Full base suite + core smoke | Untested | Untested |
+| 3.14 | Full base suite + core smoke | Full base suite + core smoke | Full base suite + core smoke |
+| 3.15 | Full base suite + core smoke | Untested | Untested |
+| 3.14 free-threaded | Full base suite + core smoke | Untested | Untested |
+| 3.16 and newer | Untested | Untested | Untested |
 
-The matrix covers normal CPython builds, not free-threaded interpreters, PyPy, or
-every CPU architecture. GitHub's `ubuntu-latest`, `windows-latest`, and
+The matrix covers normal CPython and the Linux 3.14 free-threaded build. PyPy and
+other free-threaded/CPU architecture combinations remain unverified. The core
+smoke checks that its free-threaded interpreter keeps the GIL disabled after
+loading the numerical dependencies; this does not make sequential APIs such as
+the in-memory privacy budget safe for concurrent application use. GitHub's
+`ubuntu-latest`, `windows-latest`, and
 `macos-latest` runners supply the tested hosts. Each run retains a small JSON
 record of the actual Python/dependency versions, distribution hashes, and passed
 checks. This live table follows main; PyPI metadata records the README and
@@ -38,9 +44,17 @@ rejection. Evaluation stays local; the fixture includes no real private data.
 
 The jobs use UTF-8 mode and the representative pins in
 [`constraints/core.txt`](https://github.com/dipeshbabu/private-lab-bench/blob/main/constraints/core.txt).
-The normal Linux CI still tests ordinary dependency resolution and the complete
-suite on 3.10–3.12. Passing these environments does not verify every older version
+The full base suite runs every test file with the dev dependencies on all eleven
+configured combinations. Optional scientific dependencies and Linux/gVisor checks
+run in separate Linux jobs. Coverage from all eighteen test jobs is combined and
+must meet 85% statement and 75% branch coverage; missing reports or source files
+fail the gate. Passing these environments does not verify every older version
 permitted by the package's dependency bounds.
+
+The installed-distribution smoke also builds a separate third-party task-plugin
+wheel, installs it beside each core wheel/source installation, and executes the
+discovered task through the real CLI and receipt pipeline. The plugin is a CI
+fixture and is not shipped as part of the production package.
 
 ## Optional integrations
 

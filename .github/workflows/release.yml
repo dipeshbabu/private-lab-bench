@@ -9,7 +9,23 @@ permissions:
   contents: read
 
 jobs:
+  verify-ci:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Require all main-branch workflows and jobs for this exact SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/check_release_ci.py --repository "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA"
+
   build:
+    needs: verify-ci
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,6 +42,7 @@ jobs:
           pip install build twine
           python -m build
           python -m twine check dist/*
+          python scripts/check_core_distributions.py --dist-dir dist --constraints constraints/core.txt --work-dir "$RUNNER_TEMP/release-installed-checks"
       - name: Upload distributions
         uses: actions/upload-artifact@v7
         with:

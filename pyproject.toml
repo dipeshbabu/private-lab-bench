@@ -29,6 +29,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
@@ -60,6 +61,7 @@ tdc = [
 ]
 dev = [
   "pytest>=7.0",
+  "pytest-cov>=7,<8",
   "jsonschema>=4.0",
   "cryptography>=41.0",
   "pre-commit>=4,<5",
@@ -99,6 +101,11 @@ line-length = 88
 include = ["*.py", "*.pyi", "pyproject.toml"]
 extend-exclude = ["outputs", "reports/**", "build", "dist", ".venv", "site"]
 force-exclude = true
+
+[tool.coverage.run]
+branch = true
+source = ["privatelabbench"]
+relative_files = true
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I"]

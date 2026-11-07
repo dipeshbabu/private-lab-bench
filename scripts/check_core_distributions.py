@@ -17,6 +17,7 @@ def main() -> None:
     parser.add_argument("--dist-dir", type=Path, required=True)
     parser.add_argument("--work-dir", type=Path, required=True)
     parser.add_argument("--constraints", type=Path, required=True)
+    parser.add_argument("--plugin-dir", type=Path)
     args = parser.parse_args()
     checkout = Path(__file__).resolve().parents[1]
     work = args.work_dir.resolve()
@@ -31,6 +32,12 @@ def main() -> None:
         (checkout / "privatelabbench/__init__.py").read_text(encoding="utf-8"),
     ).group(1)
     constraints = args.constraints.resolve()
+    plugin = None
+    if args.plugin_dir:
+        plugins = list(args.plugin_dir.resolve().glob("*.whl"))
+        if len(plugins) != 1:
+            raise ValueError("Expected exactly one third-party plugin fixture wheel")
+        plugin = plugins[0]
     env = {**os.environ, "PYTHONUTF8": "1"}
     env.pop("PYTHONPATH", None)
 
@@ -47,18 +54,20 @@ def main() -> None:
         )
         run([python, "-m", "pip", "install", "--upgrade", "pip"])
         run([python, "-m", "pip", "install", "--constraint", constraints, artifact])
+        if plugin:
+            run([python, "-m", "pip", "install", "--no-deps", plugin])
         run([python, "-m", "pip", "check"])
         smoke = work / (kind + "-smoke")
         smoke.mkdir()
-        run(
-            [
-                python,
-                checkout / "scripts/smoke_installed_core.py",
-                "--expected-version",
-                expected,
-            ],
-            cwd=smoke,
-        )
+        command = [
+            python,
+            checkout / "scripts/smoke_installed_core.py",
+            "--expected-version",
+            expected,
+        ]
+        if plugin:
+            command.append("--require-plugin")
+        run(command, cwd=smoke)
         summary = json.loads((smoke / "smoke-summary.json").read_text(encoding="utf-8"))
         summary["artifact_sha256"] = hashlib.sha256(artifact.read_bytes()).hexdigest()
         summaries[kind] = summary

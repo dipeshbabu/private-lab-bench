@@ -1,0 +1,30 @@
+name: Released package onboarding
+
+on:
+  schedule:
+    - cron: '17 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  latest-pypi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install the current stable PyPI wheel with a fresh index lookup
+        run: |
+          python -m pip install --upgrade --no-cache-dir --only-binary=:all: private-lab-bench
+      - name: Run the documented first session outside the checkout
+        run: |
+          cp examples/first_run.py "$RUNNER_TEMP/first_run.py"
+          cd "$RUNNER_TEMP"
+          python -c "from importlib.metadata import version; from pathlib import Path; import privatelabbench; assert version('private-lab-bench') == privatelabbench.__version__; assert 'site-packages' in Path(privatelabbench.__file__).parts; print('Actual released package:', privatelabbench.__version__)"
+          python first_run.py --output-dir released-local
+          plb verify released-local/evaluation/evaluation_receipt.json
+          python first_run.py --output-dir released-approved --share-synthetic
+          plb verify released-approved/evaluation/evaluation_receipt.shareable.json

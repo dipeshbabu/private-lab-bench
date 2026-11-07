@@ -28,6 +28,15 @@ git push origin v0.1.5
 ```
 
 The release workflow refuses to publish if the tag version differs from package metadata.
+It also requires successful main-branch push runs of CI, Core compatibility, and
+Public Release Audit for the exact tagged SHA. Every job must pass, including the
+full test matrix and combined coverage gate; missing, pending, failed, or skipped
+jobs block publication. An older successful run cannot override a newer failed
+run. If a tag arrives before checks finish, wait for the checks and rerun the
+failed release workflow; do not move the tag.
+
+After building, the workflow separately installs the wheel and source archive
+outside the checkout and exercises the core before the upload job can start.
 After PyPI publishing succeeds, it creates a GitHub Release with the same wheel,
 source archive, and a `SHA256SUMS.txt` checksum file. It never rebuilds the package
 between the two destinations.
