@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import multiprocessing
 import platform
 import subprocess
 import sys
@@ -20,6 +21,72 @@ from privatelabbench.privacy.attacks import membership_inference_risk
 from privatelabbench.privacy.export import publish_shareable_artifact
 from privatelabbench.reports.integrity import attach_integrity_metadata, verify_payload
 from privatelabbench.reports.receipt import verify_receipt
+
+
+def _held_export(candidate, policy, output, ready, resume, result):
+    import privatelabbench.privacy.export as exports
+
+    original = exports.atomic_write_json
+
+    def write(path, value):
+        original(path, value)
+        if path == output:
+            ready.set()
+            if not resume.wait(60):
+                raise RuntimeError("Installed publisher checkpoint timed out")
+
+    exports.atomic_write_json = write
+    try:
+        result.put(
+            exports.publish_shareable_artifact(candidate, policy, output).decision
+        )
+    finally:
+        exports.atomic_write_json = original
+
+
+def check_installed_export_transaction(receipt, folder):
+    import privatelabbench.privacy.export as exports
+
+    candidate = json.loads(receipt.read_text(encoding="utf-8"))
+    policy = {
+        "schema_version": "release-policy/v1",
+        "id": "synthetic-installed-regression",
+        "enabled": True,
+        "min_samples": 20,
+        "min_cell_size": 20,
+        "require_privacy_audit": False,
+    }
+    output = folder / "publisher/receipt.shareable.json"
+    context = multiprocessing.get_context("spawn")
+    ready, resume, result = context.Event(), context.Event(), context.Queue()
+    worker = context.Process(
+        target=_held_export, args=(candidate, policy, output, ready, resume, result)
+    )
+    worker.start()
+    try:
+        assert ready.wait(60), "Installed publisher did not reach its checkpoint"
+        content = output.read_bytes()
+        assert (
+            exports.publish_shareable_artifact(candidate, policy, output).decision
+            == "needs_review"
+        )
+        assert output.read_bytes() == content
+    finally:
+        resume.set()
+        worker.join(60)
+        if worker.is_alive():
+            worker.terminate()
+            worker.join()
+    assert worker.exitcode == 0 and result.get(timeout=10) == "allow"
+    result.close()
+    result.join_thread()
+    assert output.exists() and verify_receipt(output)["valid"]
+    assert (
+        json.loads(
+            output.with_suffix(".release-audit.json").read_text(encoding="utf-8")
+        )["decision"]
+        == "allow"
+    )
 
 
 def cli(*args, expected=0):
@@ -104,6 +171,21 @@ def main() -> None:
     )
     checks.append(
         "Unicode paths, CSV/newline handling, uncertainty, slices, local receipt"
+    )
+    check_installed_export_transaction(receipt, folder)
+    malformed = folder / "malformed-receipt.json"
+    malformed.write_text(json.dumps({"scope": "local", "local": []}), encoding="utf-8")
+    release_policy = folder / "release-policy.json"
+    release_policy.write_text(
+        json.dumps(
+            {"schema_version": "release-policy/v1", "id": "synthetic", "enabled": False}
+        ),
+        encoding="utf-8",
+    )
+    rejected = cli("release-check", malformed, "--policy", release_policy, expected=1)
+    assert "unreadable_policy_or_artifact" in rejected and "Traceback" not in rejected
+    checks.append(
+        "installed concurrent publisher and malformed release-check regressions"
     )
 
     paired = folder / "comparaison.json"
