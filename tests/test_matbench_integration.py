@@ -99,6 +99,76 @@ def evaluate(snapshot, **options):
     )
 
 
+def test_matbench_cli_prepares_evaluates_and_rejects_invalid_predictions(
+    snapshot, monkeypatch, capsys
+):
+    from privatelabbench.cli import main
+
+    root, task, predictions, tmp_path = snapshot
+    template = tmp_path / "template.csv"
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "plb",
+            "matbench-prepare",
+            "--cache-dir",
+            str(root),
+            "--dataset",
+            task.name,
+            "--out",
+            str(template),
+        ],
+    )
+    assert main() == 0
+    assert len(pd.read_csv(template)) == task.n_samples
+    policy = tmp_path / "release.json"
+    policy.write_text(
+        json.dumps(
+            {
+                "schema_version": "release-policy/v1",
+                "id": "synthetic-cli-review",
+                "enabled": True,
+                "min_samples": 2,
+                "min_cell_size": 2,
+                "require_privacy_audit": False,
+                "include_protocol": True,
+                "public_benchmark": task.identity(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "cli-evaluation"
+    arguments = [
+        "plb",
+        "matbench-evaluate",
+        "--cache-dir",
+        str(root),
+        "--dataset",
+        task.name,
+        str(predictions),
+        "--output-dir",
+        str(output),
+        "--release-policy",
+        str(policy),
+    ]
+    monkeypatch.setattr("sys.argv", arguments)
+    assert main() == 0
+    assert verify_payload(
+        json.loads(
+            (output / "matbench_result.shareable.json").read_text(encoding="utf-8")
+        )
+    )["valid"]
+    assert "Official unweighted fold mean" in (output / "matbench_result.md").read_text(
+        encoding="utf-8"
+    )
+    predictions.write_text(
+        "fold,sample_id,prediction\n0,unknown,0.1\n", encoding="utf-8"
+    )
+    assert main() == 2
+    assert not (output / "matbench_result.shareable.json").exists()
+    assert "workflow rejected" in capsys.readouterr().out
+
+
 def test_official_record_keys_folds_and_templates_preserve_all_records(snapshot):
     root, task, _, tmp_path = snapshot
     output = tmp_path / "template.csv"

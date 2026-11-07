@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Keep export invalidation, approval, artifact writes, and audits under one owned directory lock. A blocked publisher preserves the active publisher's output and audit.
+- Reject malformed local receipt sections in `release-check` with a structured decision instead of an AttributeError traceback.
+
 ## v0.1.5 — 2026-11-05
 
 ### Added

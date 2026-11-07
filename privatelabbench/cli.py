@@ -1525,7 +1525,10 @@ def release_check_command(args: argparse.Namespace) -> int:
         evidence = None
         if isinstance(payload, dict) and payload.get("scope") == "local":
             # The complete local evidence is bound into the local receipt.
-            evidence = payload.get("local", {}).get("release_evidence")
+            local = payload.get("local", {})
+            if not isinstance(local, dict):
+                raise ValueError("Receipt local evidence must be a mapping")
+            evidence = local.get("release_evidence")
         decision, _ = check_release(payload, policy, evidence=evidence)
         print(json.dumps(decision.as_dict(), indent=2))
         print("Dry run only; repeated-release history is checked during export.")

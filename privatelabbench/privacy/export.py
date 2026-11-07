@@ -996,64 +996,102 @@ def publish_shareable_artifact(
     signing_secret: str | None = None,
     signer: Mapping[str, Any] | None = None,
 ) -> ReleaseDecision:
-    """The sole shareable JSON writer. Denial removes any previous export."""
+    """Write an export and its audit under the directory's release lock.
+
+    Policy denials invalidate a previous export only after acquiring the lock.
+    A busy/unavailable store returns needs_review without touching another
+    publisher's artifact, audit, or ledger.
+    """
     output = Path(path)
     audit_path = output.with_suffix(".release-audit.json")
     ledger_path = output.parent / ".plb-release-ledger.json"
     lock_path = output.parent / ".plb-release.lock"
     validate_output_paths([], [output, audit_path, ledger_path, lock_path])
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.unlink(missing_ok=True)
     decision, payload = check_release(candidate, policy, evidence=evidence)
-    if payload is not None:
-        lock = None
-        try:
-            lock = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-            ledger = (
-                json.loads(ledger_path.read_text(encoding="utf-8"))
-                if ledger_path.exists()
-                else {}
-            )
-            if not isinstance(ledger, dict):
-                raise ValueError("Invalid local release ledger")
-            digest = hashlib.sha256(
-                json.dumps(
-                    payload["shareable"], sort_keys=True, allow_nan=False
-                ).encode()
-            ).hexdigest()
-            previous = ledger.get(decision.policy_id)
-            if (
-                previous is not None
-                and previous != digest
-                and not policy.get("reviewed_repeat", False)
-            ):
+    try:
+        lock = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except OSError:
+        return ReleaseDecision(
+            "needs_review", ("release_storage_or_lock_failed",), decision.policy_id
+        )
+    try:
+        output.unlink(missing_ok=True)
+        if payload is not None:
+            try:
+                return _publish_locked(
+                    output,
+                    audit_path,
+                    ledger_path,
+                    payload=payload,
+                    policy=policy,
+                    decision=decision,
+                    signing_secret=signing_secret,
+                    signer=signer,
+                )
+            except (OSError, ValueError, TypeError):
+                output.unlink(missing_ok=True)
                 decision = ReleaseDecision(
                     "needs_review",
-                    ("changed_repeated_release_requires_review",),
+                    ("release_storage_or_lock_failed",),
                     decision.policy_id,
                 )
-            else:
-                # Record approval first: a failed export conservatively retains it.
-                ledger[decision.policy_id] = digest
-                atomic_write_json(ledger_path, ledger)
-                if signer is not None:
-                    from privatelabbench.reports.trust import sign_artifact
+        _write_release_audit(audit_path, policy, decision)
+        return decision
+    finally:
+        os.close(lock)
+        lock_path.unlink(missing_ok=True)
 
-                    artifact = sign_artifact(payload, signer)
-                else:
-                    artifact = attach_integrity_metadata(
-                        payload, signing_secret=signing_secret
-                    )
-                atomic_write_json(output, artifact)
-        except (OSError, ValueError, TypeError):
-            output.unlink(missing_ok=True)
-            decision = ReleaseDecision(
-                "needs_review", ("release_storage_or_lock_failed",), decision.policy_id
-            )
-        finally:
-            if lock is not None:
-                os.close(lock)
-                lock_path.unlink(missing_ok=True)
+
+def _publish_locked(
+    output: Path,
+    audit_path: Path,
+    ledger_path: Path,
+    *,
+    payload: Mapping[str, Any],
+    policy: Mapping[str, Any],
+    decision: ReleaseDecision,
+    signing_secret: str | None,
+    signer: Mapping[str, Any] | None,
+) -> ReleaseDecision:
+    """Commit approval, artifact, and audit while the caller owns the lock."""
+    ledger = (
+        json.loads(ledger_path.read_text(encoding="utf-8"))
+        if ledger_path.exists()
+        else {}
+    )
+    if not isinstance(ledger, dict):
+        raise ValueError("Invalid local release ledger")
+    digest = hashlib.sha256(
+        json.dumps(payload["shareable"], sort_keys=True, allow_nan=False).encode()
+    ).hexdigest()
+    previous = ledger.get(decision.policy_id)
+    if (
+        previous is not None
+        and previous != digest
+        and not policy.get("reviewed_repeat", False)
+    ):
+        decision = ReleaseDecision(
+            "needs_review",
+            ("changed_repeated_release_requires_review",),
+            decision.policy_id,
+        )
+    else:
+        # Record approval first: a failed export conservatively retains it.
+        ledger[decision.policy_id] = digest
+        atomic_write_json(ledger_path, ledger)
+        if signer is not None:
+            from privatelabbench.reports.trust import sign_artifact
+
+            artifact = sign_artifact(payload, signer)
+        else:
+            artifact = attach_integrity_metadata(payload, signing_secret=signing_secret)
+        atomic_write_json(output, artifact)
+    _write_release_audit(audit_path, policy, decision)
+    return decision
+
+
+def _write_release_audit(path: Path, policy: Any, decision: ReleaseDecision) -> None:
     audit = {
         "schema_version": "release-audit/v1",
         "scope": "local",
@@ -1062,9 +1100,4 @@ def publish_shareable_artifact(
     if isinstance(policy, Mapping) and policy.get("reviewed_repeat"):
         audit["reviewed_repeat"] = True
         audit["review_reference"] = policy.get("review_reference")
-    try:
-        atomic_write_json(audit_path, audit)
-    except OSError:
-        output.unlink(missing_ok=True)
-        raise
-    return decision
+    atomic_write_json(path, audit)
