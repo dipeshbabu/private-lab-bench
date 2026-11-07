@@ -33,11 +33,27 @@ jobs:
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
 
   test:
-    runs-on: ubuntu-latest
+    name: test (${{ matrix.os }}, ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      PYTHONUTF8: "1"
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        include:
+          - {os: ubuntu-latest, python-version: "3.10"}
+          - {os: ubuntu-latest, python-version: "3.11"}
+          - {os: ubuntu-latest, python-version: "3.12"}
+          - {os: ubuntu-latest, python-version: "3.13"}
+          - {os: ubuntu-latest, python-version: "3.14"}
+          - {os: windows-latest, python-version: "3.12"}
+          - {os: windows-latest, python-version: "3.14"}
+          - {os: macos-latest, python-version: "3.12"}
+          - {os: macos-latest, python-version: "3.14"}
 
     steps:
       - name: Checkout
@@ -53,7 +69,7 @@ jobs:
       - name: Prepare output directories
         run: mkdir -p outputs reports
       - name: Run tests
-        run: pytest -q
+        run: pytest -q --cov --cov-report=json:coverage.json
       - name: List registered tasks and packs
         run: |
           plb list-tasks
@@ -97,6 +113,12 @@ jobs:
           plb run configs/tabular_eval.yaml
           plb verify reports/tabular_demo_receipt.shareable.json --signing-secret ci-secret
           plb verify-manifest reports/tabular_demo_manifest.json --signing-secret ci-secret
+
+      - name: Retain full-suite coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-${{ matrix.os }}-${{ matrix.python-version }}
+          path: coverage.json
 
   package:
     runs-on: ubuntu-latest
@@ -145,7 +167,12 @@ jobs:
       - name: Install optional chemistry adapter
         run: pip install -e '.[dev,rdkit]'
       - name: Test split audits and chemical adapters
-        run: pytest -q tests/test_design_audit.py tests/test_molecule_eval.py tests/test_adapters_and_compare.py tests/test_benchmark_packs.py
+        run: pytest -q --cov --cov-report=json:coverage.json tests/test_design_audit.py tests/test_molecule_eval.py tests/test_adapters_and_compare.py tests/test_benchmark_packs.py
+      - name: Retain backend coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-chemical-audit
+          path: coverage.json
 
   tdc-adapter:
     runs-on: ubuntu-latest
@@ -159,7 +186,12 @@ jobs:
       - name: Install optional TDC reference environment
         run: pip install -e '.[dev,tdc]'
       - name: Check adapter contracts and upstream metric agreement
-        run: pytest -q tests/test_tdc_integration.py
+        run: pytest -q --cov --cov-report=json:coverage.json tests/test_tdc_integration.py
+      - name: Retain backend coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-tdc-adapter
+          path: coverage.json
 
   matbench-adapter:
     runs-on: ubuntu-latest
@@ -177,7 +209,12 @@ jobs:
           python scripts/fetch_matbench_reference.py --output-dir "$RUNNER_TEMP/matbench-reference"
           pip install --no-deps --force-reinstall "$RUNNER_TEMP/matbench-reference"
       - name: Check fold contracts and actual upstream metric agreement
-        run: pytest -q tests/test_matbench_integration.py
+        run: pytest -q --cov --cov-report=json:coverage.json tests/test_matbench_integration.py
+      - name: Retain backend coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-matbench-adapter
+          path: coverage.json
 
   proteingym-adapter:
     runs-on: ubuntu-latest
@@ -191,7 +228,12 @@ jobs:
       - name: Install optional protein baseline tooling
         run: pip install -e '.[dev,proteingym]'
       - name: Check assay contracts, tied ranks, and scoped uncertainty
-        run: pytest -q tests/test_proteingym_integration.py tests/test_spearman_metrics.py
+        run: pytest -q --cov --cov-report=json:coverage.json tests/test_proteingym_integration.py tests/test_spearman_metrics.py
+      - name: Retain backend coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-proteingym-adapter
+          path: coverage.json
 
   opendp-backend:
     runs-on: ubuntu-latest
@@ -210,7 +252,12 @@ jobs:
       - name: Require the real OpenDP backend and test privacy contracts
         run: |
           python -c "import opendp.prelude"
-          pytest -q tests/test_opendp_backend.py tests/test_privacy_mechanisms.py
+          pytest -q --cov --cov-report=json:coverage.json tests/test_opendp_backend.py tests/test_privacy_mechanisms.py
+      - name: Retain backend coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-opendp-backend-${{ matrix.python-version }}
+          path: coverage.json
 
   sandbox-runtime:
     runs-on: ubuntu-24.04
@@ -242,7 +289,12 @@ jobs:
         env:
           PLB_SANDBOX_TESTS: "1"
           PLB_HOST_SECRET: "host-only-integration-sentinel"
-        run: pytest -q tests/test_sandbox.py tests/test_sandbox_runtime.py
+        run: pytest -q --cov --cov-report=json:coverage.json tests/test_sandbox.py tests/test_sandbox_runtime.py
+      - name: Retain backend coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-sandbox-runtime
+          path: coverage.json
 
   onboarding-pypi:
     runs-on: ubuntu-latest
@@ -255,7 +307,7 @@ jobs:
           python-version: "3.11"
       - name: Install the released wheel, not the checkout
         run: |
-          python -m pip install --only-binary=:all: private-lab-bench==0.1.4
+          python -m pip install --upgrade --no-cache-dir --only-binary=:all: private-lab-bench
       - name: Copy only the example outside the repository
         run: |
           mkdir "$RUNNER_TEMP/plb-onboarding"
@@ -263,7 +315,7 @@ jobs:
       - name: Run the first session against the actual PyPI package
         working-directory: ${{ runner.temp }}/plb-onboarding
         run: |
-          python -c "from importlib.metadata import version; from pathlib import Path; import privatelabbench; assert version('private-lab-bench') == privatelabbench.__version__ == '0.1.4'; assert 'site-packages' in Path(privatelabbench.__file__).parts"
+          python -c "from importlib.metadata import version; from pathlib import Path; import privatelabbench; assert version('private-lab-bench') == privatelabbench.__version__; assert 'site-packages' in Path(privatelabbench.__file__).parts"
           python first_run.py --output-dir local
           plb verify local/evaluation/evaluation_receipt.json
           python first_run.py --output-dir approved --share-synthetic
@@ -300,3 +352,23 @@ jobs:
           test -f reports/kinase_prediction_eval.md
           test -f reports/kinase_prediction_eval.json
           test -f reports/kinase_prediction_manifest.json
+
+  coverage-gate:
+    needs: [test, chemical-audit, tdc-adapter, matbench-adapter, proteingym-adapter, opendp-backend, sandbox-runtime]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: coverage-*
+          path: coverage-reports/
+      - name: Require all reports and enforce combined statement/branch floors
+        run: python scripts/check_coverage.py --reports-dir coverage-reports --minimum-reports 16 --statement-floor 85 --branch-floor 75
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: combined-coverage
+          path: combined-coverage.json

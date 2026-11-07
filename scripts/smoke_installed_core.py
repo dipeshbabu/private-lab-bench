@@ -40,6 +40,7 @@ def cli(*args, expected=0):
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-version", required=True)
+    parser.add_argument("--require-plugin", action="store_true")
     args = parser.parse_args()
     assert (
         version("private-lab-bench")
@@ -130,6 +131,46 @@ def main() -> None:
     assert comparison["paired_interval"]["status"] == "evaluated"
     assert abs(comparison["improvement_a_over_b"] - 0.3) < 1e-12
     checks.append("paired comparison and artifact verification")
+
+    if args.require_plugin:
+        assert version("plb-ci-task-plugin") == "0.0.1"
+        assert "ci-installed-plugin" in cli("list-tasks")
+        config = folder / "plugin.yaml"
+        plugin_output = folder / "plugin-results"
+        config.write_text(
+            yaml.safe_dump(
+                {
+                    "project": "synthetic-plugin",
+                    "task": "ci-installed-plugin",
+                    "input": {
+                        "path": str(candidate),
+                        "target_column": "target",
+                        "prediction_column": "prediction",
+                        "sample_id_column": "sample_id",
+                        "task_type": "regression",
+                    },
+                    "report": {
+                        "json": str(plugin_output / "evaluation.json"),
+                        "markdown": str(plugin_output / "evaluation.md"),
+                        "manifest": str(plugin_output / "evaluation_manifest.json"),
+                    },
+                    "audit": {"path": str(plugin_output / "audit.jsonl")},
+                    "privacy": {"mode": "none"},
+                }
+            ),
+            encoding="utf-8",
+        )
+        cli("run", config)
+        plugin_receipt = plugin_output / "evaluation_receipt.json"
+        cli("verify", plugin_receipt)
+        assert verify_receipt(plugin_receipt)["valid"]
+        plugin_report = json.loads(
+            (plugin_output / "evaluation.json").read_text(encoding="utf-8")
+        )
+        assert abs(plugin_report["result"]["clean_metrics"]["mae"] - 0.1) < 1e-12
+        checks.append(
+            "actual installed third-party entry point, execution, and receipt"
+        )
 
     policy = folder / "quality.yaml"
     policy.write_text(

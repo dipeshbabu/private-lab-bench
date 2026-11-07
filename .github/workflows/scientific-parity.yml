@@ -1,0 +1,65 @@
+name: Real scientific parity
+
+on:
+  schedule:
+    - cron: '23 7 * * 1'
+  workflow_dispatch:
+  push:
+    branches: [main, 'codex/**']
+    paths:
+      - '.github/workflows/scientific-parity.yml'
+      - 'scripts/validate_*.py'
+      - 'scripts/fetch_matbench_reference.py'
+      - 'privatelabbench/integrations/**'
+      - 'privatelabbench/data/integrations/**'
+
+permissions:
+  contents: read
+
+jobs:
+  real-parity:
+    timeout-minutes: 90
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {ecosystem: tdc, python-version: "3.11"}
+          - {ecosystem: matbench, python-version: "3.12"}
+          - {ecosystem: proteingym, python-version: "3.11"}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Cache only checksum-pinned public reference inputs
+        uses: actions/cache@v6.1.0
+        with:
+          path: ${{ runner.temp }}/public-reference
+          key: scientific-${{ matrix.ecosystem }}-${{ hashFiles('privatelabbench/integrations/*.py', 'privatelabbench/data/integrations/*.json') }}
+      - name: Install TDC's isolated reference environment
+        if: matrix.ecosystem == 'tdc'
+        run: python -m pip install -c docs/case_study/constraints.txt -e '.[dev,tdc]'
+      - name: Install Matbench tooling and the pinned corrected scorer
+        if: matrix.ecosystem == 'matbench'
+        run: |
+          python -m pip install -e '.[dev,matbench]'
+          python scripts/fetch_matbench_reference.py --output-dir "$RUNNER_TEMP/matbench-source"
+          python -m pip install --no-deps --force-reinstall "$RUNNER_TEMP/matbench-source"
+      - name: Install protein controls
+        if: matrix.ecosystem == 'proteingym'
+        run: python -m pip install -e '.[dev,proteingym]'
+      - name: Compare all six TDC tasks over five training seeds
+        if: matrix.ecosystem == 'tdc'
+        run: python -m scripts.validate_tdc_admet --download --cache-dir "$RUNNER_TEMP/public-reference" --output-dir "$RUNNER_TEMP/parity"
+      - name: Compare all five Matbench tasks and folds with both controls
+        if: matrix.ecosystem == 'matbench'
+        run: python -m scripts.validate_matbench --download --cache-dir "$RUNNER_TEMP/public-reference" --output-dir "$RUNNER_TEMP/parity"
+      - name: Compare ten assays and execute the actual upstream summary pipeline
+        if: matrix.ecosystem == 'proteingym'
+        run: python -m scripts.validate_proteingym --download --run-upstream-pipeline --cache-dir "$RUNNER_TEMP/public-reference" --output-dir "$RUNNER_TEMP/parity"
+      - name: Retain aggregate parity evidence without rows, predictions, or keys
+        uses: actions/upload-artifact@v7
+        with:
+          name: real-parity-${{ matrix.ecosystem }}
+          path: ${{ runner.temp }}/parity/verification.json
