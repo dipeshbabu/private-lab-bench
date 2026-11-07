@@ -11,7 +11,8 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 PLATFORMS = [
-    ("ubuntu-latest", version) for version in ("3.10", "3.11", "3.12", "3.13", "3.14")
+    ("ubuntu-latest", version)
+    for version in ("3.10", "3.11", "3.12", "3.13", "3.14", "3.15", "3.14t")
 ] + [
     (os_name, version)
     for os_name in ("windows-latest", "macos-latest")

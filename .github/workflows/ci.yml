@@ -50,6 +50,8 @@ jobs:
           - {os: ubuntu-latest, python-version: "3.12"}
           - {os: ubuntu-latest, python-version: "3.13"}
           - {os: ubuntu-latest, python-version: "3.14"}
+          - {os: ubuntu-latest, python-version: "3.15"}
+          - {os: ubuntu-latest, python-version: "3.14t"}
           - {os: windows-latest, python-version: "3.12"}
           - {os: windows-latest, python-version: "3.14"}
           - {os: macos-latest, python-version: "3.12"}
@@ -366,7 +368,7 @@ jobs:
           pattern: coverage-*
           path: coverage-reports/
       - name: Require all reports and enforce combined statement/branch floors
-        run: python scripts/check_coverage.py --reports-dir coverage-reports --minimum-reports 16 --statement-floor 85 --branch-floor 75
+        run: python scripts/check_coverage.py --reports-dir coverage-reports --minimum-reports 18 --statement-floor 85 --branch-floor 75
       - uses: actions/upload-artifact@v7
         if: always()
         with:

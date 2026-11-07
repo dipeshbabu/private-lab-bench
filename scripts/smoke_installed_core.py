@@ -115,6 +115,8 @@ def main() -> None:
         == args.expected_version
     )
     assert "site-packages" in Path(privatelabbench.__file__).parts
+    if "t" in getattr(sys, "abiflags", ""):
+        assert not sys._is_gil_enabled(), "A core dependency re-enabled the GIL"
     root = Path.cwd()
     checks = []
     assert "usage:" in cli("--help").lower()

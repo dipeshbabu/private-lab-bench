@@ -1,8 +1,8 @@
 # Verification and its limits
 
-The normal CI runs the complete base pytest suite on nine supported OS/Python
+The normal CI runs the complete base pytest suite on eleven supported OS/Python
 combinations, with dedicated Linux jobs for optional scientific tools, OpenDP,
-and actual gVisor execution. It combines the sixteen JSON coverage reports by
+and actual gVisor execution. It combines the eighteen JSON coverage reports by
 union of executed statements and branches, rather than averaging percentages.
 Coverage must reach 85% statements and 75% branches, with every source file and
 job report present. Unit tests and regression scenarios remain necessary even
@@ -42,7 +42,7 @@ tests both built distributions before publishing; see [releases](releases.md).
 
 Independent researcher sessions remain [pending](case_study/findings.md), at 0/3.
 Automated checks are not independent usability or security/privacy audits.
-Python 3.15+, PyPy, free-threaded builds, and unlisted OS/version combinations
+PyPy, other free-threaded builds, and unlisted OS/version combinations
 remain outside the [verified support matrix](support.md). Durable multi-process
 privacy accounting and GPU/multi-file model sandbox execution remain documented
 implementation boundaries, not capabilities claimed by these test results.

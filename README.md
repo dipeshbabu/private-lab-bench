@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://pypi.org/project/private-lab-bench/"><img alt="PyPI version" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpypi.org%2Fpypi%2Fprivate-lab-bench%2Fjson&amp;query=%24.info.version&amp;label=pypi&amp;prefix=v&amp;style=flat-square&amp;cacheSeconds=300"></a>
   <a href="https://github.com/dipeshbabu/private-lab-bench/actions/workflows/ci.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/dipeshbabu/private-lab-bench/ci.yml?branch=main&label=build&style=flat-square"></a>
-  <a href="https://dipeshbabu.github.io/private-lab-bench/support/"><img alt="Python 3.10 through 3.14; see tested support" src="https://img.shields.io/badge/python-3.10%E2%80%933.14-blue?style=flat-square"></a>
+  <a href="https://dipeshbabu.github.io/private-lab-bench/support/"><img alt="Python 3.10 through 3.15; see tested support" src="https://img.shields.io/badge/python-3.10%E2%80%933.15-blue?style=flat-square"></a>
   <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-green?style=flat-square"></a>
 </p>
 
@@ -26,7 +26,7 @@ Evaluation runs without an account, hosted service, or data upload. A receipt re
 
 ## Installation
 
-The current release is **v0.1.5**, available on [PyPI](https://pypi.org/project/private-lab-bench/0.1.5/) and [GitHub Releases](https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.5). The core has clean-install checks on Linux for Python 3.10–3.14 and on Windows/macOS for 3.12 and 3.14. See the [tested-support matrix](https://dipeshbabu.github.io/private-lab-bench/support/) for exact scope and optional-integration limits.
+The current release is **v0.1.5**, available on [PyPI](https://pypi.org/project/private-lab-bench/0.1.5/) and [GitHub Releases](https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.5). The core has clean-install checks on Linux for Python 3.10–3.15 and on Windows/macOS for 3.12 and 3.14. See the [tested-support matrix](https://dipeshbabu.github.io/private-lab-bench/support/) for exact scope and optional-integration limits.
 
 This release includes the v0.1.4 correctness fixes for multiclass scoring, membership-risk diagnostics, privacy-policy validation, and input-safe report writing. Rerun affected evaluations from the original predictions when upgrading from earlier releases.
 

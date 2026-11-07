@@ -84,7 +84,7 @@ def enforce(result, statement_floor, branch_floor):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reports-dir", type=Path, required=True)
-    parser.add_argument("--minimum-reports", type=int, default=16)
+    parser.add_argument("--minimum-reports", type=int, default=18)
     parser.add_argument("--statement-floor", type=float, default=85)
     parser.add_argument("--branch-floor", type=float, default=75)
     parser.add_argument("--output", type=Path, default=Path("combined-coverage.json"))
