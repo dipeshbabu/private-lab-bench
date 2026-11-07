@@ -8,8 +8,8 @@ authors:
 repository-code: "https://github.com/dipeshbabu/private-lab-bench"
 url: "https://github.com/dipeshbabu/private-lab-bench"
 license: MIT
-version: "0.1.5"
-date-released: "2026-11-05"
+version: "0.1.6"
+date-released: "2026-11-07"
 keywords:
   - scientific machine learning
   - evaluation

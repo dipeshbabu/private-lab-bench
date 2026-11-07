@@ -14,7 +14,7 @@
 <p align="center">
   <a href="https://dipeshbabu.github.io/private-lab-bench/quickstart/">Quickstart</a> ·
   <a href="https://dipeshbabu.github.io/private-lab-bench/">Documentation</a> ·
-  <a href="https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.5">v0.1.5 release</a> ·
+  <a href="https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.6">v0.1.6 release</a> ·
   <a href="https://github.com/dipeshbabu/private-lab-bench/blob/main/CONTRIBUTING.md">Contributing</a>
 </p>
 
@@ -26,7 +26,7 @@ Evaluation runs without an account, hosted service, or data upload. A receipt re
 
 ## Installation
 
-The current release is **v0.1.5**, available on [PyPI](https://pypi.org/project/private-lab-bench/0.1.5/) and [GitHub Releases](https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.5). The core has clean-install checks on Linux for Python 3.10–3.15 and on Windows/macOS for 3.12 and 3.14. See the [tested-support matrix](https://dipeshbabu.github.io/private-lab-bench/support/) for exact scope and optional-integration limits.
+The current release is **v0.1.6**, available on [PyPI](https://pypi.org/project/private-lab-bench/0.1.6/) and [GitHub Releases](https://github.com/dipeshbabu/private-lab-bench/releases/tag/v0.1.6). The core has clean-install checks on Linux for Python 3.10–3.15 and on Windows/macOS for 3.12 and 3.14. See the [tested-support matrix](https://dipeshbabu.github.io/private-lab-bench/support/) for exact scope and optional-integration limits.
 
 This release includes the v0.1.4 correctness fixes for multiclass scoring, membership-risk diagnostics, privacy-policy validation, and input-safe report writing. Rerun affected evaluations from the original predictions when upgrading from earlier releases.
 
@@ -39,7 +39,7 @@ python -m venv .venv
 Activate it with `source .venv/bin/activate` on macOS/Linux, or `.venv\Scripts\Activate.ps1` in Windows PowerShell. Then install:
 
 ```sh
-python -m pip install private-lab-bench==0.1.5
+python -m pip install private-lab-bench==0.1.6
 plb --help
 ```
 
@@ -60,7 +60,7 @@ python first_run.py --output-dir plb-demo
 plb verify plb-demo/evaluation/evaluation_receipt.json
 ```
 
-These commands work in PowerShell, bash, and zsh with the installed v0.1.5 package.
+These commands work in PowerShell, bash, and zsh with the installed v0.1.6 package.
 The observed result, rounded for display:
 
 ```text
