@@ -1,4 +1,5 @@
 import json
+import multiprocessing
 from pathlib import Path
 
 import jsonschema
@@ -54,6 +55,108 @@ def candidate():
             "plugin": {"raw": ["SECRET"]},
         },
     }
+
+
+def _pause_publisher(output, checkpoint, ready, resume, results):
+    """A real second process owns the lock while the parent attempts publication."""
+    import privatelabbench.privacy.export as exports
+
+    original = exports.atomic_write_json
+    target = (
+        Path(output)
+        if checkpoint == "artifact"
+        else Path(output).with_suffix(".release-audit.json")
+    )
+
+    def write(path, value):
+        original(path, value)
+        if path == target:
+            ready.set()
+            if not resume.wait(60):
+                raise RuntimeError("Publisher checkpoint timed out")
+
+    exports.atomic_write_json = write
+    try:
+        decision = exports.publish_shareable_artifact(candidate(), policy(), output)
+        results.put(decision.decision)
+    except BaseException as exc:
+        results.put(type(exc).__name__ + ": " + str(exc))
+    finally:
+        exports.atomic_write_json = original
+
+
+@pytest.mark.parametrize("checkpoint", ["artifact", "audit"])
+def test_overlapping_publishers_preserve_the_lock_owners_output_and_audit(
+    tmp_path, checkpoint
+):
+    output = tmp_path / "receipt.shareable.json"
+    context = multiprocessing.get_context("spawn")
+    ready, resume, results = context.Event(), context.Event(), context.Queue()
+    worker = context.Process(
+        target=_pause_publisher, args=(output, checkpoint, ready, resume, results)
+    )
+    worker.start()
+    try:
+        assert ready.wait(60), "Publisher failed to reach its checkpoint"
+        artifact = output.read_bytes()
+        audit = output.with_suffix(".release-audit.json")
+        previous_audit = audit.read_bytes() if audit.exists() else None
+        ledger = (tmp_path / ".plb-release-ledger.json").read_bytes()
+        for attempted_policy in (policy(), None):
+            rejected = publish_shareable_artifact(candidate(), attempted_policy, output)
+            assert rejected.reason_codes == ("release_storage_or_lock_failed",)
+            assert output.read_bytes() == artifact
+            assert (audit.read_bytes() if audit.exists() else None) == previous_audit
+            assert (tmp_path / ".plb-release-ledger.json").read_bytes() == ledger
+    finally:
+        resume.set()
+        worker.join(60)
+        if worker.is_alive():
+            worker.terminate()
+            worker.join()
+    assert worker.exitcode == 0
+    assert results.get(timeout=10) == "allow"
+    results.close()
+    results.join_thread()
+    assert output.exists() and verify_report(str(output))["valid"]
+    assert json.loads(audit.read_text(encoding="utf-8"))["decision"] == "allow"
+    assert not (tmp_path / ".plb-release.lock").exists()
+
+
+@pytest.mark.parametrize("local", [[], None, 1, "invalid", True])
+def test_release_check_rejects_malformed_local_evidence_without_a_traceback(
+    tmp_path, monkeypatch, capsys, local
+):
+    from privatelabbench.cli import main
+
+    value = candidate()
+    value["local"] = local
+    source, review = tmp_path / "receipt.json", tmp_path / "policy.json"
+    source.write_text(json.dumps(value), encoding="utf-8")
+    review.write_text(json.dumps(policy()), encoding="utf-8")
+    monkeypatch.setattr(
+        "sys.argv", ["plb", "release-check", str(source), "--policy", str(review)]
+    )
+    assert main() == 1
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["reason_codes"] == ["unreadable_policy_or_artifact"]
+    assert not captured.err
+    assert not list(tmp_path.glob("*.release-audit.json"))
+
+
+def test_release_check_is_a_nonmutating_dry_run(tmp_path, monkeypatch, capsys):
+    from privatelabbench.cli import main
+
+    source, review = tmp_path / "receipt.json", tmp_path / "policy.json"
+    source.write_text(json.dumps(candidate()), encoding="utf-8")
+    review.write_text(json.dumps(policy()), encoding="utf-8")
+    before = {path: path.read_bytes() for path in tmp_path.iterdir()}
+    monkeypatch.setattr(
+        "sys.argv", ["plb", "release-check", str(source), "--policy", str(review)]
+    )
+    assert main() == 0
+    assert '"decision": "allow"' in capsys.readouterr().out
+    assert {path: path.read_bytes() for path in tmp_path.iterdir()} == before
 
 
 @pytest.mark.parametrize(

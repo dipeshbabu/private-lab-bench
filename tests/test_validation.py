@@ -1,9 +1,80 @@
 from __future__ import annotations
 
+import json
 from argparse import Namespace
+
+import pytest
 
 from privatelabbench.cli import validate_config_command
 from privatelabbench.validation import validate_config
+
+
+@pytest.mark.parametrize(
+    ("task", "damage"),
+    [
+        (task, damage)
+        for task in ("molecules", "multi-site")
+        for damage in (
+            None,
+            "missing_target",
+            "missing_smiles",
+            "invalid_task_type",
+            "missing_path",
+            "directory_is_file",
+            "empty_directory",
+        )
+        if task == "multi-site"
+        or damage not in {"directory_is_file", "empty_directory"}
+    ],
+)
+def test_molecular_and_federated_config_validation_checks_real_input_files(
+    tmp_path, task, damage
+):
+    source = tmp_path / "data.csv"
+    columns = ["smiles", "label"]
+    if damage == "missing_target":
+        columns[1] = "other"
+    if damage == "missing_smiles":
+        columns[0] = "other"
+    source.write_text(",".join(columns) + "\nCCO,1\nCCN,2\nCCC,3\n", encoding="utf-8")
+    folder = tmp_path / "clients"
+    folder.mkdir()
+    (folder / "lab.csv").write_bytes(source.read_bytes())
+    if damage == "empty_directory":
+        (folder / "lab.csv").unlink()
+    path = (
+        "missing"
+        if damage == "missing_path"
+        else (
+            "data.csv"
+            if task == "molecules" or damage == "directory_is_file"
+            else "clients"
+        )
+    )
+    inputs = {
+        "path" if task == "molecules" else "client_dir": path,
+        "target_column": "label",
+        "smiles_column": "smiles",
+        "task_type": "unknown" if damage == "invalid_task_type" else "regression",
+    }
+    config = tmp_path / "config.json"
+    config.write_text(
+        json.dumps(
+            {
+                "project": "synthetic-validation",
+                "task": task,
+                "input": inputs,
+                "privacy": {"mode": "none"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    before = source.read_bytes()
+    result = validate_config(str(config))
+    assert result.valid is (damage is None), result.errors
+    assert source.read_bytes() == before
+    if damage:
+        assert result.errors
 
 
 def test_validate_prediction_config_passes(tmp_path):

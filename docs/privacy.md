@@ -69,6 +69,14 @@ invalid ledger fails closed. A leftover lock from an interrupted process require
 local inspection before removal. These controls do not establish differential
 privacy or guarantee that overlapping studies cannot disclose information.
 
+The publisher holds that lock through output invalidation, artifact writing, and
+the release audit. A busy or unavailable lock returns `needs_review` without
+modifying existing artifacts or audits; the caller must retry or inspect the
+storage failure rather than treat an existing file as its new result. Policy
+denials remove a stale export after acquiring the lock. Use separate output
+directories for concurrent evaluation runs; the publisher's lock does not make
+the earlier evaluation/report-generation steps a concurrent transaction.
+
 PrivateLabBench separates **privacy mechanisms**, **privacy audits**, and **release policies**. These are different tools and must not be interpreted as equivalent evidence.
 
 ## 1. Exact reporting (`mode: none`)
