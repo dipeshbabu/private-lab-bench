@@ -13,7 +13,7 @@ Activate with `source .venv/bin/activate` on macOS/Linux, or
 `.venv\Scripts\Activate.ps1` in Windows PowerShell. Then:
 
 ```sh
-python -m pip install private-lab-bench==0.1.5
+python -m pip install private-lab-bench==0.1.6
 ```
 
 The [installation guide](install.md) covers optional dependencies. The

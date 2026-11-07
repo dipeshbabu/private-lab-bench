@@ -2,7 +2,7 @@
   "created_at": "2026-11-03T00:00:00+00:00",
   "integrity": {
     "algorithm": "sha256",
-    "payload_sha256": "acab92115c4f0cc4ad5c43a7fef444d57279e69f4b479ab95125f3c5960fcef1",
+    "payload_sha256": "463b7b9b559f7e846bfdc0c9d42890750728bfc644e528829d6bccc95231d759",
     "signed": false
   },
   "receipt_id": "example-receipt-v1",
@@ -91,7 +91,7 @@
       "attestation_id": "example-attestation",
       "package": {
         "name": "private-lab-bench",
-        "version": "0.1.5"
+        "version": "0.1.6"
       }
     },
     "run": {
