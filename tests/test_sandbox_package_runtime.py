@@ -3,8 +3,8 @@
 import json
 import os
 import subprocess
+import sys
 from hashlib import sha256
-from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,6 @@ from privatelabbench.sandbox import (
     SandboxError,
     SandboxLimits,
     run_sandbox_package,
-    sandbox_command,
 )
 
 pytestmark = pytest.mark.skipif(
@@ -120,19 +119,39 @@ def test_real_package_cli_keeps_predictions_and_provenance_local(image, tmp_path
         }
     ).to_csv(data, index=False)
     output = tmp_path / "predictions.csv"
-    args = SimpleNamespace(
-        model_package=str(model),
-        data=str(data),
-        output=str(output),
-        model_sha256=sha256(model.read_bytes()).hexdigest(),
-        runtime_image=image,
-        feature=["x", "y"],
-        sample_id="sample_id",
-        seconds=10,
-        memory_mb=128,
-        task_type="regression",
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "privatelabbench",
+            "sandbox-score",
+            "--model-package",
+            str(model),
+            "--data",
+            str(data),
+            "--output",
+            str(output),
+            "--model-sha256",
+            sha256(model.read_bytes()).hexdigest(),
+            "--runtime-image",
+            image,
+            "--feature",
+            "x",
+            "--feature",
+            "y",
+            "--seconds",
+            "10",
+            "--memory-mb",
+            "128",
+            "--task-type",
+            "regression",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=True,
     )
-    assert sandbox_command(args) == 0
+    assert "Predictions and provenance remain private" in completed.stdout
     result = pd.read_csv(output)
     np.testing.assert_equal(result.prediction.to_numpy(), [8.0, 18.0])
     provenance = json.loads(output.with_suffix(".sandbox.json").read_text())

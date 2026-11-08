@@ -23,6 +23,14 @@ must not be recorded as substitutes. Complete the verifiable work and retain
 the release hold. A later scope change requires an explicit maintainer decision
 and an honest update to the documented capabilities and release requirements.
 
+The six engineering prerequisites now have evidence in the
+[readiness record](https://github.com/dipeshbabu/private-lab-bench/blob/main/audit/release-readiness.json):
+failure-path tests, expanded compatibility, automated source review, durable
+local accounting, multi-file CPU execution and broader upstream parity.
+See the [automated review summary](https://github.com/dipeshbabu/private-lab-bench/blob/main/audit/pre017-automated-security-review.md)
+for its revision, coverage, method and limits. Both unavailable external
+requirements continue to block publication.
+
 Each completed entry must link to its actual evidence. This record makes the
 decision reviewable; it does not authenticate a reviewer or prove the contents
 of a third-party report. Code and runtime changes made after a review still

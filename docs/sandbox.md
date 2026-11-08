@@ -96,7 +96,8 @@ Review and pin the complete archive digest, then run:
 ```sh
 plb sandbox-score --model-package model.zip --model-sha256 REVIEWED_ARCHIVE_SHA256 \
   --runtime-image sha256:REVIEWED_IMAGE_ID --data local-input.csv \
-  --feature feature_a --feature feature_b --output outputs/package-predictions.csv
+  --feature feature_a --feature feature_b --task-type regression \
+  --output outputs/package-predictions.csv
 ```
 
 Packages are limited to 128 MiB, 128 declared files plus the manifest, and a

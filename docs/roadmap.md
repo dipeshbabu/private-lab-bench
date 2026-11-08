@@ -42,7 +42,8 @@ remain unsupported. Its controls and tests do not constitute an
 independent security audit. OpenDP currently supports bounded means with fixed
 public size and row-level replace-one adjacency. The unreleased SQLite ledger
 shares atomic charges across local processes and restarts; operators must keep
-all queries on the same protected ledger and prevent rollback or cloning. Its upstream `contrib` status and
+all queries on the same protected ledger and prevent rollback or cloning. Its
+upstream `contrib` status and
 privacy assumptions are documented. Benchmark coverage remains a tested subset
 of each upstream suite.
 

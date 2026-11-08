@@ -3,13 +3,60 @@
   "baseline_version": "0.1.6",
   "milestone": "0.1.7",
   "requirements": {
-    "failure_path_tests": {"status": "pending", "evidence": []},
-    "dependency_and_platform_coverage": {"status": "pending", "evidence": []},
-    "automated_security_review": {"status": "in_progress", "evidence": []},
-    "independent_privacy_sandbox_audit": {"status": "unavailable", "evidence": []},
-    "durable_privacy_accounting": {"status": "pending", "evidence": []},
-    "multifile_cpu_sandbox": {"status": "pending", "evidence": []},
-    "expanded_benchmark_parity": {"status": "pending", "evidence": []},
-    "gpu_runtime_validation": {"status": "unavailable", "evidence": []}
+    "failure_path_tests": {
+      "status": "complete",
+      "evidence": [
+        "https://github.com/dipeshbabu/private-lab-bench/pull/106",
+        "https://github.com/dipeshbabu/private-lab-bench/actions/runs/42443464457/job/128617379694"
+      ]
+    },
+    "dependency_and_platform_coverage": {
+      "status": "complete",
+      "evidence": [
+        "https://github.com/dipeshbabu/private-lab-bench/pull/106",
+        "https://github.com/dipeshbabu/private-lab-bench/actions/runs/42440371017",
+        "https://github.com/dipeshbabu/private-lab-bench/actions/runs/42440370962"
+      ]
+    },
+    "automated_security_review": {
+      "status": "complete",
+      "evidence": [
+        "https://github.com/dipeshbabu/private-lab-bench/blob/main/audit/pre017-automated-security-review.md",
+        "https://github.com/dipeshbabu/private-lab-bench/pull/105"
+      ]
+    },
+    "independent_privacy_sandbox_audit": {
+      "status": "unavailable",
+      "evidence": []
+    },
+    "durable_privacy_accounting": {
+      "status": "complete",
+      "evidence": [
+        "https://github.com/dipeshbabu/private-lab-bench/blob/a0a0c9ba47283660a3c29f878950b550e7887409/tests/test_sqlite_budget.py",
+        "https://github.com/dipeshbabu/private-lab-bench/actions/runs/42443464457/job/128617379694",
+        "https://github.com/dipeshbabu/private-lab-bench/actions/runs/42443464457/job/128617379702",
+        "https://github.com/dipeshbabu/private-lab-bench/actions/runs/42443464457/job/128617379711",
+        "https://github.com/dipeshbabu/private-lab-bench/actions/runs/42443464457/job/128617379680"
+      ]
+    },
+    "multifile_cpu_sandbox": {
+      "status": "complete",
+      "evidence": [
+        "https://github.com/dipeshbabu/private-lab-bench/actions/runs/42443464457/job/128617379708",
+        "https://github.com/dipeshbabu/private-lab-bench/blob/a0a0c9ba47283660a3c29f878950b550e7887409/tests/test_sandbox_package_runtime.py"
+      ]
+    },
+    "expanded_benchmark_parity": {
+      "status": "complete",
+      "evidence": [
+        "https://github.com/dipeshbabu/private-lab-bench/actions/runs/42443464510/job/128617379524",
+        "https://github.com/dipeshbabu/private-lab-bench/actions/runs/42443464510/job/128617379559",
+        "https://github.com/dipeshbabu/private-lab-bench/actions/runs/42443464510/job/128617379605"
+      ]
+    },
+    "gpu_runtime_validation": {
+      "status": "unavailable",
+      "evidence": []
+    }
   }
 }
