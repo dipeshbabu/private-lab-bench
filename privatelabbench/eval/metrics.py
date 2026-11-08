@@ -109,6 +109,21 @@ def classification_metrics(
     metric_names: Sequence[str] | None = None,
 ) -> dict[str, float]:
     names = selected_metrics("classification", metric_names)
+    y_true, y_score = np.asarray(y_true, dtype=float), np.asarray(y_score, dtype=float)
+    if (
+        y_true.ndim != 1
+        or y_score.shape != y_true.shape
+        or not len(y_true)
+        or not np.isfinite(y_true).all()
+        or not np.isfinite(y_score).all()
+    ):
+        raise ValueError(
+            "Binary metrics require aligned, nonempty, finite 1D targets and scores"
+        )
+    if not np.isin(y_true, [0, 1]).all() or not ((0 <= y_score) & (y_score <= 1)).all():
+        raise ValueError(
+            "Binary metrics require targets 0/1 and probabilities in [0, 1]"
+        )
     out: dict[str, float] = {}
     if set(names) & {"accuracy", "f1"}:
         y_label = (y_score >= 0.5).astype(int)

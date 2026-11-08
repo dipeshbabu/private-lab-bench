@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import train_test_split
 
@@ -30,18 +31,18 @@ class RandomForestMoleculeAdapter:
     def evaluate(
         self, dataset: MoleculeDataset, *, test_size: float = 0.25, seed: int = 13
     ) -> dict[str, object]:
+        y = dataset.validated_targets()
         featurizer = build_fingerprint_adapter(
             self.fingerprint, n_bits=self.n_bits, radius=self.radius
         )
         x = featurizer.transform(dataset.smiles)
         stratify = (
-            dataset.y
-            if dataset.task_type == "classification"
-            and len(set(dataset.y.tolist())) > 1
+            y
+            if dataset.task_type == "classification" and len(np.unique(y)) > 1
             else None
         )
         x_train, x_test, y_train, y_test = train_test_split(
-            x, dataset.y, test_size=test_size, random_state=seed, stratify=stratify
+            x, y, test_size=test_size, random_state=seed, stratify=stratify
         )
 
         if dataset.task_type == "classification":
@@ -51,12 +52,14 @@ class RandomForestMoleculeAdapter:
                 class_weight="balanced",
             )
             model.fit(x_train, y_train.astype(int))
-            if hasattr(model, "predict_proba"):
-                y_train_score = model.predict_proba(x_train)[:, 1]
-                y_score = model.predict_proba(x_test)[:, 1]
+            positive = np.flatnonzero(model.classes_ == 1)
+            if len(positive):
+                y_train_score = model.predict_proba(x_train)[:, positive[0]]
+                y_score = model.predict_proba(x_test)[:, positive[0]]
             else:
-                y_train_score = model.predict(x_train)
-                y_score = model.predict(x_test)
+                # A model trained on class zero has no class-one probability column.
+                y_train_score = np.zeros(len(x_train))
+                y_score = np.zeros(len(x_test))
             metrics = classification_metrics(y_test.astype(int), y_score)
             slices = classification_error_slices(y_test.astype(int), y_score)
         else:

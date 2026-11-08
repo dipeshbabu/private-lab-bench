@@ -22,6 +22,24 @@ class MoleculeDataset:
     def n_samples(self) -> int:
         return len(self.smiles)
 
+    def validated_targets(self) -> np.ndarray:
+        """Validate before a learner can truncate or reinterpret classification labels."""
+        if self.task_type not in {"regression", "classification"}:
+            raise ValueError("task_type must be 'regression' or 'classification'")
+        values = np.asarray(self.y, dtype=float)
+        if (
+            values.ndim != 1
+            or len(values) != self.n_samples
+            or not len(values)
+            or not np.isfinite(values).all()
+        ):
+            raise ValueError(
+                "Molecule targets must be aligned, nonempty, finite 1D values"
+            )
+        if self.task_type == "classification" and not np.isin(values, [0, 1]).all():
+            raise ValueError("Molecule classification requires binary targets 0/1")
+        return values
+
 
 def infer_task_type(values: Iterable[float]) -> str:
     unique = sorted(set(float(v) for v in values))
@@ -49,9 +67,11 @@ def load_molecule_csv(
 
     y = df[target].astype(float).to_numpy()
     inferred = task_type or infer_task_type(y)
-    if inferred not in {"regression", "classification"}:
-        raise ValueError("task_type must be 'regression' or 'classification'")
-    return MoleculeDataset(smiles=smiles, y=y, task_type=inferred, target_column=target)
+    dataset = MoleculeDataset(
+        smiles=smiles, y=y, task_type=inferred, target_column=target
+    )
+    dataset.validated_targets()
+    return dataset
 
 
 def hashed_smiles_fingerprints(

@@ -63,7 +63,11 @@ def summarize_sites(
     for site, value in zip(sites, values):
         if site.get("privacy_mode", "none") == "none" and (
             (metric in {"mae", "rmse", "log_loss"} and value < 0)
-            or (metric not in {"mae", "rmse", "log_loss", "r2"} and not 0 <= value <= 1)
+            or (
+                metric not in {"mae", "rmse", "log_loss", "r2", "spearman"}
+                and not 0 <= value <= 1
+            )
+            or (metric == "spearman" and not -1 <= value <= 1)
             or (metric == "r2" and value > 1)
         ):
             raise ValueError("Exact metric estimate is outside its mathematical range")
