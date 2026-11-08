@@ -110,6 +110,11 @@ def _shareable_uncertainty(
             "seed": payload.get("seed"),
             "metric_basis": payload.get("metric_basis"),
             "released_metric_basis": "reported_metrics",
+            **{
+                key: payload[key]
+                for key in ("n_samples", "n_independent_units", "sampling")
+                if key in payload
+            },
             "reason": "Intervals were computed for clean local metrics and are not attached to perturbed released metrics.",
         }
     return payload

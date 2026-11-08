@@ -19,7 +19,7 @@
         "assume_disjoint_sites": {"type": "boolean"},
         "range_threshold": {"type": ["number", "null"], "minimum": 0},
         "models": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["model", "sites", "summary"], "properties": {"model": {"$ref": "#/$defs/model"}, "sites": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/site"}}, "summary": {"type": "object", "required": ["total_samples", "n_sites", "range", "pooled"]}}, "additionalProperties": false}},
-        "paired_sites": {"type": "array", "items": {"type": "object", "required": ["site", "n_samples", "improvement_a_over_b", "interval"], "properties": {"site": {"type": "string"}, "n_samples": {"type": "integer", "minimum": 2}, "improvement_a_over_b": {"type": "number"}, "interval": {"type": "object"}}, "additionalProperties": false}},
+        "paired_sites": {"type": "array", "items": {"type": "object", "required": ["site", "n_samples", "improvement_a_over_b", "interval"], "properties": {"site": {"type": "string"}, "n_samples": {"type": "integer", "minimum": 2}, "n_independent_units": {"type": "integer", "minimum": 2}, "improvement_a_over_b": {"type": "number"}, "interval": {"type": "object"}}, "additionalProperties": false}},
         "paired_models": {"type": "array", "items": {"$ref": "#/$defs/model"}},
         "limitations": {"type": "array", "items": {"type": "string"}},
         "release": {"type": "object"}
@@ -34,6 +34,6 @@
   "additionalProperties": false,
   "$defs": {
     "model": {"type": "object", "required": ["id", "revision"], "properties": {"id": {"type": "string"}, "revision": {"type": "string"}}, "additionalProperties": false},
-    "site": {"type": "object", "required": ["site", "n_samples", "estimate", "interval", "confidence_level", "privacy_mode"], "properties": {"site": {"type": "string"}, "n_samples": {"type": "integer", "minimum": 2}, "estimate": {"type": "number"}, "interval": {"type": "object"}, "confidence_level": {"type": ["number", "null"], "exclusiveMinimum": 0, "exclusiveMaximum": 1}, "privacy_mode": {"enum": ["none", "metric_perturbation"]}}, "additionalProperties": false}
+    "site": {"type": "object", "required": ["site", "n_samples", "estimate", "interval", "confidence_level", "privacy_mode"], "properties": {"site": {"type": "string"}, "n_samples": {"type": "integer", "minimum": 2}, "n_independent_units": {"type": "integer", "minimum": 2}, "estimate": {"type": "number"}, "interval": {"type": "object"}, "confidence_level": {"type": ["number", "null"], "exclusiveMinimum": 0, "exclusiveMaximum": 1}, "privacy_mode": {"enum": ["none", "metric_perturbation"]}}, "additionalProperties": false}
   }
 }

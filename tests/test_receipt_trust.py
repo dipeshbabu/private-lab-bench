@@ -213,6 +213,147 @@ def test_hmac_remains_bilateral_without_public_identity(tmp_path):
     )["valid"]
 
 
+@pytest.mark.parametrize("replacement", ["unsigned-passing", "malformed"])
+def test_quality_gate_uses_the_authenticated_snapshot_after_path_replacement(
+    signed, tmp_path, monkeypatch, capsys, replacement
+):
+    path, payload, trust, signer = signed
+    payload["shareable"]["evaluation"]["metrics"]["mae"] = 1.0
+    _write(path, sign_artifact(payload, signer))
+    incoming = deepcopy(payload)
+    incoming["shareable"]["evaluation"]["metrics"]["mae"] = 0.0
+    incoming.pop("signer_statement", None)
+    changed = (
+        json.dumps(attach_integrity_metadata(incoming))
+        if replacement == "unsigned-passing"
+        else "{invalid json"
+    )
+    store, policy = tmp_path / "trust.yaml", tmp_path / "quality.yaml"
+    store.write_text(yaml.safe_dump(trust), encoding="utf-8")
+    policy.write_text(
+        yaml.safe_dump(
+            {"schema_version": "quality-policy/v1", "metric": {"mae": {"max": 0.5}}}
+        ),
+        encoding="utf-8",
+    )
+    original = Path.read_text
+    replaced = False
+
+    def read_then_replace(self, *args, **kwargs):
+        nonlocal replaced
+        text = original(self, *args, **kwargs)
+        if self == path and not replaced:
+            replaced = True
+            swapped = tmp_path / "replacement.json"
+            swapped.write_text(changed, encoding="utf-8")
+            swapped.replace(path)
+        return text
+
+    monkeypatch.setattr(Path, "read_text", read_then_replace)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "plb",
+            "gate",
+            str(path),
+            "--policy",
+            str(policy),
+            "--trust-store",
+            str(store),
+            "--require-trusted-signer",
+        ],
+    )
+    assert main() == 1
+    result = json.loads(capsys.readouterr().out)
+    assert replaced
+    assert result["status"] == "fail"
+    assert result["source_evidence_level"] == "authenticated_signer_statement"
+    assert result["rules"][0]["observed"] == 1.0
+
+
+@pytest.mark.parametrize("replacement", ["unsigned-changed", "malformed"])
+def test_signing_uses_the_same_source_snapshot_that_passed_integrity(
+    signed, tmp_path, monkeypatch, replacement
+):
+    _, payload, trust, signer = signed
+    payload.pop("signer_statement", None)
+    evaluation = payload["shareable"]["evaluation"]
+    evaluation.update(
+        metrics={"mae": 1.0}, uncertainty={}, slices={}, sample_counts={"n_samples": 8}
+    )
+    payload["shareable"]["privacy"].update(
+        mechanism={"mode": "none"},
+        release={"status": "pass", "publishable": True, "decision": "allow"},
+    )
+    source = _write(
+        tmp_path / "hmac-source.json",
+        attach_integrity_metadata(payload, signing_secret="synthetic-bilateral-secret"),
+    )
+    incoming = deepcopy(payload)
+    incoming["shareable"]["evaluation"]["metrics"]["mae"] = 0.0
+    changed = (
+        json.dumps(attach_integrity_metadata(incoming))
+        if replacement == "unsigned-changed"
+        else "[invalid json"
+    )
+    policy = tmp_path / "release.yaml"
+    policy.write_text(
+        yaml.safe_dump(
+            {
+                "schema_version": "release-policy/v1",
+                "id": "snapshot-regression",
+                "enabled": True,
+                "min_samples": 2,
+                "min_cell_size": 2,
+                "require_privacy_audit": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "output" / "signed.json"
+    original = Path.read_text
+    replaced = False
+
+    def read_then_replace(self, *args, **kwargs):
+        nonlocal replaced
+        text = original(self, *args, **kwargs)
+        if self == source and not replaced:
+            replaced = True
+            swapped = tmp_path / "replacement.json"
+            swapped.write_text(changed, encoding="utf-8")
+            swapped.replace(source)
+        return text
+
+    monkeypatch.setattr(Path, "read_text", read_then_replace)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "plb",
+            "sign",
+            str(source),
+            "--policy",
+            str(policy),
+            "--signing-secret",
+            "synthetic-bilateral-secret",
+            "--private-key",
+            signer["private_key"],
+            "--signer-id",
+            "lab-a",
+            "--key-id",
+            "lab-a-2026",
+            "--out",
+            str(output),
+        ],
+    )
+    assert main() == 0
+    assert replaced
+    result = json.loads(original(output, encoding="utf-8"))
+    assert result["shareable"]["evaluation"]["metrics"]["mae"] == 1.0
+    assert verify_receipt(output, trust_store=trust, require_trusted_signer=True)[
+        "valid"
+    ]
+
+
 def test_cli_json_and_exit_codes_keep_outcomes_separate(
     signed, tmp_path, monkeypatch, capsys
 ):

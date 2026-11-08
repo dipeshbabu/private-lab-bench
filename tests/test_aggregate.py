@@ -67,6 +67,221 @@ def write(path, payload):
     return path
 
 
+def clustered_sources(
+    tmp_path, family, units, *, transform=None, legacy_transform=None
+):
+    models = (
+        [MODEL] if family != "paired" else [MODEL, {"id": "baseline", "revision": "1"}]
+    )
+    sources = []
+    for name in ("a", "b"):
+        uncertainty = {
+            "status": "evaluated",
+            "method": "cluster_percentile_bootstrap",
+            "sampling": "independent_clusters",
+            "metric_basis": "clean_metrics",
+            "n_samples": 100,
+            "n_independent_units": units,
+            "confidence_level": 0.95,
+            "metrics": {
+                "mae": {
+                    "status": "evaluated",
+                    "estimate": 0.2,
+                    "lower": 0.1,
+                    "upper": 0.3,
+                }
+            },
+        }
+        if family != "paired":
+            path = receipt(tmp_path, name, n=100)
+            value = json.loads(path.read_text())
+            value["shareable"]["evaluation"]["uncertainty"] = uncertainty
+            if family == "perturbed_evaluation":
+                value["shareable"]["privacy"]["mechanism"]["mode"] = (
+                    "metric_perturbation"
+                )
+        else:
+            value = {
+                "schema_version": "paired-comparison-artifact/v1",
+                "scope": "local",
+                "shareable": {
+                    "comparison_schema": "paired-comparison/v1",
+                    "task_type": "regression",
+                    "protocol": resolve_protocol(
+                        "plb://generic/regression@1.0.0"
+                    ).identity(),
+                    "n_samples": 100,
+                    "metric": "mae",
+                    "direction": "lower_is_better",
+                    "metric_basis": "clean_metrics",
+                    "model_a": {"metrics": {"mae": 0.1}, "selected_metric": 0.1},
+                    "model_b": {"metrics": {"mae": 0.3}, "selected_metric": 0.3},
+                    "improvement_a_over_b": 0.2,
+                    "raw_delta_a_minus_b": -0.2,
+                    "paired_interval": {
+                        **{
+                            key: value
+                            for key, value in uncertainty.items()
+                            if key != "metrics"
+                        },
+                        "method": "paired_cluster_percentile_bootstrap",
+                        "estimate": 0.2,
+                        "lower": 0.1,
+                        "upper": 0.3,
+                    },
+                },
+                "local": {},
+            }
+        output = tmp_path / "sources" / f"{name}.json"
+        if transform:
+            transform(value)
+        weak = release(
+            id=f"weak-source-{name}",
+            min_samples=2,
+            min_cell_size=2,
+        )
+        assert publish_shareable_artifact(value, weak, output).decision == "allow"
+        if legacy_transform:
+            legacy = json.loads(output.read_text(encoding="utf-8"))
+            legacy_transform(legacy)
+            write(output, legacy)
+        sources.append(output)
+    return aggregate_receipts(sources, models=models), models
+
+
+@pytest.mark.parametrize("family", ["evaluation", "paired", "perturbed_evaluation"])
+def test_stronger_aggregate_policy_rechecks_source_population_units(tmp_path, family):
+    artifact, models = clustered_sources(tmp_path, family, 2)
+    decision, public = check_release(artifact, release(public_models=models))
+    assert decision.decision != "allow" and public is None
+
+
+@pytest.mark.parametrize("family", ["evaluation", "paired", "perturbed_evaluation"])
+def test_adequate_population_provenance_survives_aggregate_export(tmp_path, family):
+    artifact, models = clustered_sources(tmp_path, family, 20)
+    decision, public = check_release(artifact, release(public_models=models))
+    assert decision.decision == "allow"
+    assert all(
+        site["n_independent_units"] == 20
+        for model in public["shareable"]["models"]
+        for site in model["sites"]
+    )
+    schema = json.loads(
+        Path(
+            "privatelabbench/data/schemas/cross-site-aggregate-v1.schema.json"
+        ).read_text()
+    )
+    import jsonschema
+
+    jsonschema.validate(attach_integrity_metadata(public), schema)
+
+
+@pytest.mark.parametrize("family", ["evaluation", "paired"])
+def test_legacy_hierarchical_statistics_need_explicit_population_metadata(
+    tmp_path, family
+):
+    def legacy(value):
+        block = (
+            value["shareable"]["evaluation"]["uncertainty"]
+            if family == "evaluation"
+            else value["shareable"]["paired_interval"]
+        )
+        block.pop("n_independent_units", None)
+        block.pop("sampling", None)
+        block["method"] = (
+            "hierarchical_percentile_bootstrap"
+            if family == "evaluation"
+            else "paired_hierarchical_percentile_bootstrap"
+        )
+
+    with pytest.raises(ValueError, match="independent-unit"):
+        clustered_sources(tmp_path, family, 20, legacy_transform=legacy)
+
+
+@pytest.mark.parametrize("family", ["evaluation", "paired"])
+@pytest.mark.parametrize("nested", ["metrics", "noninferiority"])
+def test_destination_floor_applies_recursively_to_statistical_evidence(
+    tmp_path, family, nested
+):
+    def add_nested(value):
+        block = (
+            value["shareable"]["evaluation"]["uncertainty"]["metrics"]["mae"]
+            if family == "evaluation"
+            else value["shareable"]["paired_interval"]
+        )
+        small = {
+            "status": "evaluated",
+            "n_independent_units": 2,
+            "lower": 0.123456,
+            "upper": 0.234567,
+        }
+        block[nested] = {"mae": small} if nested == "metrics" else small
+
+    artifact, models = clustered_sources(tmp_path, family, 20, transform=add_nested)
+    decision, public = check_release(artifact, release(public_models=models))
+    assert decision.decision == "allow"
+    intervals = (
+        [
+            site["interval"]
+            for model in public["shareable"]["models"]
+            for site in model["sites"]
+        ]
+        if family == "evaluation"
+        else [site["interval"] for site in public["shareable"]["paired_sites"]]
+    )
+    for interval in intervals:
+        child = interval[nested]["mae"] if nested == "metrics" else interval[nested]
+        assert child["status"] == "withheld_small_independent_unit_count"
+        assert not {"n_independent_units", "lower", "upper"} & set(child)
+    assert "0.123456" not in json.dumps(public)
+
+
+@pytest.mark.parametrize("contradictory", [False, True])
+def test_randomization_population_is_bound_even_without_a_paired_interval(
+    tmp_path, contradictory
+):
+    def change(value):
+        shared = value["shareable"]
+        if not contradictory:
+            shared["paired_interval"] = {}
+        shared["randomization_test"] = {
+            "status": "evaluated",
+            "method": "paired_cluster_randomization_swap",
+            "sampling": "independent_clusters",
+            "n_samples": 100,
+            "n_independent_units": 2,
+            "p_value": 0.1,
+        }
+
+    if contradictory:
+        with pytest.raises(ValueError, match="inconsistent"):
+            clustered_sources(tmp_path, "paired", 20, transform=change)
+    else:
+        artifact, models = clustered_sources(tmp_path, "paired", 20, transform=change)
+        assert check_release(artifact, release(public_models=models))[1] is None
+
+
+@pytest.mark.parametrize(
+    "damage", ["paired_count", "paired_units", "model_units", "legacy_small_interval"]
+)
+def test_paired_population_counts_must_match_each_model_site(tmp_path, damage):
+    artifact, models = clustered_sources(tmp_path, "paired", 20)
+    shared = artifact["shareable"]
+    if damage == "paired_count":
+        shared["paired_sites"][0]["n_samples"] = 99
+    elif damage == "paired_units":
+        shared["paired_sites"][0]["interval"]["n_independent_units"] = 21
+    elif damage == "model_units":
+        shared["models"][0]["sites"][0]["n_independent_units"] = 21
+    else:
+        for model in shared["models"]:
+            for site in model["sites"]:
+                site.pop("n_independent_units", None)
+        shared["paired_sites"][0]["interval"]["n_independent_units"] = 2
+    decision, public = check_release(artifact, release(public_models=models))
+    assert decision.decision != "allow" and public is None
+
+
 def release(**extra):
     return {
         "schema_version": "release-policy/v1",

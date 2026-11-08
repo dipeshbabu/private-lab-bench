@@ -1,5 +1,17 @@
 # Aggregate results across sites
 
+Declared independent-unit counts stay attached to each site's point estimate and
+interval, including paired comparisons. Before publication, each declared count
+must meet the destination policy's larger `min_samples`/`min_cell_size` floor.
+A weaker source approval does not waive this new review. Clustered statistics
+with missing counts, contradictory counts, or counts that exceed the observations
+are rejected. Paired evidence must match the corresponding model/site population.
+Legacy IID receipts without independent-unit metadata remain readable.
+
+Rebuild older local aggregates from their original receipts before exporting:
+older scalar aggregates could discard this sampling metadata. The counts remain
+evaluator declarations; these checks do not independently verify participant IDs.
+
 `plb aggregate` consumes verified **shareable** artifacts. It does not load raw tables, targets, or predictions. Every input must declare the same exact protocol ID, version, digest, metrics, task, input schema, benchmark identity, and metric basis. Local receipts, duplicate receipts, missing model/site combinations, and incompatible definitions are rejected.
 
 First run each local dataset under an approved versioned protocol. Its release policy must explicitly approve `include_protocol: true`. Exchange only the resulting `.shareable.json` receipts.

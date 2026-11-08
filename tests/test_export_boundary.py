@@ -277,6 +277,56 @@ def test_clean_intervals_and_slices_are_withheld_for_perturbed_metrics():
     assert released["slices"] == {}
 
 
+def test_perturbed_receipt_production_retains_population_counts_without_clean_bounds(
+    tmp_path,
+):
+    from privatelabbench.reports.receipt import build_evaluation_receipt
+
+    report, manifest = tmp_path / "report.json", tmp_path / "manifest.json"
+    report.write_text(
+        json.dumps(
+            {
+                "privacy": {"mode": "metric_perturbation"},
+                "result": {
+                    "task_type": "regression",
+                    "n_samples": 100,
+                    "clean_metrics": {"mae": 999.0},
+                    "reported_metrics": {"mae": 0.2},
+                    "privacy_gate": {"status": "pass", "publishable": True},
+                    "uncertainty": {
+                        "status": "evaluated",
+                        "method": "cluster_percentile_bootstrap",
+                        "sampling": "independent_clusters",
+                        "metric_basis": "clean_metrics",
+                        "n_samples": 100,
+                        "n_independent_units": 2,
+                        "metrics": {
+                            "mae": {"estimate": 999.0, "lower": 900.0, "upper": 1000.0}
+                        },
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest.write_text("{}", encoding="utf-8")
+    value = build_evaluation_receipt(
+        summary={},
+        report_path=report,
+        manifest_path=manifest,
+        config_path=tmp_path / "config.yaml",
+    )
+    uncertainty = value["shareable"]["evaluation"]["uncertainty"]
+    assert uncertainty["n_samples"] == 100 and uncertainty["n_independent_units"] == 2
+    assert uncertainty["sampling"] == "independent_clusters"
+    assert "metrics" not in uncertainty
+    weak, public = check_release(value, policy())
+    assert weak.decision == "allow"
+    assert public["shareable"]["evaluation"]["uncertainty"]["n_independent_units"] == 2
+    assert "999.0" not in json.dumps(public)
+    assert check_release(value, policy(min_samples=20, min_cell_size=5))[1] is None
+
+
 def test_repeated_changed_releases_require_audited_review(tmp_path):
     output = tmp_path / "receipt.shareable.json"
     value = candidate()
