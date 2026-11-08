@@ -36,8 +36,9 @@ verify model execution or scientific validity.
 ## Extension boundaries
 
 The three extensions added in v0.1.3 have explicit limits. The sandbox supports
-CPU Python scripts in an operator-reviewed image, rather than participant images
-or large multi-file/GPU checkpoints. Its controls and tests do not constitute an
+CPU Python scripts in an operator-reviewed image. The unreleased model-package
+format adds bounded, multi-file CPU models; participant images and GPU execution
+remain unsupported. Its controls and tests do not constitute an
 independent security audit. OpenDP currently supports bounded means with fixed
 public size and row-level replace-one adjacency; the application must maintain
 accounting across processes and restarts. Its upstream `contrib` status and

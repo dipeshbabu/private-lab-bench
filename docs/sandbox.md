@@ -127,7 +127,7 @@ cleanup. GPU execution and independent security audit are still unverified.
 
 Every run requests gVisor, a non-root UID, no Linux capabilities, no new
 privileges, no network, no IPC sharing, a read-only root filesystem, and only the
-script mount. Scratch space is a size-limited, non-executable tmpfs. Docker
+script or package mount. Scratch space is a size-limited, non-executable tmpfs. Docker
 memory/swap/CPU/PID limits and process/file descriptor/file-size limits constrain
 resource use. A wall-time/output watchdog terminates execution and removes only
 the uniquely named container created for that run. Cleanup failure is an error.
