@@ -49,13 +49,13 @@ jobs:
       - name: Install protein controls
         if: matrix.ecosystem == 'proteingym'
         run: python -m pip install -e '.[dev,proteingym]'
-      - name: Compare all six TDC tasks over five training seeds
+      - name: Compare all eight TDC tasks over five training seeds
         if: matrix.ecosystem == 'tdc'
         run: python -m scripts.validate_tdc_admet --download --cache-dir "$RUNNER_TEMP/public-reference" --output-dir "$RUNNER_TEMP/parity"
-      - name: Compare all five Matbench tasks and folds with both controls
+      - name: Compare all seven Matbench tasks and folds with both controls
         if: matrix.ecosystem == 'matbench'
         run: python -m scripts.validate_matbench --download --cache-dir "$RUNNER_TEMP/public-reference" --output-dir "$RUNNER_TEMP/parity"
-      - name: Compare ten assays and execute the actual upstream summary pipeline
+      - name: Compare twelve assays and execute the actual upstream summary pipeline
         if: matrix.ecosystem == 'proteingym'
         run: python -m scripts.validate_proteingym --download --run-upstream-pipeline --cache-dir "$RUNNER_TEMP/public-reference" --output-dir "$RUNNER_TEMP/parity"
       - name: Retain aggregate parity evidence without rows, predictions, or keys

@@ -1,6 +1,6 @@
 # Matbench materials evaluation
 
-Evaluate external predictions on five pinned [Matbench](https://github.com/materialsproject/matbench) tasks while preserving official row identities, units, and five-fold validation definitions. Material features remain the responsibility of the model and upstream tooling; PLB scores prediction tables and generates receipts.
+Evaluate external predictions on seven pinned [Matbench](https://github.com/materialsproject/matbench) tasks while preserving official row identities, units, and five-fold validation definitions. Material features remain the responsibility of the model and upstream tooling; PLB scores prediction tables and generates receipts.
 
 | Task | Input type | Records | Official primary metric | Target unit | Protocol |
 | --- | --- | ---: | --- | --- | --- |
@@ -9,6 +9,8 @@ Evaluate external predictions on five pinned [Matbench](https://github.com/mater
 | `matbench_jdft2d` | Structure | 636 | MAE | meV/atom | `plb://matbench/jdft2d@1.0.0` |
 | `matbench_expt_gap` | Composition | 4,604 | MAE | eV | `plb://matbench/expt-gap@1.0.0` |
 | `matbench_glass` | Composition | 5,680 | Probability ROC-AUC | Binary false/true | `plb://matbench/glass@1.0.0` |
+| `matbench_phonons` | Structure | 1,265 | MAE | 1/cm | `plb://matbench/phonons@1.0.0` |
+| `matbench_dielectric` | Structure | 4,764 | MAE | Dimensionless refractive index | `plb://matbench/dielectric@1.0.0` |
 
 These definitions come from the pinned [upstream task metadata](https://github.com/materialsproject/matbench/blob/35f88110a51adf817a53515780d99fc34f614bf8/matbench/matbench_v0.1_dataset_metadata.json). Unsupported tasks/metrics fail explicitly; this initial subset does not claim full-suite coverage.
 
@@ -61,7 +63,7 @@ The fetcher verifies the manifest's pinned file hashes and keeps the upstream li
 
 The opt-in real-data script obtains train/test frames through Matbench's own loader, checks exact IDs and labels, records every fold through its API, and compares PLB's scores **and task aggregation** at absolute tolerance `1e-12`. It uses a training-fold mean baseline and seeded fixed-random predictions as reproducibility controls, not competitive models. The low-probability classification control exercises the corrected AUC behavior.
 
-The checked-in [aggregate verification record](https://github.com/dipeshbabu/private-lab-bench/blob/main/examples/matbench/verification.json) covers 50 real fold evaluations across five tasks and two controls, with verified receipts, source hashes, and exact dependency versions. It contains no dataset rows, structures, compositions, or prediction tables.
+The checked-in [aggregate verification record](https://github.com/dipeshbabu/private-lab-bench/blob/main/examples/matbench/verification.json) covers 70 real fold evaluations across seven tasks and two controls, with verified receipts, source hashes, and exact dependency versions. It contains no dataset rows, structures, compositions, or prediction tables.
 
 ## Release approved aggregate results
 

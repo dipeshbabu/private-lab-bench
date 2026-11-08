@@ -6,6 +6,7 @@
 
 - Accept digest-pinned, multi-file CPU model packages in the Linux/gVisor executor. A bounded, uncompressed ZIP manifest declares every file; the host validates paths and hashes before mounting a read-only snapshot, and model code executes only inside the guest.
 - Persist OpenDP bounded-mean charges in an explicit, shared SQLite ledger with atomic sequential composition across processes, exact spend reconstruction, restart recovery, and fail-closed storage errors. Local operators must protect the database and journal against deletion, rollback, or cloning.
+- Expand the pinned scientific subset to eight TDC ADMET tasks, seven Matbench tasks, and twelve ProteinGym substitution assays, with new versioned protocols, strict result contracts, and upstream parity controls.
 
 ### Fixed
 

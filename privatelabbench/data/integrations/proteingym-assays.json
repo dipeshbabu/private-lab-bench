@@ -96,6 +96,24 @@
       "function": "Activity",
       "taxon": "Human",
       "n_variants": 7260
+    },
+    {
+      "id": "GFP_AEQVI_Sarkisyan_2016",
+      "filename": "GFP_AEQVI_Sarkisyan_2016.csv",
+      "sha256": "05b97d36a23363331b271edc56f1496b9a539109fd006e65532f91e9903a0838",
+      "uniprot_id": "GFP_AEQVI",
+      "function": "Activity",
+      "taxon": "Eukaryote",
+      "n_variants": 51714
+    },
+    {
+      "id": "BRCA1_HUMAN_Findlay_2018",
+      "filename": "BRCA1_HUMAN_Findlay_2018.csv",
+      "sha256": "abde5d47e84b1feeac6c32b60c1f3b5d2881accf3ceccfbadccceeea73e81c43",
+      "uniprot_id": "BRCA1_HUMAN",
+      "function": "OrganismalFitness",
+      "taxon": "Human",
+      "n_variants": 1837
     }
   ]
 }

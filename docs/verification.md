@@ -18,8 +18,8 @@ entry-point metadata, execute it, and produce a verifiable local receipt.
 [Real scientific parity](https://github.com/dipeshbabu/private-lab-bench/actions/workflows/scientific-parity.yml)
 runs weekly at Monday 07:23 UTC, on changes to its workflow/parity/integration
 definitions on main or Codex branches, and by manual dispatch. It checks all
-six supported TDC tasks over five training seeds, all five supported Matbench
-tasks/folds with two controls, and ten ProteinGym assays including the actual
+eight supported TDC tasks over five training seeds, all seven supported Matbench
+tasks/folds with two controls, and twelve ProteinGym assays including the actual
 upstream summary pipeline. Public inputs are checksum-pinned. Only aggregate
 `verification.json` records are uploaded; no rows, predictions, model parameters,
 or signing keys enter the result artifacts.

@@ -1,0 +1,57 @@
+schema_version: evaluation-protocol/v1
+id: plb://matbench/phonons
+version: 1.0.0
+task: predictions
+task_type: regression
+input_schema:
+  schema_version: prediction-table/v1
+  require_sample_id: true
+  class_labels: []
+metrics:
+- mae
+primary_metric: mae
+uncertainty:
+  enabled: false
+  confidence_level: 0.95
+  resamples: 1000
+  seed: 13
+  min_samples: 20
+  include_slices: false
+  method: percentile_bootstrap
+slices:
+  required: []
+  optional:
+  - site
+  - batch
+  min_size: 5
+comparison:
+  metric: mae
+  confidence_level: 0.95
+  resamples: 1000
+  permutations: 1000
+  seed: 13
+  min_samples: 20
+  practical_threshold: 0.0
+  noninferiority_margin: null
+  include_slice_uncertainty: false
+  min_slice_size: 5
+quality_gate: null
+privacy:
+  mode: none
+  epsilon: 8.0
+  sensitivity: 1.0
+  seed: 13
+release:
+  schema_version: release-policy/v1
+  id: matbench-phonons-v1
+  enabled: false
+  min_samples: 20
+  min_cell_size: 5
+  require_privacy_audit: false
+  include_protocol: false
+artifact_versions:
+  report: '0.2'
+  receipt: evaluation-receipt/v1
+  uncertainty: uncertainty/v1
+  comparison: paired-comparison-artifact/v1
+target_unit: 1/cm

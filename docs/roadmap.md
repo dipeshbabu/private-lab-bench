@@ -19,7 +19,7 @@ that still needs implementation or outside evidence.
   limits, and adversarial runtime checks. Predictions remain local.
 - Synthetic molecule, tabular, and protein packs, plus pinned TDC ADMET,
   Matbench, and ProteinGym integrations checked against upstream implementations:
-  six ADMET tasks, five materials tasks, and ten DMS substitution assays.
+  eight ADMET tasks, seven materials tasks, and twelve DMS substitution assays.
 - Bounded-query privacy reference mechanisms and sequential budget accounting.
   These remain separate from privacy attacks and experimental metric noise.
 - An optional [OpenDP bounded-mean backend](privacy.md#optional-opendp-backend)

@@ -9,6 +9,262 @@
   ],
   "records": [
     {
+      "data_sha256": "4db551f21ec5f577e6202725f10e34dfc509aa7df3a6bdaac497da7f6dbbb9b3",
+      "dataset": "matbench_phonons",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 0.0,
+          "fold": 0,
+          "n_test": 253,
+          "n_train": 1012,
+          "score": 337.1003191459398,
+          "upstream_score": 337.1003191459398
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 1,
+          "n_test": 253,
+          "n_train": 1012,
+          "score": 299.1208996532002,
+          "upstream_score": 299.1208996532002
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 2,
+          "n_test": 253,
+          "n_train": 1012,
+          "score": 348.2576371781606,
+          "upstream_score": 348.2576371781606
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 253,
+          "n_train": 1012,
+          "score": 325.2401539684387,
+          "upstream_score": 325.2401539684387
+        },
+        {
+          "absolute_error": 5.684341886080802e-14,
+          "fold": 4,
+          "n_test": 253,
+          "n_train": 1012,
+          "score": 310.1921212553003,
+          "upstream_score": 310.19212125530026
+        }
+      ],
+      "metric": "mae",
+      "plb_statistics": {
+        "max": 348.2576371781606,
+        "mean": 323.9822262402079,
+        "min": 299.1208996532002,
+        "std": 17.726899757261393
+      },
+      "protocol": "plb://matbench/phonons@1.0.0",
+      "strategy": "mean",
+      "target_unit": "1/cm",
+      "upstream_metric": "mae",
+      "upstream_statistics": {
+        "max": 348.2576371781606,
+        "mean": 323.9822262402079,
+        "min": 299.1208996532002,
+        "std": 17.7268997572614
+      }
+    },
+    {
+      "data_sha256": "4db551f21ec5f577e6202725f10e34dfc509aa7df3a6bdaac497da7f6dbbb9b3",
+      "dataset": "matbench_phonons",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 0.0,
+          "fold": 0,
+          "n_test": 253,
+          "n_train": 1012,
+          "score": 571.2612994881781,
+          "upstream_score": 571.2612994881781
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 1,
+          "n_test": 253,
+          "n_train": 1012,
+          "score": 523.8552267980162,
+          "upstream_score": 523.8552267980162
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 2,
+          "n_test": 253,
+          "n_train": 1012,
+          "score": 528.2877278734148,
+          "upstream_score": 528.2877278734148
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 253,
+          "n_train": 1012,
+          "score": 528.6017567927114,
+          "upstream_score": 528.6017567927114
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 4,
+          "n_test": 253,
+          "n_train": 1012,
+          "score": 508.9293403373649,
+          "upstream_score": 508.9293403373649
+        }
+      ],
+      "metric": "mae",
+      "plb_statistics": {
+        "max": 571.2612994881781,
+        "mean": 532.1870702579371,
+        "min": 508.9293403373649,
+        "std": 20.809595623711605
+      },
+      "protocol": "plb://matbench/phonons@1.0.0",
+      "strategy": "fixed-random",
+      "target_unit": "1/cm",
+      "upstream_metric": "mae",
+      "upstream_statistics": {
+        "max": 571.2612994881781,
+        "mean": 532.1870702579371,
+        "min": 508.9293403373649,
+        "std": 20.809595623711605
+      }
+    },
+    {
+      "data_sha256": "83befa09bc2ec2f4b6143afc413157827a90e5e2e42c1eb507ccfa01bf26a1d6",
+      "dataset": "matbench_dielectric",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 0.0,
+          "fold": 0,
+          "n_test": 953,
+          "n_train": 3811,
+          "score": 0.7025642979783651,
+          "upstream_score": 0.7025642979783651
+        },
+        {
+          "absolute_error": 2.220446049250313e-16,
+          "fold": 1,
+          "n_test": 953,
+          "n_train": 3811,
+          "score": 0.781093389689686,
+          "upstream_score": 0.7810933896896862
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 2,
+          "n_test": 953,
+          "n_train": 3811,
+          "score": 0.9218171348811479,
+          "upstream_score": 0.9218171348811479
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 953,
+          "n_train": 3811,
+          "score": 0.8382437918041112,
+          "upstream_score": 0.8382437918041112
+        },
+        {
+          "absolute_error": 2.220446049250313e-16,
+          "fold": 4,
+          "n_test": 952,
+          "n_train": 3812,
+          "score": 0.8003812658485908,
+          "upstream_score": 0.800381265848591
+        }
+      ],
+      "metric": "mae",
+      "plb_statistics": {
+        "max": 0.9218171348811479,
+        "mean": 0.8088199760403801,
+        "min": 0.7025642979783651,
+        "std": 0.0717835125651647
+      },
+      "protocol": "plb://matbench/dielectric@1.0.0",
+      "strategy": "mean",
+      "target_unit": null,
+      "upstream_metric": "mae",
+      "upstream_statistics": {
+        "max": 0.9218171348811479,
+        "mean": 0.8088199760403804,
+        "min": 0.7025642979783651,
+        "std": 0.07178351256516467
+      }
+    },
+    {
+      "data_sha256": "83befa09bc2ec2f4b6143afc413157827a90e5e2e42c1eb507ccfa01bf26a1d6",
+      "dataset": "matbench_dielectric",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 0.0,
+          "fold": 0,
+          "n_test": 953,
+          "n_train": 3811,
+          "score": 1.9862042749809188,
+          "upstream_score": 1.9862042749809188
+        },
+        {
+          "absolute_error": 2.220446049250313e-16,
+          "fold": 1,
+          "n_test": 953,
+          "n_train": 3811,
+          "score": 1.9697616423772697,
+          "upstream_score": 1.9697616423772695
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 2,
+          "n_test": 953,
+          "n_train": 3811,
+          "score": 1.795734753097848,
+          "upstream_score": 1.795734753097848
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 953,
+          "n_train": 3811,
+          "score": 1.8314424314008086,
+          "upstream_score": 1.8314424314008086
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 4,
+          "n_test": 952,
+          "n_train": 3812,
+          "score": 1.9322417213928231,
+          "upstream_score": 1.9322417213928231
+        }
+      ],
+      "metric": "mae",
+      "plb_statistics": {
+        "max": 1.9862042749809188,
+        "mean": 1.9030769646499337,
+        "min": 1.795734753097848,
+        "std": 0.07597556941155123
+      },
+      "protocol": "plb://matbench/dielectric@1.0.0",
+      "strategy": "fixed-random",
+      "target_unit": null,
+      "upstream_metric": "mae",
+      "upstream_statistics": {
+        "max": 1.9862042749809188,
+        "mean": 1.9030769646499337,
+        "min": 1.795734753097848,
+        "std": 0.07597556941155119
+      }
+    },
+    {
       "data_sha256": "473bc4957b2ea5e6465aef84bc29bb48ac34db27d69ea4ec5f508745c6fae252",
       "dataset": "matbench_steels",
       "fold_receipts_verified": true,
@@ -393,134 +649,6 @@
       }
     },
     {
-      "data_sha256": "36beb654e2a463ee2a6572105bea0ca2961eee7c7b26a25377bff2c3b338e53a",
-      "dataset": "matbench_glass",
-      "fold_receipts_verified": true,
-      "folds": [
-        {
-          "absolute_error": 0.0,
-          "fold": 0,
-          "n_test": 1136,
-          "n_train": 4544,
-          "score": 0.5,
-          "upstream_score": 0.5
-        },
-        {
-          "absolute_error": 0.0,
-          "fold": 1,
-          "n_test": 1136,
-          "n_train": 4544,
-          "score": 0.5,
-          "upstream_score": 0.5
-        },
-        {
-          "absolute_error": 0.0,
-          "fold": 2,
-          "n_test": 1136,
-          "n_train": 4544,
-          "score": 0.5,
-          "upstream_score": 0.5
-        },
-        {
-          "absolute_error": 0.0,
-          "fold": 3,
-          "n_test": 1136,
-          "n_train": 4544,
-          "score": 0.5,
-          "upstream_score": 0.5
-        },
-        {
-          "absolute_error": 0.0,
-          "fold": 4,
-          "n_test": 1136,
-          "n_train": 4544,
-          "score": 0.5,
-          "upstream_score": 0.5
-        }
-      ],
-      "metric": "auroc",
-      "plb_statistics": {
-        "max": 0.5,
-        "mean": 0.5,
-        "min": 0.5,
-        "std": 0.0
-      },
-      "protocol": "plb://matbench/glass@1.0.0",
-      "strategy": "mean",
-      "target_unit": null,
-      "upstream_metric": "rocauc",
-      "upstream_statistics": {
-        "max": 0.5,
-        "mean": 0.5,
-        "min": 0.5,
-        "std": 0.0
-      }
-    },
-    {
-      "data_sha256": "36beb654e2a463ee2a6572105bea0ca2961eee7c7b26a25377bff2c3b338e53a",
-      "dataset": "matbench_glass",
-      "fold_receipts_verified": true,
-      "folds": [
-        {
-          "absolute_error": 0.0,
-          "fold": 0,
-          "n_test": 1136,
-          "n_train": 4544,
-          "score": 0.47677804017280406,
-          "upstream_score": 0.47677804017280406
-        },
-        {
-          "absolute_error": 0.0,
-          "fold": 1,
-          "n_test": 1136,
-          "n_train": 4544,
-          "score": 0.4809964482510556,
-          "upstream_score": 0.4809964482510556
-        },
-        {
-          "absolute_error": 0.0,
-          "fold": 2,
-          "n_test": 1136,
-          "n_train": 4544,
-          "score": 0.5152860796299854,
-          "upstream_score": 0.5152860796299854
-        },
-        {
-          "absolute_error": 0.0,
-          "fold": 3,
-          "n_test": 1136,
-          "n_train": 4544,
-          "score": 0.4788533462898725,
-          "upstream_score": 0.4788533462898725
-        },
-        {
-          "absolute_error": 0.0,
-          "fold": 4,
-          "n_test": 1136,
-          "n_train": 4544,
-          "score": 0.5220807297845975,
-          "upstream_score": 0.5220807297845975
-        }
-      ],
-      "metric": "auroc",
-      "plb_statistics": {
-        "max": 0.5220807297845975,
-        "mean": 0.49479892882566306,
-        "min": 0.47677804017280406,
-        "std": 0.019664905348863653
-      },
-      "protocol": "plb://matbench/glass@1.0.0",
-      "strategy": "fixed-random",
-      "target_unit": null,
-      "upstream_metric": "rocauc",
-      "upstream_statistics": {
-        "max": 0.5220807297845975,
-        "mean": 0.49479892882566306,
-        "min": 0.47677804017280406,
-        "std": 0.019664905348863653
-      }
-    },
-    {
       "data_sha256": "783e7d1461eb83b00b2f2942da4b95fda5e58a0d1ae26b581c24cf8a82ca75b2",
       "dataset": "matbench_expt_gap",
       "fold_receipts_verified": true,
@@ -646,6 +774,134 @@
         "mean": 1.5424118861566098,
         "min": 1.5263221806535374,
         "std": 0.009949050268260099
+      }
+    },
+    {
+      "data_sha256": "36beb654e2a463ee2a6572105bea0ca2961eee7c7b26a25377bff2c3b338e53a",
+      "dataset": "matbench_glass",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 0.0,
+          "fold": 0,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.5,
+          "upstream_score": 0.5
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 1,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.5,
+          "upstream_score": 0.5
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 2,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.5,
+          "upstream_score": 0.5
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.5,
+          "upstream_score": 0.5
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 4,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.5,
+          "upstream_score": 0.5
+        }
+      ],
+      "metric": "auroc",
+      "plb_statistics": {
+        "max": 0.5,
+        "mean": 0.5,
+        "min": 0.5,
+        "std": 0.0
+      },
+      "protocol": "plb://matbench/glass@1.0.0",
+      "strategy": "mean",
+      "target_unit": null,
+      "upstream_metric": "rocauc",
+      "upstream_statistics": {
+        "max": 0.5,
+        "mean": 0.5,
+        "min": 0.5,
+        "std": 0.0
+      }
+    },
+    {
+      "data_sha256": "36beb654e2a463ee2a6572105bea0ca2961eee7c7b26a25377bff2c3b338e53a",
+      "dataset": "matbench_glass",
+      "fold_receipts_verified": true,
+      "folds": [
+        {
+          "absolute_error": 0.0,
+          "fold": 0,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.47677804017280406,
+          "upstream_score": 0.47677804017280406
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 1,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.4809964482510556,
+          "upstream_score": 0.4809964482510556
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 2,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.5152860796299854,
+          "upstream_score": 0.5152860796299854
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 3,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.4788533462898725,
+          "upstream_score": 0.4788533462898725
+        },
+        {
+          "absolute_error": 0.0,
+          "fold": 4,
+          "n_test": 1136,
+          "n_train": 4544,
+          "score": 0.5220807297845975,
+          "upstream_score": 0.5220807297845975
+        }
+      ],
+      "metric": "auroc",
+      "plb_statistics": {
+        "max": 0.5220807297845975,
+        "mean": 0.49479892882566306,
+        "min": 0.47677804017280406,
+        "std": 0.019664905348863653
+      },
+      "protocol": "plb://matbench/glass@1.0.0",
+      "strategy": "fixed-random",
+      "target_unit": null,
+      "upstream_metric": "rocauc",
+      "upstream_statistics": {
+        "max": 0.5220807297845975,
+        "mean": 0.49479892882566306,
+        "min": 0.47677804017280406,
+        "std": 0.019664905348863653
       }
     }
   ],

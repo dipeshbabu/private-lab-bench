@@ -1,6 +1,6 @@
 # TDC ADMET integration
 
-Evaluate external predictions on six official [Therapeutics Data Commons ADMET](https://tdcommons.ai/benchmark/admet_group/overview/) tasks, then carry the same metric contract into private ADMET evaluation. TDC supplies the public benchmark definitions and data. PLB verifies the cached snapshot, aligns predictions, and writes its ordinary local reports and `evaluation-receipt/v1` artifacts.
+Evaluate external predictions on eight official [Therapeutics Data Commons ADMET](https://tdcommons.ai/benchmark/admet_group/overview/) tasks, then carry the same metric contract into private ADMET evaluation. TDC supplies the public benchmark definitions and data. PLB verifies the cached snapshot, aligns predictions, and writes its ordinary local reports and `evaluation-receipt/v1` artifacts.
 
 | Dataset | Task | Official metric | Train/validation pool | Fixed test records | PLB protocol |
 | --- | --- | --- | ---: | ---: | --- |
@@ -8,10 +8,12 @@ Evaluate external predictions on six official [Therapeutics Data Commons ADMET](
 | Pgp_Broccatelli | Binary classification | ROC-AUC, higher is better | 973 | 245 | `plb://tdc/admet/pgp-broccatelli@1.0.0` |
 | `ames` | classification | AUROC | 5,821 | 1,457 | `plb://tdc/admet/ames@1.0.0` |
 | `herg` | classification | AUROC | 523 | 132 | `plb://tdc/admet/herg@1.0.0` |
+| `bbb_martins` | classification | AUROC | 1,624 | 406 | `plb://tdc/admet/bbb-martins@1.0.0` |
+| `hia_hou` | classification | AUROC | 461 | 117 | `plb://tdc/admet/hia-hou@1.0.0` |
 | `lipophilicity_astrazeneca` | regression | MAE | 3,360 | 840 | `plb://tdc/admet/lipophilicity-astrazeneca@1.0.0` |
 | `solubility_aqsoldb` | regression | MAE | 7,985 | 1,997 | `plb://tdc/admet/solubility-aqsoldb@1.0.0` |
 
-This subset covers six of the ADMET group's tasks. Other datasets and metrics, including AUPRC and Spearman, are rejected by this adapter until their upstream definitions have their own tested contracts. `TDCTask` metadata and ordinary versioned protocols provide the extension boundary.
+This subset covers eight of the ADMET group's tasks. Other datasets and metrics, including AUPRC and Spearman, are rejected by this adapter until their upstream definitions have their own tested contracts. `TDCTask` metadata and ordinary versioned protocols provide the extension boundary.
 
 ## Install the optional reference environment
 
@@ -66,7 +68,7 @@ python scripts/validate_tdc_admet.py --download --cache-dir outputs/tdc --output
 
 The script trains a modest random forest on each official training split for seeds 1–5: Morgan fingerprints (radius 2, 2,048 bits), 128 trees, minimum leaf size 2, square-root feature sampling, and one CPU worker. Validation records are retained but not used to fit or tune this fixed baseline. The script compares PLB scores against the upstream raw evaluator at absolute tolerance `1e-12`, checks group rounding, and verifies every receipt. `--strategy mean` provides a cheaper constant baseline.
 
-The checked-in [aggregate verification record](https://github.com/dipeshbabu/private-lab-bench/blob/main/examples/tdc_admet/verification.json) contains 30 real runs across six tasks and five training seeds, exact dependency versions, counts, scores, and snapshot hashes. It contains no benchmark rows or model predictions. Synthetic contract tests exercise malformed submissions without network access; the separate TDC CI job also checks fixed-prediction parity against the actual upstream evaluator. Baseline scores are reproducibility evidence, not a leaderboard submission or a claim of competitive performance.
+The checked-in [aggregate verification record](https://github.com/dipeshbabu/private-lab-bench/blob/main/examples/tdc_admet/verification.json) contains 40 real runs across eight tasks and five training seeds, exact dependency versions, counts, scores, and snapshot hashes. It contains no benchmark rows or model predictions. Synthetic contract tests exercise malformed submissions without network access; the separate TDC CI job also checks fixed-prediction parity against the actual upstream evaluator. Baseline scores are reproducibility evidence, not a leaderboard submission or a claim of competitive performance.
 
 ## Reuse the metric contract privately
 

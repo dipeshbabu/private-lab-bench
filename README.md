@@ -149,13 +149,13 @@ Keeping rows local limits data movement, but aggregates can still disclose sensi
 | Isolate an untrusted Python model on a Linux/gVisor host | [Sandboxed execution](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/sandbox.md) |
 | Release a bounded mean with an explicit privacy budget | [Optional OpenDP backend](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/privacy.md#optional-opendp-backend) |
 
-The benchmark integrations reproduce pinned upstream scoring rules:
+The development branch's benchmark integrations reproduce pinned upstream scoring rules:
 
 | Ecosystem | Tested coverage |
 | --- | --- |
-| [TDC ADMET](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/tdc_admet.md) | Six tasks covering permeability, transport, mutagenicity, cardiotoxicity, lipophilicity, and solubility; official splits and MAE/AUROC checks |
-| [Matbench](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/matbench.md) | Five composition/structure tasks with official folds, target units, and aggregation |
-| [ProteinGym](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/proteingym.md) | Ten pinned substitution assays with assay Spearman and protein/function aggregation |
+| [TDC ADMET](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/tdc_admet.md) | Eight tasks covering permeability, absorption, transport, mutagenicity, cardiotoxicity, lipophilicity, and solubility; official splits and MAE/AUROC checks |
+| [Matbench](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/matbench.md) | Seven composition/structure tasks with official folds, target units, and aggregation |
+| [ProteinGym](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/proteingym.md) | Twelve pinned substitution assays with assay Spearman and protein/function aggregation |
 
 Sandbox execution requires a reviewed local runtime image and gVisor; it rejects
 missing isolation and keeps predictions private. The optional OpenDP backend

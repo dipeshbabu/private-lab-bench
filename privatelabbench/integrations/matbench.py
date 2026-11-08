@@ -77,6 +77,26 @@ class MatbenchTask:
 
 
 TASKS = {
+    "matbench_phonons": MatbenchTask(
+        "matbench_phonons",
+        "regression",
+        "structure",
+        "last phdos peak",
+        "1/cm",
+        1265,
+        "4db551f21ec5f577e6202725f10e34dfc509aa7df3a6bdaac497da7f6dbbb9b3",
+        (253, 253, 253, 253, 253),
+    ),
+    "matbench_dielectric": MatbenchTask(
+        "matbench_dielectric",
+        "regression",
+        "structure",
+        "n",
+        None,
+        4764,
+        "83befa09bc2ec2f4b6143afc413157827a90e5e2e42c1eb507ccfa01bf26a1d6",
+        (953, 953, 953, 953, 952),
+    ),
     "matbench_steels": MatbenchTask(
         "matbench_steels",
         "regression",
