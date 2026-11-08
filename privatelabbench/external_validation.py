@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from copy import deepcopy
 from hashlib import sha256
+from inspect import signature
 from io import BytesIO
 from typing import Any, Mapping
 from urllib.parse import urlsplit
@@ -144,7 +145,14 @@ def prepare_validation(config, path):
         basis = "input_file_bytes"
     else:
         frame = config.prepared_input
-        content = frame.to_csv(index=False, lineterminator="\n").encode("utf-8")
+        # pandas renamed this keyword in 1.5; retain explicit row newlines on
+        # both dependency lines without rewriting newlines inside quoted fields.
+        terminator = (
+            "lineterminator"
+            if "lineterminator" in signature(pd.DataFrame.to_csv).parameters
+            else "line_terminator"
+        )
+        content = frame.to_csv(index=False, **{terminator: "\n"}).encode("utf-8")
         basis = "audited_frame_csv"
     scoring = config.raw.get("scoring_provenance")
     if scoring is not None:

@@ -19,6 +19,8 @@ jobs:
       - uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.12"
+      - name: Enforce recorded release prerequisites
+        run: python scripts/check_release_readiness.py "${GITHUB_REF_NAME#v}"
       - name: Require all main-branch workflows and jobs for this exact SHA
         env:
           GH_TOKEN: ${{ github.token }}

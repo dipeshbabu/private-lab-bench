@@ -8,17 +8,25 @@ does not imply that every optional extra or every dependency version was tested.
 
 | Python | Linux | Windows | macOS |
 | --- | --- | --- | --- |
-| 3.10 | Full base suite + core smoke; legacy compatibility | Untested | Untested |
-| 3.11 | Full base suite + core smoke | Untested | Untested |
+| 3.10 | Full base suite + core smoke; legacy compatibility | Full base suite + core smoke | Full base suite + core smoke, Intel |
+| 3.11 | Full base suite + core smoke | Full base suite + core smoke | Full base suite + core smoke |
 | 3.12 | Full base suite + core smoke | Full base suite + core smoke | Full base suite + core smoke |
-| 3.13 | Full base suite + core smoke | Untested | Untested |
+| 3.13 | Full base suite + core smoke | Full base suite + core smoke | Full base suite + core smoke |
 | 3.14 | Full base suite + core smoke | Full base suite + core smoke | Full base suite + core smoke |
-| 3.15 | Full base suite + core smoke | Untested | Untested |
-| 3.14 free-threaded | Full base suite + core smoke | Untested | Untested |
+| 3.15 | Full base suite + core smoke | Full base suite + core smoke | Full base suite + core smoke |
+| 3.14 free-threaded | Full base suite + core smoke | Full base suite + core smoke | Full base suite + core smoke |
+| 3.15 free-threaded | Full base suite + core smoke | Full base suite + core smoke | Full base suite + core smoke |
 | 3.16 and newer | Untested | Untested | Untested |
 
-The matrix covers normal CPython and the Linux 3.14 free-threaded build. PyPy and
-other free-threaded/CPU architecture combinations remain unverified. The core
+Linux and Windows ARM64 also run Python 3.14 full-suite and installed-distribution
+checks. macOS 3.10 uses `macos-15-intel`; other macOS entries use `macos-latest`.
+Artifacts record the actual architecture and interpreter, and free-threaded
+checks require the GIL to remain disabled after runtime imports.
+
+The matrix covers normal CPython and the 3.14/3.15 free-threaded builds. PyPy and
+unlisted CPU architecture combinations remain unverified. The current pinned
+scientific stack has no PyPy wheels; older/source-built stacks were not validated.
+The core
 smoke checks that its free-threaded interpreter keeps the GIL disabled after
 loading the numerical dependencies; this does not make sequential APIs such as
 the in-memory privacy budget safe for concurrent application use. GitHub's
@@ -44,12 +52,15 @@ rejection. Evaluation stays local; the fixture includes no real private data.
 
 The jobs use UTF-8 mode and the representative pins in
 [`constraints/core.txt`](https://github.com/dipeshbabu/private-lab-bench/blob/main/constraints/core.txt).
-The full base suite runs every test file with the dev dependencies on all eleven
+The full base suite runs every test file with the dev dependencies on all twenty-six
 configured combinations. Optional scientific dependencies and Linux/gVisor checks
-run in separate Linux jobs. Coverage from all eighteen test jobs is combined and
+run in separate jobs, with OpenDP, RDKit, ProteinGym and Matbench additionally
+checked on Windows and macOS Python 3.12, plus TDC on Python 3.11. Coverage from all forty-six test jobs is combined and
 must meet 85% statement and 75% branch coverage; missing reports or source files
-fail the gate. Passing these environments does not verify every older version
-permitted by the package's dependency bounds.
+fail the gate. Separate Linux, Windows and Intel macOS Python 3.10 jobs exercise the full suite and both clean
+distributions with `constraints/minimum.txt`: NumPy 1.21.3, pandas 1.3.4,
+scikit-learn 1.0.2, SciPy 1.7.2 and PyYAML 6.0. These are an available lower
+wheel-supported combination, rather than every older patch admitted by metadata.
 
 The installed-distribution smoke also builds a separate third-party task-plugin
 wheel, installs it beside each core wheel/source installation, and executes the
@@ -60,11 +71,11 @@ fixture and is not shipped as part of the production package.
 
 | Component | Dedicated tested environment | Boundary |
 | --- | --- | --- |
-| TDC ADMET | Linux, Python 3.11, pinned PyTDC 0.4.1 reference environment | NumPy <2 and pandas <3; follow the [TDC guide](tdc_admet.md) |
-| Matbench | Linux, Python 3.12, pinned upstream reference | See [Matbench](matbench.md); core support does not establish extra compatibility |
-| ProteinGym | Linux, Python 3.11, pinned upstream reference | See [ProteinGym](proteingym.md) |
-| OpenDP | Linux, Python 3.10 and 3.12, OpenDP 0.16 | Optional bounded-mean backend; see [privacy assumptions](privacy.md#optional-opendp-backend) |
-| Chemistry adapters | Linux, Python 3.11, optional RDKit | Separate split/design-audit checks |
+| TDC ADMET | Linux, Windows and macOS, Python 3.11, pinned PyTDC 0.4.1 reference environment | NumPy <2 and pandas <3; follow the [TDC guide](tdc_admet.md) |
+| Matbench | Linux, Windows and macOS, Python 3.12, pinned upstream reference | See [Matbench](matbench.md); core support does not establish extra compatibility |
+| ProteinGym | Linux, Python 3.11; Windows/macOS, Python 3.12; pinned reference | See [ProteinGym](proteingym.md) |
+| OpenDP | Linux, Python 3.10/3.12; Windows/macOS, Python 3.12; OpenDP 0.16 | Optional bounded-mean backend; see [privacy assumptions](privacy.md#optional-opendp-backend) |
+| Chemistry adapters | Linux, Python 3.11; Windows/macOS, Python 3.12; optional RDKit | Separate split/design-audit checks |
 | Untrusted script execution | Linux, Python 3.11, Docker and pinned gVisor runtime | CPU scripts in a reviewed image; Windows/macOS core support does not provide this runtime |
 
 These environments remain separate from the cross-platform core matrix. The

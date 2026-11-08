@@ -10,6 +10,7 @@ import multiprocessing
 import platform
 import subprocess
 import sys
+import sysconfig
 from importlib.metadata import version
 from pathlib import Path
 
@@ -120,7 +121,8 @@ def main() -> None:
         == args.expected_version
     )
     assert "site-packages" in Path(privatelabbench.__file__).parts
-    if "t" in getattr(sys, "abiflags", ""):
+    free_threaded = bool(sysconfig.get_config_var("Py_GIL_DISABLED"))
+    if free_threaded:
         assert not sys._is_gil_enabled(), "A core dependency re-enabled the GIL"
     root = Path.cwd()
     checks = []
@@ -366,6 +368,12 @@ def main() -> None:
 
     summary = {
         "platform": platform.system(),
+        "architecture": platform.machine(),
+        "implementation": platform.python_implementation(),
+        "free_threaded": free_threaded,
+        "gil_enabled": sys._is_gil_enabled()
+        if hasattr(sys, "_is_gil_enabled")
+        else None,
         "python": platform.python_version(),
         "package": privatelabbench.__version__,
         "installed_from_site_packages": True,
@@ -375,6 +383,8 @@ def main() -> None:
         },
         "checks": checks,
     }
+    if free_threaded:
+        assert summary["gil_enabled"] is False, "A runtime import re-enabled the GIL"
     (root / "smoke-summary.json").write_text(
         json.dumps(summary, indent=2) + "\n", encoding="utf-8"
     )

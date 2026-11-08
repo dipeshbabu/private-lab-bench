@@ -10,14 +10,32 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-PLATFORMS = [
-    ("ubuntu-latest", version)
-    for version in ("3.10", "3.11", "3.12", "3.13", "3.14", "3.15", "3.14t")
-] + [
-    (os_name, version)
-    for os_name in ("windows-latest", "macos-latest")
-    for version in ("3.12", "3.14")
-]
+PLATFORMS = (
+    [
+        ("ubuntu-latest", version)
+        for version in (
+            "3.10",
+            "3.11",
+            "3.12",
+            "3.13",
+            "3.14",
+            "3.15",
+            "3.14t",
+            "3.15t",
+        )
+    ]
+    + [
+        (os_name, version)
+        for os_name in ("windows-latest", "macos-latest")
+        for version in ("3.11", "3.12", "3.13", "3.14", "3.15", "3.14t", "3.15t")
+    ]
+    + [
+        ("windows-latest", "3.10"),
+        ("macos-15-intel", "3.10"),
+        ("ubuntu-24.04-arm", "3.14"),
+        ("windows-11-arm", "3.14"),
+    ]
+)
 REQUIRED = {
     "ci.yml": {
         "package",
@@ -25,9 +43,30 @@ REQUIRED = {
         "sandbox-runtime",
         "onboarding-pypi",
         "coverage-gate",
+        "docs",
+        "docker",
+        "chemical-audit",
+        "tdc-adapter",
+        "matbench-adapter",
+        "proteingym-adapter",
+        "opendp-backend (3.10)",
+        "opendp-backend (3.12)",
+    }
+    | {
+        f"optional-backend ({system}, {extra})"
+        for system in ("windows-latest", "macos-latest")
+        for extra in ("opendp", "rdkit", "proteingym", "matbench", "tdc")
+    }
+    | {
+        f"minimum-dependencies ({system})"
+        for system in ("ubuntu-latest", "windows-latest", "macos-15-intel")
     }
     | {f"test ({system}, {version})" for system, version in PLATFORMS},
     "compatibility.yml": {"build-core-distributions"}
+    | {
+        f"installed-minimum ({system})"
+        for system in ("ubuntu-latest", "windows-latest", "macos-15-intel")
+    }
     | {f"installed-core ({system}, {version})" for system, version in PLATFORMS},
     "public-release-audit.yml": {
         "repository-policy",

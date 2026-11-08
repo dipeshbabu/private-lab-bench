@@ -25,7 +25,7 @@ def test_average_tied_ranks_match_scipy_and_input_arrays_are_immutable():
         p = generator.normal(size=n)
         y.flags.writeable = False
         p.flags.writeable = False
-        expected = spearmanr(y, p).statistic
+        expected = spearmanr(y, p)[0]
         assert spearman_correlation(y, p) == pytest.approx(
             expected, abs=1e-12, nan_ok=True
         )
@@ -79,7 +79,7 @@ def test_selected_bootstrap_matches_a_direct_scipy_reference():
     values = []
     for _ in range(100):
         selected = rng.integers(0, len(y), len(y))
-        values.append(spearmanr(y[selected], p[selected]).statistic)
+        values.append(spearmanr(y[selected], p[selected])[0])
     expected = np.quantile(values, [0.025, 0.975])
     assert set(result["metrics"]) == {"spearman"}
     assert [

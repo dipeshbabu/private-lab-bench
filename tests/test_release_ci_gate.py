@@ -41,6 +41,24 @@ def test_green_exact_commit_main_push_runs_are_required():
 
 
 @pytest.mark.parametrize(
+    "workflow,name",
+    [
+        ("ci.yml", "minimum-dependencies (windows-latest)"),
+        ("ci.yml", "optional-backend (macos-latest, tdc)"),
+        ("ci.yml", "test (windows-11-arm, 3.14)"),
+        ("ci.yml", "test (macos-latest, 3.15t)"),
+        ("compatibility.yml", "installed-minimum (macos-15-intel)"),
+    ],
+)
+def test_expanded_compatibility_jobs_cannot_be_omitted_from_a_release(workflow, name):
+    api = API()
+    run = api.runs[workflow][0]["id"]
+    api.jobs[run] = [job for job in api.jobs[run] if job["name"] != name]
+    with pytest.raises(ValueError, match="missing"):
+        verify("example/repository", SHA, api)
+
+
+@pytest.mark.parametrize(
     "field,value",
     [
         ("head_sha", "b" * 40),

@@ -1,0 +1,15 @@
+{
+  "schema_version": "release-readiness/v1",
+  "baseline_version": "0.1.6",
+  "milestone": "0.1.7",
+  "requirements": {
+    "failure_path_tests": {"status": "pending", "evidence": []},
+    "dependency_and_platform_coverage": {"status": "pending", "evidence": []},
+    "automated_security_review": {"status": "in_progress", "evidence": []},
+    "independent_privacy_sandbox_audit": {"status": "unavailable", "evidence": []},
+    "durable_privacy_accounting": {"status": "pending", "evidence": []},
+    "multifile_cpu_sandbox": {"status": "pending", "evidence": []},
+    "expanded_benchmark_parity": {"status": "pending", "evidence": []},
+    "gpu_runtime_validation": {"status": "unavailable", "evidence": []}
+  }
+}

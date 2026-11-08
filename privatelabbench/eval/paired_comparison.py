@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from numbers import Integral, Real
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -9,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from privatelabbench.eval.metrics import (
+    METRIC_DIRECTIONS,
     classification_metrics,
     multiclass_metrics,
     regression_metrics,
@@ -34,6 +36,38 @@ class PairedComparisonConfig:
     min_slice_size: int = 5
 
     def validate(self) -> None:
+        for name in (
+            "confidence_level",
+            "practical_threshold",
+            "noninferiority_margin",
+        ):
+            value = getattr(self, name)
+            if name == "noninferiority_margin" and value is None:
+                continue
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, Real)
+                or not math.isfinite(value)
+            ):
+                raise ValueError(f"{name} must be a finite number")
+        for name in (
+            "resamples",
+            "permutations",
+            "seed",
+            "min_samples",
+            "min_slice_size",
+        ):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, Integral):
+                raise ValueError(f"{name} must be an integer")
+        if self.seed < 0:
+            raise ValueError("seed must be nonnegative")
+        if type(self.include_slice_uncertainty) is not bool:
+            raise ValueError("include_slice_uncertainty must be boolean")
+        if self.metric is not None and (
+            not isinstance(self.metric, str) or self.metric not in METRIC_DIRECTIONS
+        ):
+            raise ValueError("metric must name a supported comparison metric")
         if not 0.0 < self.confidence_level < 1.0:
             raise ValueError("confidence_level must be between 0 and 1")
         if self.resamples < 100:
