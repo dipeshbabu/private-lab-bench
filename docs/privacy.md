@@ -218,8 +218,9 @@ downward. Boundary allocations may need headroom: `0.1 + 0.2` exceeds the binary
 float `0.3`, so that combination is rejected. Batch reference allocations are
 normalized exactly and rounded down. A spend is charged before sampling, including when sampling
 fails. This ledger is **in memory and sequential**: retain it for every query on
-the population. Applications must provide durable accounting and synchronization
-across restarts, processes, exports, and other systems. Starting a new ledger does
+the population. The unreleased `SQLitePrivacyBudget` below supports shared local
+processes and restarts. Applications must still account for exports and other
+systems. Starting a new ledger does
 not reset a population's actual privacy loss.
 
 The result excludes exact means, rows, IDs, file paths, and input hashes. Bounds,
@@ -237,6 +238,57 @@ describe the primitives and their assumptions. Use this specialized backend for
 its numerical mechanisms and checked maps; this wrapper has not received an
 independent privacy/security audit, and enabling an upstream feature does not
 certify the surrounding application.
+
+### Durable local accounting (Unreleased)
+
+This API is on the development branch after v0.1.6. Create a ledger once in an
+operator-protected local directory; every worker and restarted process must open
+that same file with the same public scope and limits:
+
+```python
+from privatelabbench.privacy import OpenDPBoundedMean, SQLitePrivacyBudget
+
+# One-time initialization, before starting workers. Existing files are rejected.
+SQLitePrivacyBudget.create(
+    "private-state/study-budget.db", scope_id="public-study-v1", epsilon_limit=1.0
+)
+
+# Worker/restart path; this never creates a missing database or raises its limit.
+budget = SQLitePrivacyBudget.open(
+    "private-state/study-budget.db", scope_id="public-study-v1", epsilon_limit=1.0
+)
+query = OpenDPBoundedMean("public-score", 0.0, 1.0, 3, 0.5)
+result = query.release([0.1, 0.5, 0.9], budget=budget)
+```
+
+The directory must already exist with appropriate host permissions. Scope IDs
+and query names are public declarations, not hashes or identifiers derived from
+private rows. The database stores only those declarations and exact binary
+epsilon/delta spends. Budget inspection stays local and does not include its
+filesystem path. OpenDP result serialization contains no database or scope ID.
+
+Each spend uses a SQLite `BEGIN IMMEDIATE` transaction: read and validate the
+stored scope/limits and append-only charges, apply exact sequential composition,
+then commit before sampling. Failed samples are not refunded. Separate
+connections serialize concurrent writers; objects retain no shared connection.
+Readback checks the schema, ledger identity, charge sequence, and validity of
+every spend. The record is reread for each charge, so cost grows with history;
+this is a local study ledger rather than a high-throughput accounting service.
+
+The implementation requests a DELETE rollback journal, `synchronous=EXTRA`, and
+full filesystem synchronization on macOS. This uses SQLite's documented
+[commit durability settings](https://www.sqlite.org/pragma.html#pragma_synchronous)
+and avoids relying on WAL versions affected by the
+[WAL-reset race](https://www.sqlite.org/wal.html#the_wal_reset_bug).
+Process-crash tests cannot establish physical power-loss behavior on your storage.
+
+Use a local filesystem with working locks and synchronization, protect the
+database directory and transaction journal, and retain consistent backups.
+Network/distributed stores, owner tampering, deleted/cloned databases, and
+restoring an older budget are outside this protection. A new file or scope does
+not replenish real privacy loss. Coordinate every query and other release
+system for the same protected population. This accountant does not change
+OpenDP's adjacency assumptions or make ordinary evaluation receipts private.
 
 ## 4. Privacy attacks are empirical audits, not guarantees
 
