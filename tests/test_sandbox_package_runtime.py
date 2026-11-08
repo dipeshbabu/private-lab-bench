@@ -134,7 +134,7 @@ def test_real_package_cli_keeps_predictions_and_provenance_local(image, tmp_path
     )
     assert sandbox_command(args) == 0
     result = pd.read_csv(output)
-    np.testing.assert_equal(result.prediction, [8.0, 18.0])
+    np.testing.assert_equal(result.prediction.to_numpy(), [8.0, 18.0])
     provenance = json.loads(output.with_suffix(".sandbox.json").read_text())
     assert (
         provenance["scope"] == "local"
