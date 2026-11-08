@@ -58,7 +58,7 @@ run in separate jobs, with OpenDP, RDKit, ProteinGym and Matbench additionally
 checked on Windows and macOS Python 3.12, plus TDC on Python 3.11. Coverage from all forty-six test jobs is combined and
 must meet 85% statement and 75% branch coverage; missing reports or source files
 fail the gate. Separate Linux, Windows and Intel macOS Python 3.10 jobs exercise the full suite and both clean
-distributions with `constraints/minimum.txt`: NumPy 1.21.3, pandas 1.3.4,
+distributions with `constraints/minimum.txt`: NumPy 1.21.6, pandas 1.3.5,
 scikit-learn 1.0.2, SciPy 1.7.2 and PyYAML 6.0. These are an available lower
 wheel-supported combination, rather than every older patch admitted by metadata.
 
