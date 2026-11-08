@@ -112,6 +112,67 @@ def policy(times):
 
 
 @pytest.mark.parametrize(
+    "time", [None, 20260101, "2026-01-01T12:00:00", "2026-13-01", "invalid"]
+)
+def test_bad_collection_times_are_not_inferred_or_silently_reordered(tmp_path, time):
+    paths, times = receipts(tmp_path, [0.2, 0.3])
+    with pytest.raises(ValueError):
+        trend(paths, [time, times[1]])
+
+
+@pytest.mark.parametrize("count", [-1, 121, True])
+def test_semantically_invalid_slice_counts_fail_after_source_integrity_passes(
+    tmp_path, count
+):
+    paths, times = receipts(tmp_path, [0.2, 0.3])
+    edit(
+        paths[1],
+        lambda payload: payload["shareable"]["evaluation"]["slices"]["site"][
+            "a"
+        ].update(n_samples=count),
+    )
+    with pytest.raises(ValueError, match="slice count"):
+        trend(paths, times)
+
+
+@pytest.mark.parametrize(
+    "damage",
+    [
+        "reference",
+        "threshold",
+        "prevalence",
+        "source_digest",
+        "quality",
+        "diagnostic",
+        "all_undefined",
+    ],
+)
+def test_destination_trend_policy_rejects_invalid_rebuilt_evidence(tmp_path, damage):
+    paths, times = receipts(tmp_path, [0.2, 0.3])
+    artifact = trend(paths, times)
+    shared = artifact["shareable"]
+    if damage == "reference":
+        shared["reference_index"] = True
+    elif damage == "threshold":
+        shared["practical_threshold"] = -1
+    elif damage == "prevalence":
+        shared["prevalence_threshold"] = 2
+    elif damage == "source_digest":
+        shared["periods"][0]["source_receipt_sha256"] = "not-a-digest"
+    elif damage == "quality":
+        shared["periods"][0]["quality_gate"] = "unknown"
+    elif damage == "diagnostic":
+        shared["periods"][0]["cohort_diagnostics"] = "unknown"
+    else:
+        for period in shared["periods"]:
+            period["estimate"] = None
+    decision, public = check_release(
+        artifact, {**policy(times), "include_degradation": True}
+    )
+    assert decision.decision != "allow" and public is None
+
+
+@pytest.mark.parametrize(
     "values,last",
     [
         ([0.2, 0.2, 0.2], "within_threshold"),

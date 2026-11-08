@@ -52,10 +52,25 @@ jobs:
           - {os: ubuntu-latest, python-version: "3.14"}
           - {os: ubuntu-latest, python-version: "3.15"}
           - {os: ubuntu-latest, python-version: "3.14t"}
+          - {os: ubuntu-latest, python-version: "3.15t"}
+          - {os: windows-latest, python-version: "3.10"}
+          - {os: windows-latest, python-version: "3.11"}
           - {os: windows-latest, python-version: "3.12"}
+          - {os: windows-latest, python-version: "3.13"}
           - {os: windows-latest, python-version: "3.14"}
+          - {os: windows-latest, python-version: "3.15"}
+          - {os: windows-latest, python-version: "3.14t"}
+          - {os: windows-latest, python-version: "3.15t"}
+          - {os: macos-15-intel, python-version: "3.10"}
+          - {os: macos-latest, python-version: "3.11"}
           - {os: macos-latest, python-version: "3.12"}
+          - {os: macos-latest, python-version: "3.13"}
           - {os: macos-latest, python-version: "3.14"}
+          - {os: macos-latest, python-version: "3.15"}
+          - {os: macos-latest, python-version: "3.14t"}
+          - {os: macos-latest, python-version: "3.15t"}
+          - {os: ubuntu-24.04-arm, python-version: "3.14"}
+          - {os: windows-11-arm, python-version: "3.14"}
 
     steps:
       - name: Checkout
@@ -65,9 +80,29 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install package
+        if: matrix.os != 'windows-11-arm'
         run: |
           python -m pip install --upgrade pip
           pip install -e '.[dev]'
+      - name: Build ARM64 OpenSSL for the signing dependency
+        if: matrix.os == 'windows-11-arm'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vcpkgTool = Join-Path $env:VCPKG_INSTALLATION_ROOT 'vcpkg.exe'
+          & $vcpkgTool install openssl:arm64-windows-static-md --disable-metrics
+          if ($LASTEXITCODE -ne 0) { throw 'ARM64 OpenSSL build failed' }
+          $opensslRoot = Join-Path $env:VCPKG_INSTALLATION_ROOT 'installed/arm64-windows-static-md'
+          "OPENSSL_DIR=$opensslRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          'OPENSSL_STATIC=1' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Install the full ARM64 development environment
+        if: matrix.os == 'windows-11-arm'
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[dev]'
+          if ($LASTEXITCODE -ne 0) { throw 'ARM64 development installation failed' }
+          python -c 'from cryptography.hazmat.backends.openssl.backend import backend; print(backend.openssl_version_text())'
       - name: Prepare output directories
         run: mkdir -p outputs reports
       - name: Run tests
@@ -156,6 +191,81 @@ jobs:
           /tmp/plb-wheel/bin/plb verify /tmp/plb-simple-evaluation/evaluation_receipt.json
           /tmp/plb-wheel/bin/plb run-pack community-tabular-regression@1.0.0
           /tmp/plb-wheel/bin/plb verify reports/benchmark_packs/tabular_regression_receipt.shareable.json
+
+  minimum-dependencies:
+    name: minimum-dependencies (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15-intel]
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: "3.10"
+      - name: Install the lower dependency line
+        run: pip install --constraint constraints/minimum.txt -e '.[dev]'
+      - name: Run the complete base suite against older numerical APIs
+        run: pytest -q --cov --cov-report=json:coverage.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: coverage-minimum-${{ matrix.os }}
+          path: coverage.json
+
+  optional-backend:
+    name: optional-backend (${{ matrix.os }}, ${{ matrix.extra }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+        extra: [opendp, rdkit, proteingym, matbench, tdc]
+    env:
+      PYTHONUTF8: "1"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: ${{ matrix.extra == 'tdc' && '3.11' || '3.12' }}
+      - name: Install the selected optional backend
+        run: pip install -e '.[dev,${{ matrix.extra }}]'
+      - name: Exercise the actual optional implementation
+        run: |
+          case '${{ matrix.extra }}' in
+            tdc)
+              python -c 'import tdc'
+              pytest -q --cov --cov-report=json:coverage.json tests/test_tdc_integration.py
+              ;;
+            opendp)
+              python -c 'import opendp.prelude'
+              pytest -q --cov --cov-report=json:coverage.json tests/test_opendp_backend.py tests/test_privacy_mechanisms.py
+              ;;
+            rdkit)
+              python -c 'import rdkit'
+              pytest -q --cov --cov-report=json:coverage.json tests/test_design_audit.py tests/test_molecule_eval.py tests/test_adapters_and_compare.py
+              ;;
+            proteingym)
+              python -c 'import Bio'
+              pytest -q --cov --cov-report=json:coverage.json tests/test_proteingym_integration.py tests/test_spearman_metrics.py
+              ;;
+            matbench)
+              python scripts/fetch_matbench_reference.py --output-dir "$RUNNER_TEMP/matbench-reference"
+              pip install --no-deps --force-reinstall "$RUNNER_TEMP/matbench-reference"
+              python -c 'import matminer, matbench'
+              pytest -q --cov --cov-report=json:coverage.json tests/test_matbench_integration.py
+              ;;
+          esac
+      - uses: actions/upload-artifact@v7
+        with:
+          name: coverage-extra-${{ matrix.os }}-${{ matrix.extra }}
+          path: coverage.json
 
   chemical-audit:
     runs-on: ubuntu-latest
@@ -356,7 +466,7 @@ jobs:
           test -f reports/kinase_prediction_manifest.json
 
   coverage-gate:
-    needs: [test, chemical-audit, tdc-adapter, matbench-adapter, proteingym-adapter, opendp-backend, sandbox-runtime]
+    needs: [test, minimum-dependencies, optional-backend, chemical-audit, tdc-adapter, matbench-adapter, proteingym-adapter, opendp-backend, sandbox-runtime]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -368,7 +478,7 @@ jobs:
           pattern: coverage-*
           path: coverage-reports/
       - name: Require all reports and enforce combined statement/branch floors
-        run: python scripts/check_coverage.py --reports-dir coverage-reports --minimum-reports 18 --statement-floor 85 --branch-floor 75
+        run: python scripts/check_coverage.py --reports-dir coverage-reports --minimum-reports 46 --statement-floor 85 --branch-floor 75
       - uses: actions/upload-artifact@v7
         if: always()
         with:

@@ -17,6 +17,12 @@ runs `pip check`, and records actual installed dependency versions. The smoke ru
 use Python's UTF-8 mode for consistent text handling across platforms. They do
 not establish support for every older dependency version permitted by the package.
 
+`minimum.txt` is a separate lower wheel-supported dependency line for Python
+3.10. Linux, Windows and Intel macOS run the complete base suite and fresh
+wheel/source checks with these constraints. Its purpose is to catch API drift
+such as pandas CSV keyword renames; it does not claim every earlier patch or
+arbitrary mixed combination permitted by the package metadata.
+
 The existing unconstrained Linux CI continues to exercise normal dependency
 resolution and the full suite. Optional scientific extras and the gVisor runtime
 retain their own jobs and documented interpreter constraints.

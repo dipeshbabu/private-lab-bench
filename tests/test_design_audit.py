@@ -78,6 +78,68 @@ def definition(**kwargs):
     )
 
 
+@pytest.mark.parametrize(
+    "rules",
+    [
+        {"schema_version": "unknown"},
+        {"sample_id_column": None},
+        {"entity_columns": ["patient", "patient"]},
+        {"group_columns": [""]},
+        {"evaluation_partition": "training"},
+        {"reference_partition": "test"},
+        {
+            "partition_labels": {
+                "train": ["same"],
+                "validation": ["valid"],
+                "test": ["same"],
+            }
+        },
+        {"forbidden_pairs": [["train", "test"], ["test", "train"]]},
+        {"forbidden_pairs": [["train", "train"]]},
+        {"overlap": {"unknown": "forbid"}},
+        {"overlap": {"entities": "ignore"}},
+        {"label_tolerance": float("nan")},
+        {"chronology": {"column": "date", "timezone": "local"}},
+        {"chronology": {"column": "date", "strictly_before": 1}},
+        {"chronology": {"column": "date", "cutoff": "01/02/2026"}},
+        {
+            "exclusions": [
+                {"column": "sample_id", "operator": "equals", "value": "patient-1"}
+            ]
+        },
+        {"exclusions": [{"column": "qc", "operator": "equals", "value": ["a", "b"]}]},
+        {"exclusions": [{"column": "qc", "operator": "is_missing", "value": 1}]},
+        {"exclusions": [{"column": "qc", "operator": "less_than", "value": True}]},
+        {
+            "adapter": {
+                "name": "rdkit-molecule/v1",
+                "smiles_column": "smiles",
+                "canonical_isomeric": "yes",
+            }
+        },
+        {
+            "adapter": {
+                "name": "rdkit-molecule/v1",
+                "smiles_column": "smiles",
+                "near_duplicates": {"threshold": 0},
+            }
+        },
+        {
+            "adapter": {
+                "name": "rdkit-molecule/v1",
+                "smiles_column": "smiles",
+                "near_duplicates": {"max_pairs": False},
+            }
+        },
+    ],
+)
+def test_ambiguous_or_unsafe_design_declarations_are_rejected_before_reading_data(
+    rules,
+):
+    with pytest.raises(ValueError):
+        definition(**rules)
+
+
 def csv(tmp_path, name, rows):
     path = tmp_path / f"{name}.csv"
     pd.DataFrame(rows).to_csv(path, index=False)

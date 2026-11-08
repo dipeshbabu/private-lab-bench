@@ -57,6 +57,58 @@ def candidate():
     }
 
 
+@pytest.mark.parametrize("stage", ["ledger", "artifact", "audit"])
+def test_publication_storage_failures_remove_the_artifact_and_release_the_lock(
+    tmp_path, monkeypatch, stage
+):
+    import privatelabbench.privacy.export as exports
+
+    output = tmp_path / "receipt.shareable.json"
+    assert publish_shareable_artifact(candidate(), policy(), output).decision == "allow"
+    audit = output.with_suffix(".release-audit.json")
+    target = {
+        "ledger": tmp_path / ".plb-release-ledger.json",
+        "artifact": output,
+        "audit": audit,
+    }[stage]
+    original = exports.atomic_write_json
+    failed = False
+
+    def fail_once(path, payload):
+        nonlocal failed
+        if path == target and not failed:
+            failed = True
+            raise OSError("synthetic storage fault")
+        return original(path, payload)
+
+    monkeypatch.setattr(exports, "atomic_write_json", fail_once)
+    decision = publish_shareable_artifact(candidate(), policy(), output)
+    assert decision.reason_codes == ("release_storage_or_lock_failed",)
+    assert not output.exists() and not (tmp_path / ".plb-release.lock").exists()
+    assert json.loads(audit.read_text(encoding="utf-8"))["decision"] == "needs_review"
+    assert publish_shareable_artifact(candidate(), policy(), output).decision == "allow"
+    assert verify_report(output)["valid"]
+
+
+def test_an_unwritable_audit_cannot_leave_a_publishable_artifact_or_owned_lock(
+    tmp_path, monkeypatch
+):
+    import privatelabbench.privacy.export as exports
+
+    output = tmp_path / "receipt.shareable.json"
+    original = exports.atomic_write_json
+
+    def fail_audit(path, payload):
+        if path == output.with_suffix(".release-audit.json"):
+            raise OSError("synthetic persistent audit failure")
+        return original(path, payload)
+
+    monkeypatch.setattr(exports, "atomic_write_json", fail_audit)
+    with pytest.raises(OSError):
+        publish_shareable_artifact(candidate(), policy(), output)
+    assert not output.exists() and not (tmp_path / ".plb-release.lock").exists()
+
+
 def _pause_publisher(output, checkpoint, ready, resume, results):
     """A real second process owns the lock while the parent attempts publication."""
     import privatelabbench.privacy.export as exports

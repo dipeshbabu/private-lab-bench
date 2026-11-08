@@ -4,6 +4,11 @@ PrivateLabBench uses the version in both `pyproject.toml` and `privatelabbench/_
 
 ## Release checklist
 
+v0.1.7 and later are currently held by the recorded
+[release prerequisites](release_readiness.md). The workflow rejects incomplete
+requirements before building or uploading. Passing CI alone does not clear the
+independent-audit or GPU-validation prerequisites.
+
 Before tagging:
 
 1. Every check on each release PR has passed. Squash merge using the checked head
