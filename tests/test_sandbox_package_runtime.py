@@ -123,7 +123,7 @@ def test_real_package_cli_keeps_predictions_and_provenance_local(image, tmp_path
         [
             sys.executable,
             "-m",
-            "privatelabbench",
+            "privatelabbench.cli",
             "sandbox-score",
             "--model-package",
             str(model),
@@ -149,8 +149,9 @@ def test_real_package_cli_keeps_predictions_and_provenance_local(image, tmp_path
         capture_output=True,
         text=True,
         timeout=30,
-        check=True,
+        check=False,
     )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
     assert "Predictions and provenance remain private" in completed.stdout
     result = pd.read_csv(output)
     np.testing.assert_equal(result.prediction.to_numpy(), [8.0, 18.0])
