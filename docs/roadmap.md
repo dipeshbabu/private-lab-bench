@@ -40,8 +40,9 @@ CPU Python scripts in an operator-reviewed image. The unreleased model-package
 format adds bounded, multi-file CPU models; participant images and GPU execution
 remain unsupported. Its controls and tests do not constitute an
 independent security audit. OpenDP currently supports bounded means with fixed
-public size and row-level replace-one adjacency; the application must maintain
-accounting across processes and restarts. Its upstream `contrib` status and
+public size and row-level replace-one adjacency. The unreleased SQLite ledger
+shares atomic charges across local processes and restarts; operators must keep
+all queries on the same protected ledger and prevent rollback or cloning. Its upstream `contrib` status and
 privacy assumptions are documented. Benchmark coverage remains a tested subset
 of each upstream suite.
 

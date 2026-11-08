@@ -5,6 +5,7 @@
 ### Added
 
 - Accept digest-pinned, multi-file CPU model packages in the Linux/gVisor executor. A bounded, uncompressed ZIP manifest declares every file; the host validates paths and hashes before mounting a read-only snapshot, and model code executes only inside the guest.
+- Persist OpenDP bounded-mean charges in an explicit, shared SQLite ledger with atomic sequential composition across processes, exact spend reconstruction, restart recovery, and fail-closed storage errors. Local operators must protect the database and journal against deletion, rollback, or cloning.
 
 ### Fixed
 

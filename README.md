@@ -163,6 +163,10 @@ uses public bounds and fixed sample size, checks upstream privacy maps, and
 requires a shared budget. Neither extension automatically authorizes disclosure
 of model outputs or existing exact evaluation reports.
 
+The development branch adds a [durable local privacy ledger](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/privacy.md#durable-local-accounting-unreleased)
+for shared OpenDP accounting across worker processes and restarts. This API is
+unreleased; v0.1.7 remains subject to the release prerequisites.
+
 The [Caco2 case study](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/case_study.md) follows a model-selection decision through uncertainty, critical-group checks, approved export, and signature verification. It distinguishes the real public control from a synthetic measurement-shift proxy. Independent researcher onboarding trials remain pending.
 
 ## Developing and contributing
