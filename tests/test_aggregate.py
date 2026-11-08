@@ -144,6 +144,29 @@ def test_nonlinear_metrics_and_unproven_disjointness_never_get_naive_pooled_scor
     )
 
 
+def test_negative_spearman_receipts_can_be_aggregated_and_released(tmp_path):
+    protocol = resolve_protocol(
+        "plb://proteingym/dms-substitutions-spearman@1.0.0"
+    ).identity()
+    inputs = []
+    for name, score in (("a", -0.8), ("b", 0.5)):
+        path = receipt(tmp_path, name, protocol=protocol)
+        payload = json.loads(path.read_text())
+        payload["shareable"]["evaluation"]["metrics"] = {"spearman": score}
+        inputs.append(write(path, payload))
+    artifact = aggregate_receipts(inputs, models=[MODEL], assume_disjoint_sites=True)
+    decision, public = check_release(artifact, release())
+    assert decision.decision == "allow"
+    assert public["shareable"]["metric"] == "spearman"
+    row = public["shareable"]["models"][0]
+    assert [site["estimate"] for site in row["sites"]] == [-0.8, 0.5]
+    assert row["summary"]["range"]["worst_sites"] == ["site-1"]
+    assert row["summary"]["pooled"]["estimate"] is None
+    output = tmp_path / "aggregate.shareable.json"
+    assert publish_shareable_artifact(artifact, release(), output).decision == "allow"
+    assert verify_report(output)["valid"]
+
+
 @pytest.mark.parametrize(
     "mutation",
     [

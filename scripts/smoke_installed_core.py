@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import multiprocessing
 import platform
 import subprocess
@@ -16,11 +17,15 @@ import numpy as np
 import yaml
 
 import privatelabbench
-from privatelabbench.eval.metrics import multiclass_metrics
+from privatelabbench.adapters.sklearn_adapter import RandomForestMoleculeAdapter
+from privatelabbench.aggregate import summarize_sites
+from privatelabbench.eval.metrics import classification_metrics, multiclass_metrics
+from privatelabbench.privacy.aggregation import aggregate_client_metrics
 from privatelabbench.privacy.attacks import membership_inference_risk
 from privatelabbench.privacy.export import publish_shareable_artifact
 from privatelabbench.reports.integrity import attach_integrity_metadata, verify_payload
 from privatelabbench.reports.receipt import verify_receipt
+from privatelabbench.tasks.molecules import MoleculeDataset
 
 
 def _held_export(candidate, policy, output, ready, resume, result):
@@ -321,6 +326,42 @@ def main() -> None:
     assert verify_payload(payload)["valid"] is False
     checks.append(
         "custom class labels, balanced membership risk, malformed digest rejection"
+    )
+
+    for label in (0, 1):
+        model_result = RandomForestMoleculeAdapter(n_estimators=3).evaluate(
+            MoleculeDataset(
+                ["C", "CC"] * 10, np.full(20, label), "classification", "target"
+            )
+        )
+        assert model_result["metrics"]["accuracy"] == 1.0
+        assert math.isnan(model_result["metrics"]["auroc"])
+    try:
+        classification_metrics(
+            np.array([0, 1]), np.array([np.nan, 0.8]), metric_names=["accuracy"]
+        )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("A nonfinite binary score produced a valid metric")
+    assert aggregate_client_metrics([{"mae": 1.0}, {"auroc": 0.5}], [1.0, 0.0]) == {
+        "mae": 1.0
+    }
+    assert aggregate_client_metrics([{"mae": 1.0}, {"mae": 3.0}], [1e308, 1e308]) == {
+        "mae": 2.0
+    }
+    site_summary = summarize_sites(
+        [
+            {"site": "a", "n_samples": 20, "estimate": -0.8},
+            {"site": "b", "n_samples": 20, "estimate": 0.5},
+        ],
+        "spearman",
+        disjoint=True,
+    )
+    assert site_summary["range"]["worst_sites"] == ["a"]
+    assert site_summary["pooled"]["estimate"] is None
+    checks.append(
+        "single-class molecules, binary finite-score validation, stable weighted means, negative Spearman"
     )
 
     summary = {

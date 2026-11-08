@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Accept valid negative Spearman correlations in cross-site summaries and approved aggregate exports; correlations remain site-level rather than being naively pooled.
+- Handle single-class molecular baselines using the fitted class labels, while leaving AUROC undefined. Reject nonfinite targets and nonbinary classification labels before training can truncate them.
+- Validate binary metric inputs independently of the selected metrics, so a nonfinite score cannot become an apparently valid accuracy or F1 result.
+- Reject negative/nonfinite aggregation weights, ignore zero-weight clients, and normalize available weights per metric to avoid division by zero and overflow.
+
 ## v0.1.6 — 2026-11-07
 
 ### Fixed
