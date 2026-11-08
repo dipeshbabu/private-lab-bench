@@ -20,7 +20,7 @@ from privatelabbench.privacy.dp import PrivacyConfig, privacy_summary, privatize
 from privatelabbench.privacy.export import check_release, publish_shareable_artifact
 from privatelabbench.quality import EXIT_CODES as QUALITY_EXIT_CODES
 from privatelabbench.quality import evaluate_quality_gate
-from privatelabbench.reports.integrity import verify_report
+from privatelabbench.reports.integrity import verify_payload, verify_report
 from privatelabbench.reports.json import write_json_report
 from privatelabbench.reports.manifest import verify_run_manifest
 from privatelabbench.reports.markdown import (
@@ -890,8 +890,9 @@ def gate_command(args: argparse.Namespace) -> int:
             validate_output_paths([source, args.policy, args.trust_store], [args.out])
             Path(args.out).unlink(missing_ok=True)
         trust = _read_release_policy(args.trust_store) if args.trust_store else None
-        verification = verify_report(
-            str(source),
+        artifact = json.loads(source.read_text(encoding="utf-8"))
+        verification = verify_payload(
+            artifact,
             signing_secret=_secret(args),
             trust_store=trust,
             require_trusted_signer=args.require_trusted_signer,
@@ -900,7 +901,6 @@ def gate_command(args: argparse.Namespace) -> int:
             raise ValueError(
                 f"Artifact verification failed: {verification.get('reason')}"
             )
-        artifact = json.loads(source.read_text(encoding="utf-8"))
         policy = yaml.safe_load(Path(args.policy).read_text(encoding="utf-8"))
         result = evaluate_quality_gate(artifact, policy)
         result["source_evidence_level"] = verification.get(
@@ -1626,10 +1626,10 @@ def sign_command(args: argparse.Namespace) -> int:
         ],
     )
     Path(args.out).unlink(missing_ok=True)
-    check = verify_report(str(source), signing_secret=_secret(args))
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    check = verify_payload(payload, signing_secret=_secret(args))
     if not check.get("valid"):
         raise ValueError("Source artifact failed its integrity check")
-    payload = json.loads(source.read_text(encoding="utf-8"))
     signer = {
         "private_key": args.private_key,
         "signer_id": args.signer_id,

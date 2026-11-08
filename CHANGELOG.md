@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- Bind quality gating and signing to the exact in-memory artifact that passed verification, preserving requested signer/secret checks when a source pathname changes.
+- Preserve declared population units across aggregate source families and enforce destination disclosure floors and paired population consistency before publishing derived statistics.
 - Accept valid negative Spearman correlations in cross-site summaries and approved aggregate exports; correlations remain site-level rather than being naively pooled.
 - Handle single-class molecular baselines using the fitted class labels, while leaving AUROC undefined. Reject nonfinite targets and nonbinary classification labels before training can truncate them.
 - Validate binary metric inputs independently of the selected metrics, so a nonfinite score cannot become an apparently valid accuracy or F1 result.

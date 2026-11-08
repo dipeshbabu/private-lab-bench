@@ -46,6 +46,37 @@ def _count(value: Any) -> int:
     return value
 
 
+def _population_units(count: int, *records: Mapping[str, Any]) -> int | None:
+    """Keep declared population counts bound to their observation/inference data."""
+    from privatelabbench.privacy.export import _uses_cluster_units
+
+    units = set()
+    clustered = False
+    for record in records:
+        if not isinstance(record, Mapping):
+            raise ValueError("Invalid site sampling metadata")
+        if "n_samples" in record and (
+            type(record["n_samples"]) is not int or record["n_samples"] != count
+        ):
+            raise ValueError("Sampling observation count differs from the site count")
+        if "n_independent_units" in record:
+            value = record["n_independent_units"]
+            if type(value) is not int or not 2 <= value <= count:
+                raise ValueError("Invalid site independent-unit count")
+            units.add(value)
+        clustered |= _uses_cluster_units(record)
+    if len(units) > 1 or clustered and not units:
+        raise ValueError("Missing or inconsistent site independent-unit metadata")
+    return next(iter(units)) if units else None
+
+
+def _require_population_floor(units: int | None, policy: Mapping[str, Any]) -> None:
+    if units is not None and units < max(
+        policy["min_samples"], policy["min_cell_size"]
+    ):
+        raise ValueError("Site independent-unit count is below release thresholds")
+
+
 def summarize_sites(
     sites: Sequence[Mapping[str, Any]],
     metric: str,
@@ -355,6 +386,7 @@ def aggregate_receipts(
                 interval,
                 mode,
                 uncertainty.get("confidence_level"),
+                _population_units(count, uncertainty, interval),
             )
         else:
             if len(parsed_models) != 2 or parsed_models[0] == parsed_models[1]:
@@ -382,14 +414,19 @@ def aggregate_receipts(
                 abs_tol=1e-12,
             ):
                 raise ValueError("Paired improvement conflicts with per-model metrics")
+            interval = evaluation.get("paired_interval", {})
+            units = _population_units(
+                count, interval, evaluation.get("randomization_test", {})
+            )
             for model, value in zip(parsed_models, (a, b)):
-                _add_site(groups, model, site, count, value, {}, "none", None)
+                _add_site(groups, model, site, count, value, {}, "none", None, units)
             paired_sites.append(
                 {
                     "site": site,
                     "n_samples": count,
                     "improvement_a_over_b": improvement,
-                    "interval": evaluation.get("paired_interval", {}),
+                    "interval": interval,
+                    **({"n_independent_units": units} if units is not None else {}),
                 }
             )
         verification.append(
@@ -449,7 +486,9 @@ def aggregate_receipts(
     )
 
 
-def _add_site(groups, model, site, count, estimate, interval, mode, confidence):
+def _add_site(
+    groups, model, site, count, estimate, interval, mode, confidence, units=None
+):
     from privatelabbench.privacy.export import _statistics
 
     key = (model["id"], model["revision"])
@@ -464,6 +503,7 @@ def _add_site(groups, model, site, count, estimate, interval, mode, confidence):
             "interval": _statistics(interval),
             "confidence_level": confidence,
             "privacy_mode": mode,
+            **({"n_independent_units": units} if units is not None else {}),
         }
     )
 
@@ -472,7 +512,11 @@ def sanitize_aggregate(
     shared: Mapping[str, Any], policy: Mapping[str, Any]
 ) -> dict[str, Any]:
     """Rebuild the public summary from approved scalars; plugin dictionaries stay local."""
-    from privatelabbench.privacy.export import _statistics, _token, protocol_identity
+    from privatelabbench.privacy.export import (
+        _release_statistics,
+        _token,
+        protocol_identity,
+    )
 
     if policy.get("include_protocol") is not True:
         raise ValueError(
@@ -521,7 +565,12 @@ def sanitize_aggregate(
             mode = site.get("privacy_mode", "none")
             if mode not in {"none", "metric_perturbation"}:
                 raise ValueError("Invalid metric privacy basis")
-            interval = _statistics(site.get("interval", {})) if mode == "none" else {}
+            raw_interval = site.get("interval", {})
+            units = _population_units(count, site, raw_interval)
+            _require_population_floor(units, policy)
+            interval = (
+                _release_statistics(raw_interval, policy) if mode == "none" else {}
+            )
             confidence = site.get("confidence_level")
             if (
                 confidence is not None
@@ -536,6 +585,7 @@ def sanitize_aggregate(
                     "interval": interval,
                     "confidence_level": confidence,
                     "privacy_mode": mode,
+                    **({"n_independent_units": units} if units is not None else {}),
                 }
             )
         labels = {row["site"] for row in rows}
@@ -564,14 +614,38 @@ def sanitize_aggregate(
                 row["site"] == label for row in paired_sites
             ):
                 raise ValueError("Paired site must match the approved model/site set")
+            count = _count(site.get("n_samples"))
+            interval = site.get("interval", {})
+            units = _population_units(count, site, interval)
+            _require_population_floor(units, policy)
+            model_sites = [
+                row
+                for model in clean_models
+                for row in model["sites"]
+                if row["site"] == label
+            ]
+            if any(
+                row["n_samples"] != count
+                or row.get("n_independent_units") is not None
+                and row["n_independent_units"] != units
+                for row in model_sites
+            ):
+                raise ValueError(
+                    "Paired population counts differ from the model/site records"
+                )
+            if units is not None:
+                # Older paired aggregate files retained units only on the interval.
+                for row in model_sites:
+                    row["n_independent_units"] = units
             paired_sites.append(
                 {
                     "site": label,
-                    "n_samples": _count(site.get("n_samples")),
+                    "n_samples": count,
                     "improvement_a_over_b": _finite(
                         site.get("improvement_a_over_b"), "paired improvement"
                     ),
-                    "interval": _statistics(site.get("interval", {})),
+                    "interval": _release_statistics(interval, policy),
+                    **({"n_independent_units": units} if units is not None else {}),
                 }
             )
         if set(row["site"] for row in paired_sites) != site_set:

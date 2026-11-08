@@ -194,20 +194,56 @@ def _statistics(value: Any) -> dict[str, Any]:
     return output
 
 
-def _release_statistics(value: Any, policy: Mapping[str, Any]) -> dict[str, Any]:
-    result = _statistics(value)
+def _uses_cluster_units(value: Mapping[str, Any]) -> bool:
+    sampling, method = value.get("sampling"), value.get("method")
+    return (
+        isinstance(sampling, str)
+        and sampling in {"independent_clusters", "nested_clusters"}
+        or isinstance(method, str)
+        and method
+        in {
+            "cluster_percentile_bootstrap",
+            "hierarchical_percentile_bootstrap",
+            "paired_cluster_percentile_bootstrap",
+            "paired_hierarchical_percentile_bootstrap",
+            "paired_cluster_randomization_swap",
+        }
+    )
+
+
+def _statistical_floor(
+    result: dict[str, Any], policy: Mapping[str, Any]
+) -> dict[str, Any]:
+    def withheld():
+        return {
+            "status": "withheld_small_independent_unit_count",
+            **{
+                key: result[key]
+                for key in ("method", "sampling", "metric_basis")
+                if key in result
+            },
+        }
+
+    if result.get("status") == "withheld_small_independent_unit_count":
+        return withheld()
     if "n_independent_units" in result:
         count = result["n_independent_units"]
         if type(count) is not int or count < policy["min_cell_size"]:
-            return {
-                "status": "withheld_small_independent_unit_count",
-                **{
-                    key: result[key]
-                    for key in ("method", "sampling", "metric_basis")
-                    if key in result
-                },
-            }
+            return withheld()
+    elif _uses_cluster_units(result):
+        raise ValueError("Non-IID statistics require independent-unit metadata")
+    if "metrics" in result:
+        result["metrics"] = {
+            name: _statistical_floor(value, policy)
+            for name, value in result["metrics"].items()
+        }
+    if "noninferiority" in result:
+        result["noninferiority"] = _statistical_floor(result["noninferiority"], policy)
     return result
+
+
+def _release_statistics(value: Any, policy: Mapping[str, Any]) -> dict[str, Any]:
+    return _statistical_floor(_statistics(value), policy)
 
 
 def validate_policy(value: Any) -> dict[str, Any]:
@@ -622,6 +658,16 @@ def _sanitize(
                 "status": "withheld_metric_basis_mismatch",
                 "metric_basis": "clean_metrics",
                 "released_metric_basis": "reported_metrics",
+                **{
+                    key: uncertainty[key]
+                    for key in (
+                        "n_samples",
+                        "n_independent_units",
+                        "sampling",
+                        "method",
+                    )
+                    if key in uncertainty
+                },
             }
         task_type = evaluation.get("task_type")
         if task_type not in {"regression", "classification", "multiclass", None}:
