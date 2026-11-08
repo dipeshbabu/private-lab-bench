@@ -30,9 +30,10 @@ there is no fallback to ordinary containers or host Python execution.
 
 ## Script contract
 
-The script receives one JSON object on stdin with an ordered `features` numeric
-matrix. Sample IDs, targets, other CSV columns, host paths, credentials, and host
-environment variables are not passed. It must print exactly one JSON object:
+The script receives one JSON object on stdin with the ordered numeric columns
+explicitly selected by `--feature`. Sample IDs, unselected CSV columns, host
+paths, credentials, and host environment variables are not passed. Do not select
+target/label columns as features. It must print exactly one JSON object:
 
 ```python
 import json
@@ -58,10 +59,69 @@ plb sandbox-score --model submitted-model.py --model-sha256 MODEL_SHA256 \
 
 Choose fresh prediction/provenance paths. The selected script is read into a
 bounded snapshot, verified against its digest, and mounted as one read-only file.
-It is never imported or deserialized by the host. The current contract supports
-CPU Python scripts up to 8 MiB, which may embed model parameters. Large multi-file
-checkpoints, accelerators, participant container images, and remote services are
-outside this first executor.
+It is never imported or deserialized by the host. Single CPU Python scripts may
+be up to 8 MiB and embed model parameters. The unreleased multi-file contract
+below supports larger bounded CPU assets. Accelerators, participant container
+images, and remote services remain outside the verified executor.
+
+## Multi-file CPU packages (Unreleased)
+
+After v0.1.6, `--model-package` accepts a pinned `sandbox-model-package/v1`
+archive instead of `--model`. The model author creates a plain, uncompressed ZIP
+with a root `model-package.json` manifest naming the Python entrypoint and the
+SHA-256 of every other file:
+
+```python
+from hashlib import sha256
+import json
+from pathlib import Path
+import zipfile
+
+# Author-side packaging, outside the private-data evaluator.
+files = {name: Path(name).read_bytes() for name in ["predict.py", "helper.py", "weights.json"]}
+manifest = {
+    "schema_version": "sandbox-model-package/v1",
+    "entrypoint": "predict.py",
+    "files": {name: sha256(content).hexdigest() for name, content in files.items()},
+}
+with zipfile.ZipFile("model.zip", "x", compression=zipfile.ZIP_STORED) as archive:
+    archive.writestr("model-package.json", json.dumps(manifest))
+    for name, content in files.items():
+        archive.writestr(name, content)
+print(sha256(Path("model.zip").read_bytes()).hexdigest())
+```
+
+Review and pin the complete archive digest, then run:
+
+```sh
+plb sandbox-score --model-package model.zip --model-sha256 REVIEWED_ARCHIVE_SHA256 \
+  --runtime-image sha256:REVIEWED_IMAGE_ID --data local-input.csv \
+  --feature feature_a --feature feature_b --output outputs/package-predictions.csv
+```
+
+Packages are limited to 128 MiB, 128 declared files plus the manifest, and a
+64 KiB directory/manifest. Only ZIP32 `ZIP_STORED` regular files are accepted:
+compression, ZIP64, split disks, links, comments, extra headers, overlapping
+members and duplicate names are rejected. Paths use portable ASCII components,
+at most 16 levels/256 characters, with no traversal, absolute/device names,
+case ambiguity or file/directory collisions. Runtime validation also checks
+local/central headers, CRCs, every file digest, and exact manifest coverage.
+The [manifest schema](https://github.com/dipeshbabu/private-lab-bench/blob/main/privatelabbench/data/schemas/sandbox-model-package-v1.schema.json)
+describes the JSON shape; archive/path/resource checks are additional.
+
+Only the validated snapshot tree is mounted read-only at `/model`. Host Docker
+configuration and other staging files are outside that mount. A fixed guest-only
+bootstrap adds `/model` and the entrypoint directory for local module imports;
+Python still uses isolated mode. Use `Path(__file__)` to locate assets, since the
+working directory remains bounded scratch space. Native/checkpoint loading, if
+the model needs it, happens inside the guest using libraries in the reviewed
+operator image. The host neither imports the model nor unpickles its assets.
+
+The same CPU/memory/PID/time/output and network restrictions apply. Choose enough
+memory for the model within the configured limits. The provenance records the
+package format and remains local. Dedicated Linux CI exercises actual imports,
+weights, read-only mounts, output/resource attacks, CLI output and owned-container
+cleanup. GPU execution and independent security audit are still unverified.
 
 ## Enforced controls
 

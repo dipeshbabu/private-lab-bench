@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Accept digest-pinned, multi-file CPU model packages in the Linux/gVisor executor. A bounded, uncompressed ZIP manifest declares every file; the host validates paths and hashes before mounting a read-only snapshot, and model code executes only inside the guest.
+
 ### Fixed
 
 - Bind quality gating and signing to the exact in-memory artifact that passed verification, preserving requested signer/secret checks when a source pathname changes.

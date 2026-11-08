@@ -177,7 +177,11 @@ def build_parser() -> argparse.ArgumentParser:
         "sandbox-score",
         help="Run an untrusted Python model with Linux/gVisor isolation; local outputs only.",
     )
-    sandbox.add_argument("--model", required=True)
+    sandbox_model = sandbox.add_mutually_exclusive_group(required=True)
+    sandbox_model.add_argument("--model", help="Pinned Python script.")
+    sandbox_model.add_argument(
+        "--model-package", help="Pinned sandbox-model-package/v1 ZIP."
+    )
     sandbox.add_argument("--model-sha256", required=True)
     sandbox.add_argument(
         "--runtime-image",
