@@ -18,8 +18,8 @@ entry-point metadata, execute it, and produce a verifiable local receipt.
 [Real scientific parity](https://github.com/dipeshbabu/private-lab-bench/actions/workflows/scientific-parity.yml)
 runs weekly at Monday 07:23 UTC, on changes to its workflow/parity/integration
 definitions on main or Codex branches, and by manual dispatch. It checks all
-six supported TDC tasks over five training seeds, all five supported Matbench
-tasks/folds with two controls, and ten ProteinGym assays including the actual
+eight supported TDC tasks over five training seeds, all seven supported Matbench
+tasks/folds with two controls, and twelve ProteinGym assays including the actual
 upstream summary pipeline. Public inputs are checksum-pinned. Only aggregate
 `verification.json` records are uploaded; no rows, predictions, model parameters,
 or signing keys enter the result artifacts.
@@ -43,7 +43,10 @@ tests both built distributions before publishing; see [releases](releases.md).
 
 Independent researcher sessions remain [pending](case_study/findings.md), at 0/3.
 Automated checks are not independent usability or security/privacy audits.
-PyPy and unlisted OS/version combinations
-remain outside the [verified support matrix](support.md). Durable multi-process
-privacy accounting and GPU/multi-file model sandbox execution remain documented
-implementation boundaries, not capabilities claimed by these test results.
+PyPy and unlisted OS/version combinations remain outside the
+[verified support matrix](support.md). The development branch adds
+[durable local accounting](privacy.md#durable-local-accounting-unreleased) and
+[multi-file CPU model packages](sandbox.md#multi-file-cpu-packages-unreleased),
+with concurrency, restart and actual gVisor checks. These features are unreleased.
+GPU execution remains unsupported, and independent privacy/sandbox review is
+still unavailable. The [v0.1.7 release hold](release_readiness.md) remains in place.

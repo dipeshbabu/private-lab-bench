@@ -11,6 +11,7 @@ from privatelabbench.privacy.formal import (
     release_bounded_means,
 )
 from privatelabbench.privacy.opendp_backend import OpenDPBoundedMean
+from privatelabbench.privacy.sqlite_budget import SQLitePrivacyBudget
 
 
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf")])
@@ -192,6 +193,66 @@ def test_release_charges_shared_budget_and_serializes_no_exact_values():
     assert ledger.epsilon_spent == 1.0
     with pytest.raises(ValueError, match="budget exceeded"):
         query.release([0.0, 0.5, 1.0], budget=ledger)
+
+
+def test_actual_opendp_release_uses_durable_budget_across_restarts(tmp_path):
+    require_opendp()
+    path = tmp_path / "private-budget.db"
+    ledger = SQLitePrivacyBudget.create(
+        path, scope_id="public-fixed-query", epsilon_limit=1.0
+    )
+    query = OpenDPBoundedMean("public-query", 0.0, 1.0, 3, 0.5)
+    first = query.release([0.0, 0.5, 1.0], budget=ledger)
+    restarted = SQLitePrivacyBudget.open(
+        path, scope_id="public-fixed-query", epsilon_limit=1.0
+    )
+    second = query.release([0.2, 0.4, 0.6], budget=restarted)
+    assert math.isfinite(first.value) and math.isfinite(second.value)
+    assert ledger.epsilon_spent == 1.0
+    with pytest.raises(ValueError, match="budget exceeded"):
+        query.release([0.2, 0.4, 0.6], budget=restarted)
+    for value in (first, second):
+        encoded = json.dumps(value.as_dict(), allow_nan=False)
+        assert str(path) not in encoded and "public-fixed-query" not in encoded
+        assert "clipped_mean" not in encoded and "values" not in encoded
+
+
+@pytest.mark.parametrize(
+    "failure", [RuntimeError("sampling failed"), math.inf, math.nan]
+)
+def test_durable_charge_survives_sampler_failure_and_reopen(
+    tmp_path, monkeypatch, failure
+):
+    require_opendp()
+    path = tmp_path / "failed-sample.db"
+    ledger = SQLitePrivacyBudget.create(
+        path, scope_id="public-fixed-query", epsilon_limit=0.5
+    )
+    original = OpenDPBoundedMean.measurement
+
+    def controlled_failure(self):
+        measurement, sensitivity = original(self)
+
+        class FailingMeasurement:
+            input_domain = measurement.input_domain
+
+            def __call__(self, values):
+                if isinstance(failure, Exception):
+                    raise failure
+                return failure
+
+        return FailingMeasurement(), sensitivity
+
+    monkeypatch.setattr(OpenDPBoundedMean, "measurement", controlled_failure)
+    query = OpenDPBoundedMean("public-query", 0.0, 1.0, 3, 0.5)
+    with pytest.raises((RuntimeError, ValueError)):
+        query.release([0.0, 0.5, 1.0], budget=ledger)
+    restarted = SQLitePrivacyBudget.open(
+        path, scope_id="public-fixed-query", epsilon_limit=0.5
+    )
+    assert restarted.epsilon_spent == 0.5
+    with pytest.raises(ValueError, match="budget exceeded"):
+        query.release([0.0, 0.5, 1.0], budget=restarted)
 
 
 @pytest.mark.parametrize(

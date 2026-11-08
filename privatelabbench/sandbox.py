@@ -7,6 +7,7 @@ import math
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -32,6 +33,23 @@ DOCKER_HOST = "unix:///var/run/docker.sock"
 
 class SandboxError(ValueError):
     """A local rejection; never includes submitted stdout/stderr or private rows."""
+
+
+def _file_snapshot(path: Path, maximum: int) -> bytes:
+    """Bound regular-file inputs before parsing or passing private features."""
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0))
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise SandboxError("Sandbox inputs must be regular files")
+        stream = os.fdopen(descriptor, "rb")
+    except BaseException:
+        os.close(descriptor)
+        raise
+    with stream:
+        content = stream.read(maximum + 1)
+    if len(content) > maximum:
+        raise SandboxError("Sandbox input exceeds its byte limit")
+    return content
 
 
 @dataclass(frozen=True)
@@ -166,7 +184,17 @@ def _check_runtime(docker, image):
         raise SandboxError("Use a reviewed local Linux image ID without image volumes")
 
 
-def _create_args(name, image, model_path, limits):
+def _create_args(name, image, model_path, limits, *, package_entrypoint=None):
+    destination = "/model" if package_entrypoint is not None else "/model.py"
+    interpreter = ["-I", "-B", "/model.py"]
+    if package_entrypoint is not None:
+        interpreter = [
+            "-I",
+            "-B",
+            "-c",
+            "import os,runpy,sys; sys.path[:0]=['/model',os.path.dirname(sys.argv[1])]; runpy.run_path(sys.argv[1],run_name='__main__')",
+            "/model/" + package_entrypoint,
+        ]
     return [
         "create",
         "--name",
@@ -207,7 +235,7 @@ def _create_args(name, image, model_path, limits):
         "--tmpfs",
         f"/tmp:rw,noexec,nosuid,nodev,size={limits.scratch_mb}m,mode=1777",
         "--mount",
-        f"type=bind,src={model_path},dst=/model.py,readonly",
+        f"type=bind,src={model_path},dst={destination},readonly",
         "--log-driver",
         "none",
         "--no-healthcheck",
@@ -225,9 +253,7 @@ def _create_args(name, image, model_path, limits):
         "PATH=/usr/local/bin:/usr/bin:/bin",
         "PYTHONDONTWRITEBYTECODE=1",
         "/usr/local/bin/python",
-        "-I",
-        "-B",
-        "/model.py",
+        *interpreter,
     ]
 
 
@@ -323,18 +349,59 @@ def run_sandbox(
     The operator reviews the runtime image and host. The script is untrusted.
     Predictions are a potential data-exfiltration channel and MUST remain local.
     """
+    return _run_model(
+        model,
+        features,
+        model_sha256=model_sha256,
+        runtime_image=runtime_image,
+        task_type=task_type,
+        limits=limits,
+        package=False,
+    )
+
+
+def run_sandbox_package(
+    model: bytes,
+    features,
+    *,
+    model_sha256: str,
+    runtime_image: str,
+    task_type="regression",
+    limits=None,
+):
+    """Execute a bounded digest-verified multi-file model package in gVisor only."""
+    return _run_model(
+        model,
+        features,
+        model_sha256=model_sha256,
+        runtime_image=runtime_image,
+        task_type=task_type,
+        limits=limits,
+        package=True,
+    )
+
+
+def _run_model(
+    model, features, *, model_sha256, runtime_image, task_type, limits, package
+):
     limits = limits or SandboxLimits()
     if not isinstance(limits, SandboxLimits):
         raise SandboxError("Explicit SandboxLimits required")
     if not re.fullmatch(r"sha256:[0-9a-f]{64}", runtime_image):
         raise SandboxError("An immutable local runtime image ID is required")
-    if not isinstance(model, bytes) or not 0 < len(model) <= MAX_MODEL_BYTES:
-        raise SandboxError("Model script exceeds its byte limit or is empty")
-    if (
-        not re.fullmatch(r"[0-9a-f]{64}", model_sha256)
-        or sha256(model).hexdigest() != model_sha256
-    ):
-        raise SandboxError("Model script digest mismatch")
+    snapshot = None
+    if package:
+        from privatelabbench.sandbox_package import read_model_package
+
+        snapshot = read_model_package(model, model_sha256)
+    else:
+        if not isinstance(model, bytes) or not 0 < len(model) <= MAX_MODEL_BYTES:
+            raise SandboxError("Model script exceeds its byte limit or is empty")
+        if (
+            not re.fullmatch(r"[0-9a-f]{64}", model_sha256)
+            or sha256(model).hexdigest() != model_sha256
+        ):
+            raise SandboxError("Model script digest mismatch")
     if task_type not in {"regression", "classification"}:
         raise SandboxError("Declare regression or binary classification")
     matrix = np.asarray(features)
@@ -355,16 +422,24 @@ def run_sandbox(
         raise SandboxError("Sandbox execution requires a Linux host")
     with tempfile.TemporaryDirectory(prefix="plb-sandbox-", dir="/tmp") as folder:
         root = Path(folder)
-        script = root / "model.py"
-        script.write_bytes(model)
-        script.chmod(0o444)
         docker = _Docker(root / "docker-config")
         _check_runtime(docker, runtime_image)
+        if snapshot is None:
+            selected = root / "model.py"
+            selected.write_bytes(model)
+            selected.chmod(0o444)
+            entrypoint = None
+        else:
+            selected = root / "model"
+            snapshot.materialize(selected)
+            entrypoint = snapshot.entrypoint
         name = "plb-sandbox-" + uuid4().hex
         created = False
         try:
             container = docker.command(
-                *_create_args(name, runtime_image, script, limits)
+                *_create_args(
+                    name, runtime_image, selected, limits, package_entrypoint=entrypoint
+                )
             )
             created = True
             if not re.fullmatch(rb"[0-9a-f]{64}\s*", container.stdout):
@@ -383,18 +458,12 @@ def run_sandbox(
 def sandbox_command(args):
     """Local-only CLI with fresh output paths and no automatic public export."""
     try:
-        model, data, output = map(Path, (args.model, args.data, args.output))
+        package = getattr(args, "model_package", None)
+        model, data, output = map(Path, (package or args.model, args.data, args.output))
         provenance = output.with_suffix(".sandbox.json")
         validate_output_paths([model, data], [output, provenance])
         if output.exists() or provenance.exists():
             raise SandboxError("Choose fresh local prediction and provenance paths")
-
-        def snapshot(path, maximum):
-            with path.open("rb") as handle:
-                content = handle.read(maximum + 1)
-            if len(content) > maximum:
-                raise SandboxError("Sandbox input exceeds its byte limit")
-            return content
 
         if (
             len(set(args.feature)) != len(args.feature)
@@ -404,7 +473,8 @@ def sandbox_command(args):
                 "Feature roles must be unique and separate from sample IDs"
             )
         frame = pd.read_csv(
-            BytesIO(snapshot(data, MAX_INPUT_BYTES)), dtype={args.sample_id: "string"}
+            BytesIO(_file_snapshot(data, MAX_INPUT_BYTES)),
+            dtype={args.sample_id: "string"},
         )
         if not {args.sample_id, *args.feature} <= set(frame) or frame.empty:
             raise SandboxError("Missing declared sample-ID/features or empty input")
@@ -413,8 +483,14 @@ def sandbox_command(args):
             raise SandboxError("Sample IDs must be complete and unique")
         values = frame[args.feature].to_numpy()
         limits = SandboxLimits(seconds=args.seconds, memory_mb=args.memory_mb)
-        predictions = run_sandbox(
-            snapshot(model, MAX_MODEL_BYTES),
+        maximum = MAX_MODEL_BYTES
+        executor = run_sandbox
+        if package:
+            from privatelabbench.sandbox_package import MAX_PACKAGE_BYTES
+
+            maximum, executor = MAX_PACKAGE_BYTES, run_sandbox_package
+        predictions = executor(
+            _file_snapshot(model, maximum),
             values,
             model_sha256=args.model_sha256,
             runtime_image=args.runtime_image,
@@ -439,6 +515,7 @@ def sandbox_command(args):
                 "host_pid_limit": limits.host_pid_limit,
                 "network": "none",
                 "n_samples": len(frame),
+                **({"model_format": "sandbox-model-package/v1"} if package else {}),
             },
         )
         print(f"Local sandbox predictions: {output}")

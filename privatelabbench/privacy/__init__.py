@@ -22,6 +22,7 @@ from privatelabbench.privacy.formal import (
     release_bounded_means,
 )
 from privatelabbench.privacy.opendp_backend import OpenDPBoundedMean, OpenDPMeanRelease
+from privatelabbench.privacy.sqlite_budget import SQLitePrivacyBudget
 
 __all__ = [
     "ADJACENCY_MODEL",
@@ -33,6 +34,7 @@ __all__ = [
     "PrivacyAttackSpec",
     "PrivacyBudget",
     "PrivacyConfig",
+    "SQLitePrivacyBudget",
     "ensure_builtin_privacy_attacks_registered",
     "get_privacy_attack",
     "list_privacy_attacks",

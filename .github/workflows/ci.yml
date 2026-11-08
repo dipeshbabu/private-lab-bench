@@ -401,7 +401,7 @@ jobs:
         env:
           PLB_SANDBOX_TESTS: "1"
           PLB_HOST_SECRET: "host-only-integration-sentinel"
-        run: pytest -q --cov --cov-report=json:coverage.json tests/test_sandbox.py tests/test_sandbox_runtime.py
+        run: pytest -q --cov --cov-report=json:coverage.json tests/test_sandbox.py tests/test_sandbox_runtime.py tests/test_sandbox_package.py tests/test_sandbox_package_runtime.py
       - name: Retain backend coverage
         uses: actions/upload-artifact@v7
         with:

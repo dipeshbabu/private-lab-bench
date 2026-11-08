@@ -19,7 +19,7 @@ that still needs implementation or outside evidence.
   limits, and adversarial runtime checks. Predictions remain local.
 - Synthetic molecule, tabular, and protein packs, plus pinned TDC ADMET,
   Matbench, and ProteinGym integrations checked against upstream implementations:
-  six ADMET tasks, five materials tasks, and ten DMS substitution assays.
+  eight ADMET tasks, seven materials tasks, and twelve DMS substitution assays.
 - Bounded-query privacy reference mechanisms and sequential budget accounting.
   These remain separate from privacy attacks and experimental metric noise.
 - An optional [OpenDP bounded-mean backend](privacy.md#optional-opendp-backend)
@@ -36,11 +36,14 @@ verify model execution or scientific validity.
 ## Extension boundaries
 
 The three extensions added in v0.1.3 have explicit limits. The sandbox supports
-CPU Python scripts in an operator-reviewed image, rather than participant images
-or large multi-file/GPU checkpoints. Its controls and tests do not constitute an
+CPU Python scripts in an operator-reviewed image. The unreleased model-package
+format adds bounded, multi-file CPU models; participant images and GPU execution
+remain unsupported. Its controls and tests do not constitute an
 independent security audit. OpenDP currently supports bounded means with fixed
-public size and row-level replace-one adjacency; the application must maintain
-accounting across processes and restarts. Its upstream `contrib` status and
+public size and row-level replace-one adjacency. The unreleased SQLite ledger
+shares atomic charges across local processes and restarts; operators must keep
+all queries on the same protected ledger and prevent rollback or cloning. Its
+upstream `contrib` status and
 privacy assumptions are documented. Benchmark coverage remains a tested subset
 of each upstream suite.
 

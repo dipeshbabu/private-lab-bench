@@ -8,6 +8,7 @@ from importlib.metadata import version
 from typing import Sequence
 
 from privatelabbench.privacy.formal import ADJACENCY_MODEL, PrivacyBudget
+from privatelabbench.privacy.sqlite_budget import SQLitePrivacyBudget
 
 
 def _opendp():
@@ -103,16 +104,19 @@ class OpenDPBoundedMean:
         return measurement, float(aggregate.map(2))
 
     def release(
-        self, values: Sequence[float], *, budget: PrivacyBudget
+        self, values: Sequence[float], *, budget: PrivacyBudget | SQLitePrivacyBudget
     ) -> OpenDPMeanRelease:
         """Charge a shared local ledger before sampling; failures are not refunded.
 
         Keep the SAME ledger for every release about the protected population.
-        The ledger is in-memory and sequential, not a concurrent or durable store.
+        PrivacyBudget is sequential in-memory state; SQLitePrivacyBudget supports
+        concurrent processes and restarts on one protected local database.
         Validation errors must remain local; they are not DP releases.
         """
-        if not isinstance(budget, PrivacyBudget):
-            raise ValueError("An explicit shared PrivacyBudget is required")
+        if not isinstance(budget, (PrivacyBudget, SQLitePrivacyBudget)):
+            raise ValueError(
+                "An explicit shared PrivacyBudget or SQLitePrivacyBudget is required"
+            )
         if len(values) != self.public_size:
             raise ValueError("Input does not match the declared public size")
         if any(isinstance(x, (bool, str, bytes)) for x in values):

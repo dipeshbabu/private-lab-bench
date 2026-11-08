@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import io
 import json
 import math
 import multiprocessing
@@ -11,6 +12,8 @@ import platform
 import subprocess
 import sys
 import sysconfig
+import zipfile
+from hashlib import sha256
 from importlib.metadata import version
 from pathlib import Path
 
@@ -24,6 +27,7 @@ from privatelabbench.eval.metrics import classification_metrics, multiclass_metr
 from privatelabbench.privacy.aggregation import aggregate_client_metrics
 from privatelabbench.privacy.attacks import membership_inference_risk
 from privatelabbench.privacy.export import publish_shareable_artifact
+from privatelabbench.privacy.sqlite_budget import SQLitePrivacyBudget
 from privatelabbench.reports.integrity import attach_integrity_metadata, verify_payload
 from privatelabbench.reports.receipt import verify_receipt
 from privatelabbench.tasks.molecules import MoleculeDataset
@@ -364,6 +368,53 @@ def main() -> None:
     assert site_summary["pooled"]["estimate"] is None
     checks.append(
         "single-class molecules, binary finite-score validation, stable weighted means, negative Spearman"
+    )
+
+    from privatelabbench.sandbox_package import read_model_package
+
+    model_files = {
+        "predict.py": b"raise RuntimeError('host must not execute model')",
+        "weights.json": b"[1,2]",
+    }
+    model_manifest = {
+        "schema_version": "sandbox-model-package/v1",
+        "entrypoint": "predict.py",
+        "files": {
+            name: sha256(content).hexdigest() for name, content in model_files.items()
+        },
+    }
+    package_stream = io.BytesIO()
+    with zipfile.ZipFile(
+        package_stream, "w", compression=zipfile.ZIP_STORED
+    ) as archive:
+        archive.writestr("model-package.json", json.dumps(model_manifest))
+        for name, content in model_files.items():
+            archive.writestr(name, content)
+    package_bytes = package_stream.getvalue()
+    prepared = read_model_package(package_bytes, sha256(package_bytes).hexdigest())
+    assert prepared.entrypoint == "predict.py" and prepared.file_count == 2
+    checks.append(
+        "installed multi-file model-package validation without host model execution"
+    )
+
+    ledger_path = folder / "private-budget.db"
+    durable = SQLitePrivacyBudget.create(
+        ledger_path, scope_id="installed-core", epsilon_limit=1.0
+    )
+    durable.spend(label="first", epsilon=0.5)
+    reopened = SQLitePrivacyBudget.open(
+        ledger_path, scope_id="installed-core", epsilon_limit=1.0
+    )
+    reopened.spend(label="second", epsilon=0.5)
+    assert durable.epsilon_spent == 1.0 and reopened.epsilon_remaining == 0.0
+    try:
+        reopened.spend(label="overflow", epsilon=0.5)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("A restarted durable ledger admitted an overspend")
+    checks.append(
+        "durable SQLite privacy accounting across reopen and budget exhaustion"
     )
 
     summary = {

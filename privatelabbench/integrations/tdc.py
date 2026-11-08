@@ -38,6 +38,22 @@ class TDCTask:
 
 
 TASKS = {
+    "bbb_martins": TDCTask(
+        "bbb_martins",
+        "classification",
+        "auroc",
+        "roc-auc",
+        "5035139072311f4cb0a1a54cffe11bc727004886ace4629b98f6db20c431e4af",
+        "82d4fa96f671a8382e9d8e6de3dde8385b9f337854c83e6fde2e69a7be93754f",
+    ),
+    "hia_hou": TDCTask(
+        "hia_hou",
+        "classification",
+        "auroc",
+        "roc-auc",
+        "87f35dc1767174efa245ee71644229b5073a8490988527a3fe6d2f1e7522c7db",
+        "da702497c3c0a50dbdff77471517562a8813859f53f069ac5bb43126aa534351",
+    ),
     "caco2_wang": TDCTask(
         "caco2_wang",
         "regression",
