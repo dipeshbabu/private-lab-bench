@@ -1,0 +1,116 @@
+/* Typography follows the documentation reference; layout stays theme-native. */
+.md-header__title {
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.md-typeset {
+  font-size: 0.8rem;
+  line-height: 1.75;
+}
+
+.md-typeset h1 {
+  color: var(--md-default-fg-color);
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.14;
+}
+
+.md-typeset h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.md-typeset h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.md-typeset h4 {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.md-typeset a {
+  font-weight: 500;
+}
+
+.md-typeset strong a,
+.md-typeset a strong {
+  font-weight: 700;
+}
+
+.md-typeset :is(h1, h2, h3, h4, h5, h6) a {
+  font-weight: inherit;
+}
+
+.md-nav {
+  font-size: 0.7rem;
+}
+
+.md-sidebar--primary .md-nav {
+  font-size: 0.8rem;
+}
+
+.md-nav__link--active {
+  font-weight: 650;
+}
+
+.md-nav__container:has(> .md-nav__link--active) {
+  font-weight: 650;
+}
+
+.md-nav--primary > .md-nav__list > .md-nav__item--section > .md-nav__link,
+.md-nav--primary > .md-nav__list > .md-nav__item > label.md-nav__link,
+.md-nav--secondary .md-nav__title {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.md-nav--secondary .md-nav__link--active {
+  font-weight: 600;
+}
+
+.md-typeset table:not([class]) {
+  font-size: 0.76rem;
+}
+
+.md-typeset table:not([class]) th {
+  font-weight: 650;
+}
+
+.md-typeset pre > code,
+.md-typeset .highlight code,
+.md-typeset .md-code__content {
+  font-size: 0.72rem;
+}
+
+.md-typeset :not(pre) > code {
+  font-size: 0.9em;
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  font-size: 0.76rem;
+}
+
+.md-typeset .admonition-title,
+.md-typeset summary {
+  font-weight: 700;
+}
+
+.md-typeset .tabbed-labels > label {
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+@media screen and (min-width: 100em) {
+  html {
+    font-size: 125%;
+  }
+}
