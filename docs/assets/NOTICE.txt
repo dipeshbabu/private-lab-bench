@@ -1,0 +1,9 @@
+PrivateLabBench flask mark
+
+The flask-outline glyph is from Material Design Icons by Pictogrammers and its
+contributors, distributed under Apache License 2.0. The glyph geometry is
+unchanged. PrivateLabBench adds project colors, color-scheme styling and an
+accessible title. A copy of the icon license accompanies this asset.
+
+Upstream project: https://github.com/Templarian/MaterialDesign
+Upstream license: https://github.com/Templarian/MaterialDesign/blob/master/LICENSE

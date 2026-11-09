@@ -6,11 +6,12 @@ repo_name: dipeshbabu/private-lab-bench
 edit_uri: edit/main/docs/
 theme:
   name: material
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
   font:
     text: Inter
     code: JetBrains Mono
   icon:
-    logo: material/flask-outline
     repo: fontawesome/brands/github
     previous: material/arrow-left
     next: material/arrow-right
