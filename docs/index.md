@@ -12,7 +12,7 @@ your environment; share reviewed aggregate evidence when disclosure is approved.
 
 | Journey | Start here |
 | --- | --- |
-| Try a decision in five minutes | [Synthetic calibration walkthrough](quickstart.md): a better overall model fails a required instrument group |
+| Try a scientific decision | [Synthetic calibration walkthrough](quickstart.md): a better overall model fails a required instrument group |
 | Evaluate your own private data | [Prediction tables](prediction_tables.md), [paired comparisons](paired_comparison.md), and [quality gates](quality_gates.md) |
 | Share approved evidence | [Evaluation receipts](evaluation_receipts.md), [release policy](privacy.md), and [signer trust](receipt_trust.md) |
 

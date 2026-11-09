@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import math
 from hashlib import sha256
 from importlib.metadata import version
 from pathlib import Path
@@ -137,6 +138,164 @@ def _release(context):
             key: context[key] for key in ("model", "dataset", "evaluator_relationship")
         },
     }
+
+
+def _finite_number(value):
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+    )
+
+
+def _count_description(observations, units):
+    def count(value):
+        return str(value) if isinstance(value, int) and value >= 0 else "unavailable"
+
+    return f"{count(observations)} observations; {count(units)} connectivity units"
+
+
+def _limit_description(label, observed, limit, *, counts=None):
+    suffix = f" ({counts})" if counts else ""
+    if not _finite_number(observed):
+        return (
+            f"{label}: unavailable; predeclared limit {limit:.6f}{suffix}: investigate."
+        )
+    passed = observed <= limit
+    return (
+        f"{label}: {observed:.6f} {'meets' if passed else 'exceeds'} "
+        f"the predeclared limit {limit:.6f}{suffix}: "
+        f"{'pass' if passed else 'fail'}."
+    )
+
+
+def write_decision_page(public, protocol):
+    """Explain approved aggregates using the public, frozen case rules only."""
+    public = Path(public)
+    evaluations = {
+        name: json.loads((public / (name + ".json")).read_text(encoding="utf-8"))[
+            "shareable"
+        ]["evaluation"]
+        for name in ("reference-candidate", "proxy-candidate", "proxy-baseline")
+    }
+    original = evaluations["reference-candidate"]
+    proxy = evaluations["proxy-candidate"]
+    mean = evaluations["proxy-baseline"]
+    paired = json.loads((public / "proxy-paired.json").read_text(encoding="utf-8"))[
+        "shareable"
+    ]
+    if any(
+        artifact.get("protocol", {}).get("sha256") != protocol.sha256
+        for artifact in (*evaluations.values(), paired)
+    ):
+        raise ValueError("Decision rules must match the approved protocol digest")
+    rules = protocol.as_dict()
+    metric_rules = rules["quality_gate"]["metric"]["mae"]
+    critical_rule = rules["quality_gate"]["slices"]["critical"]["high_logp"]
+    practical_threshold = rules["comparison"]["practical_threshold"]
+    critical = (
+        proxy.get("slices", {})
+        .get(critical_rule["column"], {})
+        .get(critical_rule["value"], {})
+    )
+    critical_mae = (
+        critical.get("metrics", {}).get(critical_rule["metric"])
+        if critical.get("status") == "evaluated"
+        else None
+    )
+    uncertainty = proxy.get("uncertainty", {})
+    mae_interval = uncertainty.get("metrics", {}).get("mae", {})
+    interval_upper = (
+        mae_interval.get("upper")
+        if uncertainty.get("status") == mae_interval.get("status") == "evaluated"
+        else None
+    )
+    description = (
+        proxy.get("external_validation", {})
+        .get("dataset", {})
+        .get("provenance_statement", "Approved aggregate Caco2 evaluation.")
+    )
+    overall_counts = _count_description(
+        proxy.get("sample_counts", {}).get("n_samples"),
+        uncertainty.get("n_independent_units"),
+    )
+    critical_counts = _count_description(
+        critical.get("n"), critical.get("n_independent_units")
+    )
+
+    def metric_cell(evaluation):
+        metric = evaluation.get("metrics", {}).get("mae")
+        return f"{metric:.6f}" if _finite_number(metric) else "unavailable"
+
+    improvement = paired.get("improvement_a_over_b")
+    improvement_text = (
+        f"{improvement:.6f}" if _finite_number(improvement) else "unavailable"
+    )
+    paired_interval = paired.get("paired_interval", {})
+    lower, upper = paired_interval.get("lower"), paired_interval.get("upper")
+    if (
+        paired_interval.get("status") == "evaluated"
+        and _finite_number(lower)
+        and _finite_number(upper)
+    ):
+        meets_criterion = (
+            lower >= practical_threshold if practical_threshold > 0 else lower > 0
+        )
+        relative = "meets" if meets_criterion else "does not meet"
+        criterion = "at least" if practical_threshold > 0 else "greater than"
+        interval_text = (
+            f"Paired interval: [{lower:.6f}, {upper:.6f}]; its lower bound "
+            f"{relative} the predeclared practical improvement criterion "
+            f"({criterion} {practical_threshold:.6f})."
+        )
+    else:
+        interval_text = (
+            "Paired interval unavailable: relative improvement requires investigation."
+        )
+    lines = [
+        "# Controlled Caco2 model-selection result",
+        "",
+        description,
+        "",
+        "| Evaluation | MAE | Quality |",
+        "| --- | ---: | --- |",
+        f"| Original held-out candidate | {metric_cell(original)} | {original.get('quality_gate', {}).get('status')} |",
+        f"| Synthetic proxy candidate | {metric_cell(proxy)} | {proxy.get('quality_gate', {}).get('status')} |",
+        f"| Synthetic proxy training mean | {metric_cell(mean)} | {mean.get('quality_gate', {}).get('status')} |",
+        "",
+        _limit_description(
+            "Overall proxy MAE",
+            proxy.get("metrics", {}).get("mae"),
+            metric_rules["max"],
+            counts=overall_counts,
+        ),
+        "",
+        _limit_description(
+            "Overall proxy MAE interval upper bound",
+            interval_upper,
+            metric_rules["max_ci_upper"],
+        ),
+        "",
+        _limit_description(
+            "Critical high-logP group MAE",
+            critical_mae,
+            critical_rule["max"],
+            counts=critical_counts,
+        ),
+        "",
+        f"Paired improvement of candidate over baseline: {improvement_text}. Model A is the forest reference; Model B is the training-mean reference. Predeclared practical improvement threshold: {practical_threshold:.6f}.",
+        "",
+        interval_text,
+        "",
+        "Relative improvement does not waive an overall or critical-group quality failure. Limits come from the public frozen case protocol; model-quality and aggregate-release decisions are separate.",
+        "",
+        "Reference/current changes reuse public compounds and IDs; independent-cohort delta intervals are withheld. Connectivity clusters are an inferential assumption, not proof of chemical independence.",
+        "",
+        "The signed files authenticate a pinned example issuer's statement. Execution and scientific validity are not independently verified. Raw rows, model parameters, keys, full audit evidence, and paths remain under local/.",
+    ]
+    path = public / "decision.md"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
 
 
 def evaluate_case(
@@ -348,36 +507,7 @@ def evaluate_case(
             )
         }
     atomic_write_json(private / "provenance.json", provenance)
-    original = json.loads((public / "reference-candidate.json").read_text())[
-        "shareable"
-    ]["evaluation"]
-    proxy = json.loads((public / "proxy-candidate.json").read_text())["shareable"][
-        "evaluation"
-    ]
-    mean = json.loads((public / "proxy-baseline.json").read_text())["shareable"][
-        "evaluation"
-    ]
-    paired = json.loads((public / "proxy-paired.json").read_text())["shareable"]
-    lines = [
-        "# Controlled Caco2 model-selection result",
-        "",
-        provenance["description"],
-        "",
-        "| Evaluation | MAE | Quality |",
-        "| --- | ---: | --- |",
-        f"| Original held-out candidate | {original['metrics']['mae']:.6f} | {original.get('quality_gate', {}).get('status')} |",
-        f"| Synthetic proxy candidate | {proxy['metrics']['mae']:.6f} | {proxy.get('quality_gate', {}).get('status')} |",
-        f"| Synthetic proxy training mean | {mean['metrics']['mae']:.6f} | {mean.get('quality_gate', {}).get('status')} |",
-        "",
-        f"Paired improvement of candidate over baseline: {paired['improvement_a_over_b']:.6f}. Model A is the forest reference; Model B is the training-mean reference. Practical threshold: 0.02.",
-        "",
-        f"Paired interval: {paired['paired_interval']}",
-        "",
-        "Reference/current changes reuse public compounds and IDs; independent-cohort delta intervals are withheld. Connectivity clusters are an inferential assumption, not proof of chemical independence.",
-        "",
-        "The signed files authenticate a pinned example issuer's statement. Execution and scientific validity are not independently verified. Raw rows, model parameters, keys, full audit evidence, and paths remain under local/.",
-    ]
-    (public / "decision.md").write_text("\n".join(lines) + "\n")
+    write_decision_page(public, protocol)
     atomic_write_json(
         public / "verification.json",
         {

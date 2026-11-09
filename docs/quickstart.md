@@ -2,10 +2,13 @@
 icon: material/rocket-launch-outline
 ---
 
-# A scientific decision in five minutes
+# Make a scientific decision
 
 Try the synthetic example, evaluate your own predictions, then share only approved
 evidence. No account, model training, or dataset upload is required.
+
+The example runs in your installed environment. Allow extra time for initial
+setup and dependency downloads, which can take more than five minutes.
 
 ## Install
 

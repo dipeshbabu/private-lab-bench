@@ -957,17 +957,9 @@ def print_run_summary(summary: dict[str, Any]) -> None:
             f"(member advantage: {float(summary.get('privacy_member_advantage', 0.0)):.4f})"
         )
     if "privacy_gate_status" in summary:
-        print(
-            "Privacy gate: "
-            f"{summary['privacy_gate_status']} "
-            f"(shareable: {str(summary.get('privacy_gate_publishable')).lower()})"
-        )
+        print(f"Privacy risk screening: {summary['privacy_gate_status']}")
     if "aggregate_release_status" in summary:
-        print(
-            "Aggregate release: "
-            f"{summary['aggregate_release_status']} "
-            f"(shareable: {str(summary.get('aggregate_release_publishable')).lower()})"
-        )
+        print(f"Aggregate screening: {summary['aggregate_release_status']}")
     print(f"Privacy: {summary['privacy']}")
     print(f"Markdown report saved to: {Path(summary['markdown_report'])}")
     print(f"JSON report saved to: {Path(summary['json_report'])}")
