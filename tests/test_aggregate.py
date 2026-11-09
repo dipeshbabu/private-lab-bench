@@ -626,6 +626,7 @@ def test_protocol_bound_paired_artifacts_preserve_within_site_evidence(
         public
     )
     # Explicit scientific overrides cannot silently alter the frozen comparison.
+    protected = {path: path.read_bytes() for path in (protocol, source_policy, *paths)}
     monkeypatch.setattr(
         "sys.argv",
         [
@@ -642,8 +643,17 @@ def test_protocol_bound_paired_artifacts_preserve_within_site_evidence(
             str(tmp_path / "conflict.json"),
         ],
     )
-    with pytest.raises(ValueError, match="conflicts"):
-        main()
+    capsys.readouterr()
+    assert main() == 1
+    captured = capsys.readouterr()
+    assert captured.out == (
+        "Comparison rejected: comparison.resamples conflicts with the versioned "
+        "protocol; choose a new protocol version\n"
+    )
+    assert captured.err == ""
+    assert "Traceback" not in captured.out
+    assert {path: path.read_bytes() for path in protected} == protected
+    assert not (tmp_path / "conflict.json").exists()
 
 
 def test_cli_generates_local_output_gates_public_output_and_cleans_stale_export(
