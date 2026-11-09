@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/dipeshbabu/private-lab-bench/main/docs/assets/logo.svg" alt="PrivateLabBench logo" width="96" height="96">
+</p>
+
 <h1 align="center">PrivateLabBench</h1>
 
 <p align="center">

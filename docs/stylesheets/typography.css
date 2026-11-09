@@ -1,4 +1,8 @@
-/* Typography follows the documentation reference; layout stays theme-native. */
+/* Shared documentation typography and branding. */
+.md-logo img {
+  filter: brightness(0) invert(1);
+}
+
 .md-header__title {
   font-weight: 700;
   letter-spacing: -0.3px;
