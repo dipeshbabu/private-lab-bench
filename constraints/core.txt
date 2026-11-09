@@ -36,13 +36,13 @@ pyyaml==6.0.3
     # via private-lab-bench (pyproject.toml)
 scikit-learn==1.7.2 ; python_full_version < '3.11'
     # via private-lab-bench (pyproject.toml)
-scikit-learn==1.9.1 ; python_full_version >= '3.11'
+scikit-learn==1.7.2 ; python_full_version >= '3.11'
     # via private-lab-bench (pyproject.toml)
 scipy==1.15.3 ; python_full_version < '3.11'
     # via scikit-learn
-scipy==1.17.1 ; python_full_version == '3.11.*'
+scipy==1.15.3 ; python_full_version == '3.11.*'
     # via scikit-learn
-scipy==1.18.1 ; python_full_version >= '3.12'
+scipy==1.15.3 ; python_full_version >= '3.12'
     # via scikit-learn
 six==1.17.0 ; python_full_version < '3.11'
     # via python-dateutil
