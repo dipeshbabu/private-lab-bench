@@ -75,6 +75,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+      - name: Preseed the official Windows Python 3.10 archive
+        if: matrix.os == 'windows-latest' && matrix.python-version == '3.10'
+        shell: pwsh
+        run: ./.github/scripts/preseed-windows-python310.ps1
       - name: Set up Python
         uses: actions/setup-python@v7.1.0
         with:
@@ -203,6 +207,10 @@ jobs:
       PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v7
+      - name: Preseed the official Windows Python 3.10 archive
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: ./.github/scripts/preseed-windows-python310.ps1
       - uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.10"
