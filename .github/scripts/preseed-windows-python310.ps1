@@ -10,6 +10,9 @@ if (-not $IsWindows -or -not [Environment]::Is64BitProcess -or
     $env:RUNNER_OS -ne 'Windows' -or $env:RUNNER_ARCH -ne 'X64') {
     throw 'Python preseed is restricted to GitHub-hosted Windows X64 runners.'
 }
+if ([string]::IsNullOrWhiteSpace($env:PLB_GITHUB_API_TOKEN)) {
+    throw 'The step-scoped GitHub API token is required.'
+}
 
 foreach ($name in @('RUNNER_TOOL_CACHE', 'RUNNER_TEMP')) {
     $value = [Environment]::GetEnvironmentVariable($name)
@@ -48,6 +51,7 @@ $archive = Join-Path $downloadDirectory 'python-3.10.11-win32-x64.zip'
 & curl.exe --fail --location --retry 3 --silent --show-error `
     --connect-timeout 30 --max-time 180 `
     --header 'Accept: application/octet-stream' `
+    --header "Authorization: Bearer $env:PLB_GITHUB_API_TOKEN" `
     'https://api.github.com/repos/actions/python-versions/releases/assets/195976320' `
     --output $archive
 if ($LASTEXITCODE -ne 0) { throw 'Official Python archive download failed.' }

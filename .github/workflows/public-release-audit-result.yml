@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows: ["Public Release Audit"]
     types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
