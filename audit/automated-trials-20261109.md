@@ -117,10 +117,19 @@ No driver, toolkit, Windows feature or container service was installed or change
   structurally invalid inputs cleanly. Successful output, signatures and direct
   low-level API exception behavior are preserved. Separate CLI retests leave the
   original failure logs unchanged.
+- Stricter installed-wheel diagnostics exposed three pre-existing comparison
+  tracebacks for incomplete/duplicate IDs and target disagreement. Rejection and
+  exact alignment remain required; the CLI now reports these input errors
+  without a traceback. The original diagnostic failures remain in the evidence.
 - Package discovery now prunes generated auxiliary trees. A traversal regression
   fails on the prior configuration and passes with the correction. A config-only
   wheel comparison retained all 135 members, including 129 package/data payloads,
   byte-for-byte. The change affects discovery work, not library contents.
+  Development tooling now requests the already-supported setuptools minimum.
+  The traversal regression reads discovery settings without unrelated license
+  validation and passes with setuptools 77.0.1, 77.0.3 and 84.2.1. Version 65.5.0
+  lacks pruning and is below the declared build requirement; it is not reported
+  as passing. The dev-extra dependency metadata changes intentionally.
 
 Focused regressions and unchanged-input retests accompany these corrections.
 The original plans and reports are preserved. CI remains required before landing

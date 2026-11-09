@@ -2,18 +2,28 @@
 
 from pathlib import Path
 
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
+
 import pytest
 
 
 def test_package_discovery_does_not_traverse_auxiliary_trees(tmp_path, monkeypatch):
-    pytest.importorskip("setuptools", reason="Packaging backend is not installed")
+    setuptools = pytest.importorskip(
+        "setuptools", reason="Packaging backend is not installed"
+    )
     from setuptools import discovery
-    from setuptools.config.expand import find_packages
-    from setuptools.config.pyprojecttoml import read_configuration
 
     project = Path(__file__).resolve().parents[1] / "pyproject.toml"
-    settings = read_configuration(str(project), expand=False)
+    settings = tomllib.loads(project.read_text(encoding="utf-8"))
     find_settings = settings["tool"]["setuptools"]["packages"]["find"]
+    finder = (
+        setuptools.find_namespace_packages
+        if find_settings.pop("namespaces", True)
+        else setuptools.find_packages
+    )
     auxiliary = {
         "outputs",
         "reports",
@@ -42,7 +52,7 @@ def test_package_discovery_does_not_traverse_auxiliary_trees(tmp_path, monkeypat
 
     with monkeypatch.context() as patch:
         patch.setattr(discovery.os, "scandir", reject_auxiliary_traversal)
-        packages = find_packages(root_dir=str(tmp_path), **find_settings)
+        packages = finder(where=str(tmp_path), **find_settings)
 
     assert set(packages) == {
         "privatelabbench",

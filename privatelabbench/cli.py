@@ -1368,6 +1368,8 @@ def compare_command(args: argparse.Namespace) -> int:
     validate_output_paths(
         sources, _comparison_output_paths(args.json_report, args.report)
     )
+    output = Path(args.json_report)
+    output.with_name(f"{output.stem}.shareable{output.suffix}").unlink(missing_ok=True)
     if (
         args.target is None
         and len(args.inputs) == 2
@@ -2012,6 +2014,9 @@ def main() -> int:
             return compare_command(args)
         except DesignAuditFailure as exc:
             print(str(exc))
+            return 1
+        except (ValueError, OSError) as exc:
+            print(f"Comparison rejected: {exc}")
             return 1
     if args.command == "verify":
         return verify_any_command(args)
