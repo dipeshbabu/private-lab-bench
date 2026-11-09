@@ -1,3 +1,7 @@
+---
+icon: material/clipboard-check-outline
+---
+
 # Split integrity and training-reference audits
 
 Use an `evaluation-design/v1` declaration to check supported leakage conditions before interpreting a score:

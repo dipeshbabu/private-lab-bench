@@ -1,3 +1,7 @@
+---
+icon: material/clipboard-text-outline
+---
+
 # Caco2 model-selection case: analysis plan
 
 This plan fixes the new proxy analysis before its execution. Public benchmark compatibility and the reference forest's public test score are already known from #36; this is not a blind prospective model competition or a preregistered clinical study.

@@ -1,3 +1,7 @@
+---
+icon: material/target
+---
+
 # PrivateLabBench Project Scope
 
 PrivateLabBench is an open-source, local-first evaluation framework for scientific machine learning on private or restricted datasets.

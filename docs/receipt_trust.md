@@ -1,3 +1,7 @@
+---
+icon: material/key-outline
+---
+
 # Receipt trust and offline signatures
 
 A receipt records a claim about an evaluation. Interpret its evidence at separate levels:

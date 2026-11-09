@@ -1,3 +1,7 @@
+---
+icon: material/eye-off-outline
+---
+
 # Hidden benchmark owner workflow
 
 Evaluate prediction submissions locally against owner-held labels, then publish explicitly approved aggregate receipts and a receipt-only results table. `hidden-benchmark/v1` pins an evaluation protocol and keeps owner dataset paths local. It supports regression, binary probabilities, and ordered multiclass probabilities.

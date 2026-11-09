@@ -1,3 +1,7 @@
+---
+icon: material/shield-check-outline
+---
+
 # Public Release Audit
 
 PrivateLabBench should not change from private to public until the automated full-history audit passes **and** the remaining manual release review is complete.

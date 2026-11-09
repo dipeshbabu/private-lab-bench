@@ -1,3 +1,7 @@
+---
+icon: material/filter-check-outline
+---
+
 # Model-quality gates
 
 Quality gates apply explicit user thresholds to evaluation evidence. They do not

@@ -1,3 +1,7 @@
+---
+icon: material/family-tree
+---
+
 # Sampling units and slice inference
 
 Repeated observations from one patient, compound, assay, or laboratory can remain dependent. Declare the independent sampling unit before interpreting an interval:

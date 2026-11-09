@@ -1,3 +1,7 @@
+---
+icon: material/lan
+---
+
 # Aggregate results across sites
 
 Declared independent-unit counts stay attached to each site's point estimate and

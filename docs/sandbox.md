@@ -1,3 +1,7 @@
+---
+icon: material/shield-lock-outline
+---
+
 # Sandboxed model execution
 
 `plb sandbox-score` runs an untrusted Python inference script inside gVisor's

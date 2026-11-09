@@ -1,3 +1,7 @@
+---
+icon: material/home-outline
+---
+
 # PrivateLabBench
 
 Evaluate scientific model predictions locally, compare candidates with a baseline,

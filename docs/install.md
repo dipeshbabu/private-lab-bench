@@ -1,3 +1,7 @@
+---
+icon: material/download-outline
+---
+
 # Installation
 
 ## Install v0.1.6
@@ -58,12 +62,14 @@ mkdocs serve
 
 ## Supported Python
 
-The core has installed-wheel and source-install checks on Linux for Python
-3.10–3.15, and on Windows/macOS for Python 3.12 and 3.14. All configured combinations
-also run the full base suite; Linux 3.14 free-threaded is checked separately.
-Other OS/interpreter combinations remain untested. See the
-[support matrix](support.md) for exact scope, representative dependency pins,
-legacy Python 3.10 status, and the separate constraints for optional integrations.
+The development branch runs the full base suite and clean wheel/source checks
+across 26 configured OS/Python combinations: CPython 3.10–3.15 and 3.14/3.15
+free-threaded builds on Linux, Windows and macOS, plus Linux/Windows ARM64 on
+Python 3.14. macOS Python 3.10 uses Intel runners. See the [support matrix](support.md)
+for exact coverage, dependency pins and optional-integration requirements.
+
+Support recorded for the published v0.1.6 release is available in its
+[tagged support matrix](https://github.com/dipeshbabu/private-lab-bench/blob/v0.1.6/docs/support.md).
 
 ## Verify the installation
 

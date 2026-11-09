@@ -1,3 +1,7 @@
+---
+icon: material/file-document-check-outline
+---
+
 # Evaluation Receipts
 
 PrivateLabBench evaluation receipts are stable artifacts for communicating the result of a local evaluation without making the local run directory or private dataset part of the sharing protocol.

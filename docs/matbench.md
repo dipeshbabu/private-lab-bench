@@ -1,3 +1,7 @@
+---
+icon: material/cube-outline
+---
+
 # Matbench materials evaluation
 
 Evaluate external predictions on seven pinned [Matbench](https://github.com/materialsproject/matbench) tasks while preserving official row identities, units, and five-fold validation definitions. Material features remain the responsibility of the model and upstream tooling; PLB scores prediction tables and generates receipts.

@@ -1,3 +1,7 @@
+---
+icon: material/tag-outline
+---
+
 # Releases
 
 PrivateLabBench uses the version in both `pyproject.toml` and `privatelabbench/__init__.py`.

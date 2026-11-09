@@ -1,3 +1,7 @@
+---
+icon: material/file-cog-outline
+---
+
 # Evaluation protocols
 
 An evaluation protocol fixes the scientific rules independently of a dataset. Two labs can use the same rules on different private tables and record the same ID, version, and SHA-256 digest in their receipts. A benchmark pack also ships demonstration data; a protocol contains no observations or dataset paths.

@@ -1,3 +1,7 @@
+---
+icon: material/chart-timeline-variant
+---
+
 # Longitudinal evaluation from receipts
 
 Use `plb trend` to compare a fixed model's results over time without collecting prior raw datasets. Inputs are verified, already-shareable `evaluation-receipt/v1` artifacts. The result is a versioned `longitudinal-series/v1` artifact with source receipt digests, per-period scores, available uncertainty, practical changes, slice trajectories, and quality decisions.

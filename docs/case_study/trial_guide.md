@@ -1,3 +1,7 @@
+---
+icon: material/account-group-outline
+---
+
 # Voluntary independent researcher trial
 
 This is an onboarding/usability dry run on public and synthetic demonstration data. It is not a request for a private dataset, a model-training artifact, an identity, or a contact address. There is no telemetry or automatic submission.

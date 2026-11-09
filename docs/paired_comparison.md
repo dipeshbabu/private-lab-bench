@@ -1,3 +1,7 @@
+---
+icon: material/compare-horizontal
+---
+
 # Paired model comparison
 
 PrivateLabBench can compare two models on the **same private evaluation samples** without treating their metric estimates as independent.

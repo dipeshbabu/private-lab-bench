@@ -1,3 +1,7 @@
+---
+icon: material/chart-bell-curve-cumulative
+---
+
 # Statistical uncertainty
 
 PrivateLabBench can estimate uncertainty for prediction-table metrics with a reproducible percentile bootstrap.

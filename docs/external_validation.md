@@ -1,3 +1,7 @@
+---
+icon: material/clipboard-search-outline
+---
+
 # External validation of released models
 
 Use the `external_validation` profile on a normal, versioned prediction-table run to describe a model evaluation on private, restricted, public, or undisclosed data. The profile adds model identity and declared provenance to ordinary metrics, uncertainty, baselines, slices, diagnostics, and receipts. It performs no model download or training.

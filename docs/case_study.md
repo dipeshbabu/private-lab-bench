@@ -1,3 +1,7 @@
+---
+icon: material/flask-outline
+---
+
 # A better model can still fail the intended use
 
 The Caco2 case asks two different questions: does a reference forest improve on a simple training-mean baseline, and does it satisfy absolute/critical-group requirements after a controlled measurement shift? The result is **relative improvement with an unacceptable critical group**, not a deployment recommendation.

@@ -1,3 +1,7 @@
+---
+icon: material/clipboard-check-outline
+---
+
 # v0.1.7 readiness
 
 v0.1.7 is on hold. The published v0.1.6 files and tags remain unchanged.

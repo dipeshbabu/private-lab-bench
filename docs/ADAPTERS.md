@@ -1,3 +1,7 @@
+---
+icon: material/connection
+---
+
 # PrivateLabBench Adapters
 
 Adapters connect domain-specific data or models to the common local evaluation workflow.

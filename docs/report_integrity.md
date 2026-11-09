@@ -1,3 +1,7 @@
+---
+icon: material/file-check-outline
+---
+
 # Report Integrity, Manifests, and Receipts
 
 For public-key signer authentication, use the [receipt trust workflow](receipt_trust.md).
