@@ -1,10 +1,12 @@
 import json
+import shutil
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
-from scripts.caco2_case_study import case_protocol, evaluate_case
+from scripts.caco2_case_study import case_protocol, evaluate_case, write_decision_page
 
 
 def fixture_data():
@@ -88,6 +90,16 @@ def test_case_decision_release_and_limited_trust_end_to_end(tmp_path):
         ]
         == 0
     )
+    decision = (public / "decision.md").read_text()
+    assert (
+        "Overall proxy MAE: 0.283333 meets the predeclared limit 0.600000 "
+        "(120 observations; 60 connectivity units): pass."
+    ) in decision
+    assert (
+        "Critical high-logP group MAE: 0.750000 exceeds the predeclared limit "
+        "0.700000 (40 observations; 20 connectivity units): fail."
+    ) in decision
+    assert "Predeclared practical improvement threshold: 0.020000." in decision
 
 
 def test_fast_fixture_does_not_redefine_the_published_case_protocol():
@@ -135,3 +147,108 @@ def test_checked_in_examples_verify_and_contain_only_approved_artifacts():
         assert (
             "tdc-caco2_wang-test-" not in text and "D:\\\\private-lab-bench" not in text
         )
+
+
+def _approved_decision_inputs(tmp_path):
+    """Engineering rendering fixture; copies public aggregates, never raw data."""
+    source = Path(__file__).resolve().parents[1] / "examples/caco2_case/approved"
+    for name in (
+        "reference-candidate.json",
+        "proxy-candidate.json",
+        "proxy-baseline.json",
+        "proxy-paired.json",
+    ):
+        shutil.copyfile(source / name, tmp_path / name)
+    return tmp_path
+
+
+def test_decision_page_explains_approved_numeric_reasons_without_resigning(tmp_path):
+    public = _approved_decision_inputs(tmp_path)
+    before = {path.name: path.read_bytes() for path in public.glob("*.json")}
+    decision = write_decision_page(public, case_protocol()).read_text()
+    assert (
+        "Overall proxy MAE: 0.604110 exceeds the predeclared limit 0.600000 "
+        "(182 observations; 140 connectivity units): fail."
+    ) in decision
+    assert (
+        "Overall proxy MAE interval upper bound: 0.663107 meets the "
+        "predeclared limit 0.700000: pass."
+    ) in decision
+    assert (
+        "Critical high-logP group MAE: 0.849552 exceeds the predeclared limit "
+        "0.700000 (61 observations; 59 connectivity units): fail."
+    ) in decision
+    assert "Paired improvement of candidate over baseline: 0.130868." in decision
+    assert (
+        "Paired interval: [0.071865, 0.191472]; its lower bound meets the "
+        "predeclared practical improvement criterion (at least 0.020000)."
+    ) in decision
+    assert "Relative improvement does not waive" in decision
+    assert before == {path.name: path.read_bytes() for path in public.glob("*.json")}
+    source = Path(__file__).resolve().parents[1] / "examples/caco2_case/approved"
+    assert decision == (source / "decision.md").read_text()
+
+
+@pytest.mark.parametrize(
+    ("lower", "expected"),
+    [(0.019999, "does not meet"), (0.02, "meets"), (0.020001, "meets")],
+    ids=["below-threshold", "equal-to-threshold", "above-threshold"],
+)
+def test_decision_page_paired_interval_positive_threshold_boundary(
+    tmp_path, lower, expected
+):
+    """Synthetic interval boundaries use the unchanged public 0.02 rule."""
+    public = _approved_decision_inputs(tmp_path)
+    path = public / "proxy-paired.json"
+    receipt = json.loads(path.read_text())
+    receipt["shareable"]["paired_interval"]["lower"] = lower
+    path.write_text(json.dumps(receipt))
+    protocol = case_protocol()
+    assert protocol.as_dict()["comparison"]["practical_threshold"] == 0.02
+    decision = write_decision_page(public, protocol).read_text()
+    interval = next(
+        line for line in decision.splitlines() if line.startswith("Paired interval:")
+    )
+    assert f"[{lower:.6f}, 0.191472]" in interval
+    assert (
+        f"its lower bound {expected} the predeclared practical improvement "
+        "criterion (at least 0.020000)."
+    ) in interval
+
+
+@pytest.mark.parametrize(
+    "missing",
+    ["slice", "metric", "null", "nonfinite", "unavailable_status"],
+)
+def test_decision_page_does_not_pass_unavailable_critical_evidence(tmp_path, missing):
+    """Synthetic suppression/missing-value cases exercise explanation behavior."""
+    public = _approved_decision_inputs(tmp_path)
+    path = public / "proxy-candidate.json"
+    receipt = json.loads(path.read_text())
+    regime = receipt["shareable"]["evaluation"]["slices"]["regime"]
+    if missing == "slice":
+        del regime["high-logp"]
+    elif missing == "metric":
+        regime["high-logp"]["metrics"].pop("mae")
+    elif missing == "unavailable_status":
+        regime["high-logp"].update(status="suppressed")
+        regime["high-logp"]["metrics"]["mae"] = 0.1
+    else:
+        regime["high-logp"]["metrics"]["mae"] = (
+            None if missing == "null" else float("nan")
+        )
+    path.write_text(json.dumps(receipt))
+    decision = write_decision_page(public, case_protocol()).read_text()
+    critical = next(
+        line for line in decision.splitlines() if line.startswith("Critical high-logP")
+    )
+    assert "unavailable; predeclared limit 0.700000" in critical
+    assert critical.endswith(": investigate.")
+    assert ": pass." not in critical
+
+
+def test_decision_page_rejects_different_public_rules(tmp_path):
+    public = _approved_decision_inputs(tmp_path)
+    with pytest.raises(ValueError, match="approved protocol digest"):
+        write_decision_page(public, case_protocol(fixture=True))
+    assert not (public / "decision.md").exists()

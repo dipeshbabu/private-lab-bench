@@ -175,7 +175,10 @@ Aggregate reports do **not** include row-level:
 - predictions/probabilities;
 - metadata values tied to individual rows.
 
-The local source path can appear in local reports for reproducibility. A separate evaluation-receipt artifact with explicit local/private versus shareable fields is tracked in issue #6.
+The local source path can appear in local reports for reproducibility.
+[Evaluation receipts](evaluation_receipts.md) distinguish local fields from
+approved shareable evidence. `plb evaluate` writes a local receipt by default;
+export requires a reviewed [release policy](privacy.md).
 
 ## Included examples
 

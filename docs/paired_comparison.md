@@ -49,7 +49,9 @@ plb compare candidate.csv baseline.csv \
   --metric log_loss
 ```
 
-When `--target` is omitted, `plb compare` keeps the existing config-level comparison behavior for backwards compatibility.
+Two `.csv` inputs with conventional `sample_id,target,prediction` columns select
+paired mode even without `--target`. Use explicit column bindings for other
+names. Config-file inputs retain the existing config-level comparison behavior.
 
 ## Exact sample alignment
 
@@ -186,19 +188,41 @@ Add `--include-slice-uncertainty` to run a paired bootstrap inside each eligible
 
 ### Multiple comparisons
 
-Scanning many slices increases the chance of seeing an apparently extreme subgroup by chance. PrivateLabBench reports the slice evidence but does not currently apply an automatic multiplicity correction. Do not interpret a large collection of exploratory slice intervals or p-values as pre-registered confirmatory tests.
+Scanning many slices increases the chance of finding an apparently extreme
+subgroup by chance. Without a declared multiplicity policy, slice inference is
+exploratory and unadjusted. A [sampling design](sampling_design.md#declared-slice-families)
+can declare a family and request adjusted slice-test p-values using
+Benjamini–Yekutieli or, with an explicit dependence assumption,
+Benjamini–Hochberg. Set the family before inspecting results. These corrections
+do not adjust confidence intervals or make an exploratory scan confirmatory.
 
 ## Artifacts and sharing boundary
 
-A paired comparison writes:
+A paired comparison writes these local files by default:
 
 ```text
-comparison.json
-comparison.shareable.json
-comparison.md
+reports/model_comparison.json
+reports/model_comparison.md
+reports/model_comparison.shareable.release-audit.json
 ```
 
-The local JSON artifact contains local prediction-table paths and SHA256 hashes for reproducibility.
+Use `--json-report` and `--report` to choose other report paths. The local JSON
+contains prediction-table paths and SHA-256 hashes for reproducibility. The
+Markdown report is also local; review the release audit for the export decision.
+
+To request an approved aggregate artifact, supply a reviewed
+[release policy](privacy.md):
+
+```bash
+plb compare candidate.csv baseline.csv \
+  --target target --prediction-column prediction \
+  --task-type regression --metric rmse \
+  --release-policy release.yaml
+```
+
+Only an allowed export creates `reports/model_comparison.shareable.json`.
+Without a policy, evaluation still succeeds locally and the audit records
+`missing_policy`.
 
 The independently verifiable shareable artifact contains only aggregate comparison evidence such as:
 
@@ -225,6 +249,9 @@ Verify it with:
 ```bash
 plb verify reports/model_comparison.shareable.json
 ```
+
+Unsigned verification establishes integrity. See [signer trust](receipt_trust.md)
+to authenticate a signer's statement.
 
 The machine-readable schema is bundled at `privatelabbench/data/schemas/paired-comparison-artifact-v1.schema.json`.
 

@@ -49,12 +49,15 @@ plb --help
 
 The longer command name, `privatelabbench`, works too. See the [installation guide](https://github.com/dipeshbabu/private-lab-bench/blob/main/docs/install.md) for optional dependencies and source installs, or open the [quickstart in Colab](https://colab.research.google.com/github/dipeshbabu/private-lab-bench/blob/main/examples/notebooks/quickstart.ipynb).
 
-## 1. Try a scientific decision in five minutes
+## 1. Try a scientific decision
 
 The candidate improves overall. Does it still fail on a required instrument?
 Run this fully synthetic calibration example: 160 simulated specimens, two
 instruments, a baseline, and acceptance thresholds fixed before evaluation.
 No training or model download is needed.
+
+Run the walkthrough after installation. Creating a fresh environment and
+downloading dependencies can take more than five minutes.
 
 In a fresh working directory, download the small example and run it:
 
