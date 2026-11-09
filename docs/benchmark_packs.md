@@ -1,3 +1,7 @@
+---
+icon: material/package-variant-closed
+---
+
 # Community Benchmark Packs
 
 Benchmark packs are small, versioned examples that package a prediction-table evaluation protocol without turning PrivateLabBench into a dataset hosting project.

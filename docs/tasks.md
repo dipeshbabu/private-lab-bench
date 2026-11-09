@@ -1,3 +1,7 @@
+---
+icon: material/puzzle-outline
+---
+
 # Tasks and plugins
 
 ## Discover tasks

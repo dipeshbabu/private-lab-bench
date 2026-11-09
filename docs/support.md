@@ -1,3 +1,7 @@
+---
+icon: material/devices
+---
+
 # Tested compatibility
 
 The core evaluates prediction tables without a model framework or optional domain
@@ -76,7 +80,7 @@ fixture and is not shipped as part of the production package.
 | ProteinGym | Linux, Python 3.11; Windows/macOS, Python 3.12; pinned reference | See [ProteinGym](proteingym.md) |
 | OpenDP | Linux, Python 3.10/3.12; Windows/macOS, Python 3.12; OpenDP 0.16 | Optional bounded-mean backend; see [privacy assumptions](privacy.md#optional-opendp-backend) |
 | Chemistry adapters | Linux, Python 3.11; Windows/macOS, Python 3.12; optional RDKit | Separate split/design-audit checks |
-| Untrusted script execution | Linux, Python 3.11, Docker and pinned gVisor runtime | CPU scripts in a reviewed image; Windows/macOS core support does not provide this runtime |
+| Untrusted model execution | Linux, Python 3.11, Docker and pinned gVisor runtime | CPU scripts and model packages in a reviewed image; Windows/macOS core support does not provide this runtime |
 
 These environments remain separate from the cross-platform core matrix. The
 [sandbox guide](sandbox.md) documents host requirements and limits; this testing

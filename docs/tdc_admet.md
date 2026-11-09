@@ -1,3 +1,7 @@
+---
+icon: material/molecule
+---
+
 # TDC ADMET integration
 
 Evaluate external predictions on eight official [Therapeutics Data Commons ADMET](https://tdcommons.ai/benchmark/admet_group/overview/) tasks, then carry the same metric contract into private ADMET evaluation. TDC supplies the public benchmark definitions and data. PLB verifies the cached snapshot, aligns predictions, and writes its ordinary local reports and `evaluation-receipt/v1` artifacts.

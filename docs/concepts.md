@@ -1,3 +1,7 @@
+---
+icon: material/lightbulb-outline
+---
+
 # Concepts
 
 ## Local-first evaluation

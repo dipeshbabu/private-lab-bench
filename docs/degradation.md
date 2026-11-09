@@ -1,3 +1,7 @@
+---
+icon: material/chart-box-outline
+---
+
 # Reference/current performance diagnostics
 
 Use two prediction tables from the same model and scoring setup to inspect where performance changed:

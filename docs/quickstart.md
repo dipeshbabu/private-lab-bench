@@ -1,3 +1,7 @@
+---
+icon: material/rocket-launch-outline
+---
+
 # A scientific decision in five minutes
 
 Try the synthetic example, evaluate your own predictions, then share only approved

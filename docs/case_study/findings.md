@@ -1,3 +1,7 @@
+---
+icon: material/notebook-check-outline
+---
+
 # Independent onboarding findings
 
 **Status: pending. Completed independent researcher trials: 0 of at least 3.**

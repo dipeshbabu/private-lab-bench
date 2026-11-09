@@ -1,3 +1,7 @@
+---
+icon: material/dna
+---
+
 # ProteinGym DMS substitution evaluation
 
 Evaluate mutation-effect scores within each assay, then summarize the selected assays using ProteinGym's protein/function weighting. This integration supports twelve pinned assays from the public v1.3 substitution archive. It does not pool mutations from unrelated assays or present a subset as the full 217-assay leaderboard.

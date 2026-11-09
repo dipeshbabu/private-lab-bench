@@ -1,3 +1,7 @@
+---
+icon: material/calculator-variant-outline
+---
+
 # Trusted local model scoring
 
 `plb score` runs an explicitly approved, pinned local numeric model and writes a local prediction table. An opt-in pipeline then uses the ordinary evaluator, external-validation profile, and release gate. No private inputs are sent to a model developer or an online evaluator.

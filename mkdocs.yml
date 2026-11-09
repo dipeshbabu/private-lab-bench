@@ -6,7 +6,16 @@ repo_name: dipeshbabu/private-lab-bench
 edit_uri: edit/main/docs/
 theme:
   name: material
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    logo: material/flask-outline
+    repo: fontawesome/brands/github
+    previous: material/arrow-left
+    next: material/arrow-right
   features:
+    - navigation.footer
     - navigation.sections
     - navigation.top
     - content.code.copy
@@ -18,6 +27,8 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+extra_css:
+  - stylesheets/typography.css
 nav:
   - Home: index.md
   - Install: install.md
@@ -57,5 +68,15 @@ nav:
   - Adapters: ADAPTERS.md
   - Troubleshooting: troubleshooting.md
   - Releases: releases.md
+  - Release readiness: release_readiness.md
   - Roadmap: roadmap.md
   - Project scope: project_scope.md
+  - Repository settings: repository_settings.md
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/dipeshbabu/private-lab-bench
+      name: PrivateLabBench on GitHub
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/private-lab-bench/
+      name: PrivateLabBench on PyPI

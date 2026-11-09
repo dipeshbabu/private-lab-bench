@@ -1,3 +1,7 @@
+---
+icon: material/cog-outline
+---
+
 # Recommended GitHub Repository Settings
 
 These are the intended discovery/community settings for the public PrivateLabBench repository. They are repository metadata/settings rather than source-controlled behavior.

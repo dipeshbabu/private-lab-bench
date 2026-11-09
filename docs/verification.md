@@ -1,3 +1,7 @@
+---
+icon: material/check-decagram-outline
+---
+
 # Verification and its limits
 
 The normal CI runs the complete base pytest suite on twenty-six configured OS/Python

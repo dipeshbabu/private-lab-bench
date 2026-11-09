@@ -1,3 +1,7 @@
+---
+icon: material/lock-outline
+---
+
 # Privacy Model and Guarantees
 
 ## Enforced export policy

@@ -1,3 +1,7 @@
+---
+icon: material/table
+---
+
 # Prediction Table Protocol
 
 PrivateLabBench uses a domain-independent prediction-table protocol so researchers can evaluate outputs from any model without integrating model code into the framework.

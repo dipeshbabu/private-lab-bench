@@ -1,3 +1,7 @@
+---
+icon: material/map-marker-path
+---
+
 # Roadmap
 
 PrivateLabBench evaluates scientific models where the data lives and produces

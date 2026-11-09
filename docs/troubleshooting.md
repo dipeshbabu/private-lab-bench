@@ -1,3 +1,7 @@
+---
+icon: material/lifebuoy
+---
+
 # Troubleshooting
 
 ## `plb` is not found
