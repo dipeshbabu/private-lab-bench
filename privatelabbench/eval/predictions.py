@@ -503,18 +503,18 @@ def evaluate_prediction_table(
         require_sample_id=require_sample_id,
     )
 
-    selected_for_dropna = [target, *prediction_cols]
+    required_values = [target, *prediction_cols]
     if split_column:
-        selected_for_dropna.append(split_column)
-    if design and df[selected_for_dropna].isna().any().any():
+        required_values.append(split_column)
+    if df[required_values].isna().any().any():
         raise ValueError(
-            "Sampling designs require complete targets/predictions; declare exclusions before evaluation"
+            "Prediction evaluation requires complete targets/predictions and declared "
+            "split values; repair missing values or apply explicit predeclared "
+            "exclusions/eligibility before evaluation. Rows are never implicitly dropped."
         )
-    df = df.dropna(subset=selected_for_dropna).reset_index(drop=True)
     if df.empty:
-        raise ValueError(
-            "No valid rows found after dropping missing targets or predictions."
-        )
+        raise ValueError("Prediction table must contain at least one evaluation row.")
+    df = df.reset_index(drop=True)
 
     raw_targets = df[target].to_numpy()
     resolved_task_type = _infer_or_validate_task_type(

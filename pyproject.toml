@@ -77,6 +77,16 @@ plb = "privatelabbench.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["privatelabbench*"]
+exclude = [
+  "outputs", "outputs.*",
+  "reports", "reports.*",
+  "build", "build.*",
+  "dist", "dist.*",
+  "site", "site.*",
+  "tests", "tests.*",
+  "docs", "docs.*",
+  "examples", "examples.*",
+]
 
 [tool.setuptools.package-data]
 privatelabbench = [

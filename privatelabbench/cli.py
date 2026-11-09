@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from collections.abc import Callable
 from pathlib import Path
 
 import yaml
@@ -1553,6 +1554,8 @@ def _print_basic_verification(result: dict[str, object]) -> int:
     print(f"Artifact: {result.get('path')}")
     print(f"Hash valid: {result.get('hash_valid', result.get('valid'))}")
     print(f"Reason: {result.get('reason')}")
+    if result.get("error"):
+        print(f"Error: {result['error']}")
     if result.get("schema_version"):
         print(f"Schema: {result.get('schema_version')}")
     if result.get("scope"):
@@ -1570,10 +1573,60 @@ def _print_basic_verification(result: dict[str, object]) -> int:
     return 0 if result.get("valid") else 1
 
 
-def verify_any_command(args: argparse.Namespace) -> int:
-    path = Path(args.artifact)
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    schema = payload.get("schema_version") if isinstance(payload, dict) else None
+class _InvalidVerificationInput(ValueError):
+    """An artifact's JSON shape is incompatible with CLI verification."""
+
+
+def _verification_input_error(path: Path, exc: Exception) -> dict[str, object]:
+    if isinstance(exc, UnicodeDecodeError):
+        reason = "invalid_artifact_encoding"
+        error = "Artifact must contain UTF-8 encoded JSON."
+    elif isinstance(exc, json.JSONDecodeError):
+        reason = "invalid_artifact_json"
+        error = f"Invalid JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}"
+    elif isinstance(exc, _InvalidVerificationInput):
+        reason = "invalid_artifact_shape"
+        error = str(exc)
+    else:
+        reason = "unreadable_artifact"
+        error = str(exc)
+    return {"valid": False, "reason": reason, "error": error, "path": str(path)}
+
+
+def _verify_cli_artifact(
+    path: Path,
+    verifier: Callable[[dict[str, object]], dict[str, object]],
+    *,
+    manifest: bool = False,
+) -> dict[str, object]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise _InvalidVerificationInput("Artifact JSON must be an object.")
+        if manifest or payload.get("schema_version") == "run-manifest/v0.1":
+            if not isinstance(payload.get("run", {}), dict):
+                raise _InvalidVerificationInput("Manifest run must be an object.")
+            artifacts = payload.get("artifacts", [])
+            if not isinstance(artifacts, list) or any(
+                not isinstance(artifact, dict) for artifact in artifacts
+            ):
+                raise _InvalidVerificationInput(
+                    "Manifest artifacts must be an array of objects."
+                )
+        return verifier(payload)
+    except (
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        _InvalidVerificationInput,
+    ) as exc:
+        return _verification_input_error(path, exc)
+
+
+def _verify_any_artifact(
+    args: argparse.Namespace, path: Path, payload: dict[str, object]
+) -> dict[str, object]:
+    schema = payload.get("schema_version")
     trust_path = getattr(args, "trust_store", None)
     try:
         trust = (
@@ -1581,7 +1634,7 @@ def verify_any_command(args: argparse.Namespace) -> int:
             if trust_path
             else None
         )
-    except (OSError, yaml.YAMLError):
+    except (OSError, UnicodeDecodeError, yaml.YAMLError):
         trust = {"schema_version": "invalid"}
     options = {
         "signing_secret": _secret(args),
@@ -1590,11 +1643,7 @@ def verify_any_command(args: argparse.Namespace) -> int:
         "expected_protocol_sha256": getattr(args, "expected_protocol_sha256", None),
     }
     if schema == RECEIPT_SCHEMA_VERSION:
-        result = verify_receipt(path, **options)
-        if getattr(args, "json", False):
-            print(json.dumps(result, indent=2))
-            return 0 if result.get("valid") else 1
-        return _print_basic_verification(result)
+        return verify_receipt(path, **options)
     if schema == "run-manifest/v0.1":
         result = verify_run_manifest(path, signing_secret=_secret(args))
         result["schema_version"] = schema
@@ -1602,13 +1651,18 @@ def verify_any_command(args: argparse.Namespace) -> int:
             result.update(
                 valid=False, reason="public_signer_verification_requires_receipt"
             )
-        if getattr(args, "json", False):
-            print(json.dumps(result, indent=2))
-            return 0 if result.get("valid") else 1
-        return _print_basic_verification(result)
+        return result
     result = verify_report(str(path), **options)
     result["schema_version"] = schema
     result["scope"] = payload.get("scope") if isinstance(payload, dict) else None
+    return result
+
+
+def verify_any_command(args: argparse.Namespace) -> int:
+    path = Path(args.artifact)
+    result = _verify_cli_artifact(
+        path, lambda payload: _verify_any_artifact(args, path, payload)
+    )
     if getattr(args, "json", False):
         print(json.dumps(result, indent=2))
         return 0 if result.get("valid") else 1
@@ -1673,31 +1727,46 @@ def sign_command(args: argparse.Namespace) -> int:
 
 
 def verify_report_command(args: argparse.Namespace) -> int:
-    result = verify_report(args.json_report, signing_secret=_secret(args))
+    result = _verify_cli_artifact(
+        Path(args.json_report),
+        lambda payload: verify_report(args.json_report, signing_secret=_secret(args)),
+    )
     print("PrivateLabBench report verification")
     print(f"Report: {result['path']}")
     print(f"Valid: {result['valid']}")
     print(f"Reason: {result['reason']}")
-    print(f"Hash valid: {result['hash_valid']}")
-    if result["signature_valid"] is not None:
+    if result.get("error"):
+        print(f"Error: {result['error']}")
+    print(f"Hash valid: {result.get('hash_valid', False)}")
+    if result.get("signature_valid") is not None:
         print(f"Signature valid: {result['signature_valid']}")
-    print(f"Payload SHA256: {result['payload_sha256']}")
+    if result.get("payload_sha256"):
+        print(f"Payload SHA256: {result['payload_sha256']}")
     return 0 if result["valid"] else 1
 
 
 def verify_manifest_command(args: argparse.Namespace) -> int:
-    result = verify_run_manifest(args.manifest, signing_secret=_secret(args))
+    result = _verify_cli_artifact(
+        Path(args.manifest),
+        lambda payload: verify_run_manifest(
+            args.manifest, signing_secret=_secret(args)
+        ),
+        manifest=True,
+    )
     print("PrivateLabBench manifest verification")
     print(f"Manifest: {result['path']}")
     print(f"Valid: {result['valid']}")
     print(f"Reason: {result['reason']}")
+    if result.get("error"):
+        print(f"Error: {result['error']}")
     print(f"Run ID: {result.get('run_id')}")
-    print(f"Manifest hash valid: {result['hash_valid']}")
-    print(f"Artifact hashes valid: {result['artifacts_valid']}")
-    print(f"Report integrity valid: {result['report_valid']}")
-    if result["signature_valid"] is not None:
+    print(f"Manifest hash valid: {result.get('hash_valid', False)}")
+    print(f"Artifact hashes valid: {result.get('artifacts_valid', False)}")
+    print(f"Report integrity valid: {result.get('report_valid', False)}")
+    if result.get("signature_valid") is not None:
         print(f"Signature valid: {result['signature_valid']}")
-    print(f"Payload SHA256: {result['payload_sha256']}")
+    if result.get("payload_sha256"):
+        print(f"Payload SHA256: {result['payload_sha256']}")
     return 0 if result["valid"] else 1
 
 

@@ -107,6 +107,18 @@ Each probability row must:
 - stay within `[0, 1]`;
 - sum to `1.0` within a small numerical tolerance.
 
+## Missing values and the evaluation cohort
+
+Required targets, prediction/probability columns, and any configured membership
+split must be complete. A blank or NaN in these columns rejects prediction-table
+evaluation before scoring; it does not remove the affected rows and calculate a
+score on a smaller cohort. Numeric targets and scores must also be finite.
+
+Repair an incomplete submission, or predeclare legitimate cohort exclusions in
+an [evaluation design](evaluation_design.md#eligibility-is-applied-before-scoring).
+Eligibility is applied and audited before the selected table is scored. Missing
+values in optional metadata do not remove otherwise eligible observations.
+
 ## Metadata
 
 Columns that are not the target, prediction columns, sample ID, or split column are treated as metadata. PrivateLabBench does not need to know their domain semantics.

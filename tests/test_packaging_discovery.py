@@ -1,0 +1,52 @@
+"""Package discovery must prune generated trees before inspecting their contents."""
+
+from pathlib import Path
+
+import pytest
+
+
+def test_package_discovery_does_not_traverse_auxiliary_trees(tmp_path, monkeypatch):
+    pytest.importorskip("setuptools", reason="Packaging backend is not installed")
+    from setuptools import discovery
+    from setuptools.config.expand import find_packages
+    from setuptools.config.pyprojecttoml import read_configuration
+
+    project = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    settings = read_configuration(str(project), expand=False)
+    find_settings = settings["tool"]["setuptools"]["packages"]["find"]
+    auxiliary = {
+        "outputs",
+        "reports",
+        "build",
+        "dist",
+        "site",
+        "tests",
+        "docs",
+        "examples",
+    }
+    for name in auxiliary:
+        (tmp_path / name / "nested" / "generated").mkdir(parents=True)
+    for relative in ("privatelabbench/core", "privatelabbench/data/schemas"):
+        (tmp_path / relative).mkdir(parents=True)
+    (tmp_path / "privatelabbench/__init__.py").write_text("", encoding="utf-8")
+    (tmp_path / "privatelabbench/core/__init__.py").write_text("", encoding="utf-8")
+
+    original_scandir = discovery.os.scandir
+
+    def reject_auxiliary_traversal(path):
+        relative = Path(path).resolve().relative_to(tmp_path.resolve())
+        assert not relative.parts or relative.parts[0] not in auxiliary, (
+            f"Package discovery entered auxiliary tree: {relative}"
+        )
+        return original_scandir(path)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(discovery.os, "scandir", reject_auxiliary_traversal)
+        packages = find_packages(root_dir=str(tmp_path), **find_settings)
+
+    assert set(packages) == {
+        "privatelabbench",
+        "privatelabbench.core",
+        "privatelabbench.data",
+        "privatelabbench.data.schemas",
+    }
