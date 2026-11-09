@@ -68,6 +68,10 @@ PrivateLabBench:
 
 This is important because silently comparing a convenient intersection can change the scientific question being answered.
 
+The CLI rejects invalid IDs, disagreeing targets, and unreadable inputs with an
+explanation and exit code 1. A rejected comparison does not write new scores.
+Correct the inputs before interpreting or sharing a new result.
+
 ## Metric direction and improvement
 
 The artifact records both:

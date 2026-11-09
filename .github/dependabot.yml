@@ -2,6 +2,9 @@ version: 2
 updates:
   - package-ecosystem: pip
     directory: /
+    # Compatibility matrices and frozen reference environments are test fixtures.
+    # Regenerate their Python-specific pins deliberately; never raise the lower line.
+    exclude-paths: ["constraints/**"]
     schedule:
       interval: weekly
       day: monday

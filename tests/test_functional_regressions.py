@@ -276,20 +276,34 @@ def test_cli_rejects_output_collisions_before_removing_inputs(
 
 
 @pytest.mark.parametrize("command", ["aggregate", "compare"])
-def test_evidence_commands_preserve_policy_files(tmp_path, monkeypatch, command):
+def test_evidence_commands_preserve_policy_files(
+    tmp_path, monkeypatch, capsys, command
+):
     policy = tmp_path / "policy.yaml"
     policy.write_text("id: preserve-this-policy\n", encoding="utf-8")
     originals = policy.read_bytes()
     source = tmp_path / "input.json"
     source.write_text("{}", encoding="utf-8")
+    original_input = source.read_bytes()
     args = ["plb", command, str(source), "--release-policy", str(policy)]
     args += (
         ["--out", str(policy)] if command == "aggregate" else ["--report", str(policy)]
     )
     monkeypatch.setattr("sys.argv", args)
-    with pytest.raises(ValueError, match="separate"):
-        main()
+    if command == "compare":
+        assert main() == 1
+        captured = capsys.readouterr()
+        assert captured.out == (
+            "Comparison rejected: Output paths must be separate from every input "
+            "and from one another\n"
+        )
+        assert captured.err == ""
+        assert "Traceback" not in captured.out
+    else:
+        with pytest.raises(ValueError, match="separate"):
+            main()
     assert policy.read_bytes() == originals
+    assert source.read_bytes() == original_input
 
 
 def test_runner_rejects_report_aliases_and_hardlinked_inputs(tmp_path):

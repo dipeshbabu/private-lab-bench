@@ -41,12 +41,13 @@ The manifest format remains backward compatible. Existing manifest verification 
 
 ## 3. Evaluation receipts
 
-After a config-driven manifest is written, PrivateLabBench also creates:
+After a config-driven manifest is written, PrivateLabBench creates a local JSON
+receipt, a Markdown summary or blocked-export notice, and a local release audit:
 
 ```text
 <run>_receipt.json
-<run>_receipt.shareable.json
 <run>_receipt.md
+<run>_receipt.shareable.release-audit.json
 ```
 
 `evaluation-receipt/v1` separates:
@@ -54,7 +55,11 @@ After a config-driven manifest is written, PrivateLabBench also creates:
 - `shareable`: released metrics, input-schema summary, aggregate slices, privacy/release status, benchmark identity, provenance ID, and artifact names/hashes;
 - `local`: local paths, config snapshot, exact metrics, runner details, and full attestation.
 
-The shareable JSON receipt omits the `local` section entirely and has its own integrity digest/signature. The Markdown receipt is rendered only from the shareable section.
+A reviewed release policy must allow export before
+`<run>_receipt.shareable.json` is created. This approved JSON omits the `local`
+section entirely and has its own integrity digest/signature. Its Markdown summary
+is rendered from approved shareable fields. When export is blocked, the Markdown
+file states the reason and refers to the local JSON; it is not an approved result.
 
 See [`evaluation_receipts.md`](evaluation_receipts.md).
 
@@ -69,6 +74,12 @@ plb verify reports/kinase_prediction_eval.json
 ```
 
 The explicit legacy commands remain available.
+
+Unreadable files, invalid UTF-8, malformed JSON, and unsupported artifact shapes
+produce a diagnostic and exit code 1. In `plb verify --json` mode, the response
+contains `valid: false`, a reason, and an error message. Successful integrity and
+signer checks retain their existing output. Verification errors do not establish
+anything about the underlying scientific result.
 
 ## Optional local signing
 
